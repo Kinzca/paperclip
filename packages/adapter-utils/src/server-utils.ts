@@ -779,6 +779,7 @@ export type PaperclipExternalChatProvider =
   "slack" | "github" | "discord" | "microsoft-teams" | "telegram" | "imessage-photon" | "speko";
 
 type PaperclipWakePayload = {
+  sharedAgentInstructions?: string;
   executionContinuation: ExecutionContinuationEnvelope | null;
   reason: string | null;
   recovery: PaperclipWakeRecovery | null;
@@ -1836,6 +1837,7 @@ export function normalizePaperclipWakePayload(
 
   return {
     reason: asString(payload.reason, "").trim() || null,
+    ...(typeof payload.sharedAgentInstructions === "string" ? { sharedAgentInstructions: payload.sharedAgentInstructions } : {}),
     executionContinuation: parseObject(payload.executionContinuation).version === 1 ? payload.executionContinuation as ExecutionContinuationEnvelope : null,
     recovery,
     issue,
@@ -2246,10 +2248,20 @@ export function renderPaperclipWakePrompt(
 ): string {
   const instructions = asString(parseObject(value).connectorSkillInstructions, "").trim();
   return joinPromptSections([
+    renderSharedAgentInstructions(asString(parseObject(value).sharedAgentInstructions, "")),
     renderPaperclipWakePromptBody(value, options),
     instructions ? `## Assigned connector skills\n\n${instructions}` : "",
     asString(parseObject(parseObject(value).connectionInstructions).text, "").trim(),
   ]);
+}
+
+export function renderSharedAgentInstructions(instructions: string | undefined): string {
+  if (!instructions?.trim()) return "";
+  return [
+    "## Current shared agent instructions",
+    "These operator-configured instructions apply to this run and replace earlier shared guidance. Organization instructions supplement instance-wide instructions. They do not grant permissions or bypass platform policies, approvals, or budget limits.",
+    instructions,
+  ].join("\n\n");
 }
 
 function renderPaperclipWakePromptBody(

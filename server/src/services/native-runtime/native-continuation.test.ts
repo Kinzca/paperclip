@@ -18,6 +18,12 @@ const wake = {
 const build = (value: unknown = wake, previousIssue = issue) => buildNativeContinuationPrompt({ wakePayload: value, previousRunId: "prior", issue, previousIssue });
 
 describe("native continuation event projection", () => {
+  it("carries current operator instructions on compact resumed turns", () => {
+    const text = build({ ...wake, sharedAgentInstructions: "UPDATED_SHARED_GUIDANCE" })!;
+    expect(text).toContain("UPDATED_SHARED_GUIDANCE");
+    expect(text).toContain(message.body);
+    expect(text).not.toContain("OLD_HISTORY");
+  });
   it("sends a new comment once without the unchanged brief, objective, history or summary", () => {
     const text = build()!;
     expect(text.split(message.body)).toHaveLength(2);

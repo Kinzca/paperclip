@@ -46,6 +46,12 @@ describe("AI pool session adoption", () => {
     expect(aiConnectionOnlyConfigRevision(edit)).toBe(false);
     expect((await decision({ agentRuntimeConfig: { aiConnection: binding }, agentConfigRevision: aiConnectionRevisionMetadata(first) }, { agentConfigRevision: aiConnectionRevisionMetadata(edit) }, { revisions: [edit, first] })).reset).toBe(true);
   });
+
+  it("does not waive changed shared instructions through an AI account compatibility candidate", async () => {
+    const prior = { effectiveAdapterConfig: { ...config, paperclipSharedInstructionsRevision: "before" }, agentRuntimeConfig: { aiConnection: binding } };
+    expect((await decision(prior, { effectiveAdapterConfig: { ...config, paperclipSharedInstructionsRevision: "after" } })).reset).toBe(true);
+    expect((await decision(prior)).reset).toBe(true);
+  });
   it("does not bridge a stale revision over a newer runtime settings change", async () => {
     const first = revision("revision-1", null, binding);
     const adoption = revision("revision-2", binding, pool);

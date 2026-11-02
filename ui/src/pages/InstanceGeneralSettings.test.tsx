@@ -19,6 +19,7 @@ vi.mock("@/api/auth", () => ({ authApi: mockAuthApi }));
 vi.mock("@/api/health", () => ({ healthApi: mockHealthApi }));
 vi.mock("@/api/instanceSettings", () => ({ instanceSettingsApi: mockInstanceSettingsApi }));
 vi.mock("@/lib/browserNavigation", () => ({ navigateTopLevel: mockNavigateTopLevel }));
+vi.mock("@/components/SharedAgentInstructionsSettings", () => ({ SharedAgentInstructionsSettings: () => null }));
 vi.mock("../context/BreadcrumbContext", () => ({
   useBreadcrumbs: () => ({ setBreadcrumbs: vi.fn() }),
 }));

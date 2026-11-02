@@ -18,6 +18,8 @@ export interface Company {
   id: string;
   name: string;
   description: string | null;
+  /** Shared guidance appended to every agent run in this organization. */
+  agentInstructions?: string;
   status: CompanyStatus;
   pauseReason: PauseReason | null;
   pausedAt: Date | null;

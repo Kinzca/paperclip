@@ -1,4 +1,4 @@
-import { isPaperclipExternalChatContractTurn, normalizePaperclipWakePayload } from "@paperclipai/adapter-utils/server-utils";
+import { isPaperclipExternalChatContractTurn, normalizePaperclipWakePayload, renderSharedAgentInstructions } from "@paperclipai/adapter-utils/server-utils";
 
 /** Only new, authorized events belong in an already retained provider conversation.
  * Full bootstrap input is kept separately for an actual provider resume failure.
@@ -75,5 +75,6 @@ export function buildNativeContinuationPrompt(input: {
     ...(wake.unresolvedBlockerIssueIds.length ? { unresolvedBlockerIssueIds: wake.unresolvedBlockerIssueIds } : {}),
   };
   if (!events.messages.length && !humanResponses.length && !wake.childIssueSummaries.length && !Object.keys(taskChanges).length) return null;
-  return JSON.stringify(events);
+  const sharedInstructions = renderSharedAgentInstructions(wake.sharedAgentInstructions);
+  return sharedInstructions ? `${sharedInstructions}\n\n${JSON.stringify(events)}` : JSON.stringify(events);
 }

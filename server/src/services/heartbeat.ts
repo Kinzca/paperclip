@@ -14,6 +14,7 @@ import {
   formatIssueIdentifierLink,
 } from "./heartbeat/scheduling.js";
 import { FAST_RESPONSE_AGENT_GUIDANCE, fastResponseHistoryBody } from "@paperclipai/shared";
+import { resolveSharedAgentInstructions } from "./shared-agent-instructions.js";
 import { agentExecutionsHaveStopped } from "./agent-execution-stop.js";
 import {
   cancelHeartbeatNativeRun,
@@ -2755,7 +2756,8 @@ export function heartbeatService(
             })
           : null;
       context.executionContinuation = executionContinuation;
-      const paperclipWakePayload = await buildPaperclipWakePayload({
+      const sharedAgentInstructions = await resolveSharedAgentInstructions(db, agent.companyId);
+      const taskWakePayload = await buildPaperclipWakePayload({
         db,
         companyId: agent.companyId,
         agentId: agent.id,
@@ -2780,8 +2782,13 @@ export function heartbeatService(
           experimentalInstanceSettings.enableSimplifiedEnglishInteractions ===
           true,
       });
+      const paperclipWakePayload = taskWakePayload
+        ? { ...taskWakePayload, sharedAgentInstructions: sharedAgentInstructions.text }
+        : null;
       if (paperclipWakePayload) {
         context[PAPERCLIP_WAKE_PAYLOAD_KEY] = paperclipWakePayload;
+      } else if (sharedAgentInstructions.text) {
+        context[PAPERCLIP_WAKE_PAYLOAD_KEY] = { sharedAgentInstructions: sharedAgentInstructions.text };
       } else {
         delete context[PAPERCLIP_WAKE_PAYLOAD_KEY];
       }
@@ -3242,7 +3249,10 @@ export function heartbeatService(
       const sessionConfigMetadataInput = {
           agentIdentityKeyId: agentIdentity?.keyId,
           adapterType: agent.adapterType,
-          effectiveAdapterConfig: runtimeConfig,
+          effectiveAdapterConfig: {
+            ...runtimeConfig,
+            ...(sharedAgentInstructions.text ? { paperclipSharedInstructionsRevision: sharedAgentInstructions.sha256 } : {}),
+          },
           managedAiHome: managedAiRuntime?.home,
           agentRuntimeConfig: agent.runtimeConfig,
           issueOverrides: issueAssigneeOverrides,
@@ -3313,7 +3323,7 @@ export function heartbeatService(
           ? await db.select().from(agentConfigRevisions).where(and(eq(agentConfigRevisions.companyId, agent.companyId), eq(agentConfigRevisions.agentId, agent.id))).orderBy(desc(agentConfigRevisions.createdAt), desc(agentConfigRevisions.id)).limit(21)
           : [];
         const candidates = aiConnectionSessionCompatibilityInputs({
-          effectiveAdapterConfig: runtimeConfig, agentRuntimeConfig: agent.runtimeConfig,
+          effectiveAdapterConfig: sessionConfigMetadataInput.effectiveAdapterConfig, agentRuntimeConfig: agent.runtimeConfig,
           agentConfigRevision: sessionConfigMetadataInput.agentConfigRevision,
           issueOverrides: issueAssigneeOverrides, originalIssueOverrides: originalAiIssueOverrides,
           binding: aiBinding, router: requestedAiBinding?.mode === "router",

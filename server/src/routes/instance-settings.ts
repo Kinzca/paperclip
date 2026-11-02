@@ -241,7 +241,7 @@ export function instanceSettingsRoutes(db: Db, pluginWorkers?: PluginWorkerManag
             entityType: "instance_settings",
             entityId: updated.id,
             details: {
-              general: updated.general,
+              general: { ...updated.general, agentInstructions: undefined },
               changedKeys: Object.keys(req.body).sort(),
             },
           }),

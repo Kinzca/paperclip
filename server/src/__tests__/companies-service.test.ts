@@ -107,6 +107,19 @@ describeEmbeddedPostgres("companyService", () => {
     expect(rows.map((row) => row.issuePrefix).sort()).toEqual(["ARO", "AROA"]);
   });
 
+  it("round-trips organization instructions through settings writes, detail reads, and the organization list", async () => {
+    const service = companyService(db);
+    const first = await service.create({ name: "Studio One" });
+    const second = await service.create({ name: "Studio Two" });
+    expect((await service.getById(first.id))?.agentInstructions).toBe("");
+    expect((await service.update(first.id, { agentInstructions: "Preserve evidence." }))?.agentInstructions).toBe("Preserve evidence.");
+    expect((await service.getById(first.id))?.agentInstructions).toBe("Preserve evidence.");
+    const listed = await service.list();
+    expect(listed.find(company => company.id === first.id)?.agentInstructions).toBe("Preserve evidence.");
+    expect(listed.find(company => company.id === second.id)?.agentInstructions).toBe("");
+    expect((await service.update(first.id, { agentInstructions: "" }))?.agentInstructions).toBe("");
+  });
+
   it("does not auto-provision bundled built-in agents for a freshly created company", async () => {
     const created = await companyService(db).create({
       name: "Fresh Company",

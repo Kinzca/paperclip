@@ -1,5 +1,10 @@
 # Paperclip V1 Implementation Spec
 
+Shared agent instructions (2026-11-03): instance administrators can configure
+guidance for all organizations; board users can add organization-scoped guidance.
+Each admitted run receives the current layers, including resumed sessions.
+See [shared-agent-instructions.md](shared-agent-instructions.md) for the contract.
+
 Addendum (2026-11-02): assigned standard roots support inherited, versioned native
 task workflows. See [NATIVE-WORKFLOWS.md](NATIVE-WORKFLOWS.md) for admission,
 bounded DAG execution, explicit review, recovery and governed template improvement.

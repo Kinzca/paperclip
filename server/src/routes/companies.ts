@@ -1313,7 +1313,11 @@ export function companyRoutes(db: Db, storage?: StorageService, options?: Compan
         action: "company.updated",
         entityType: "company",
         entityId: companyId,
-        details: body,
+        details: {
+          ...body,
+          agentInstructions: undefined,
+          ...(body.agentInstructions !== undefined ? { changedKeys: Object.keys(body).sort() } : {}),
+        },
       });
     }
     res.json(company);

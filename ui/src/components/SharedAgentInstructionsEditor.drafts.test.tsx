@@ -1,0 +1,41 @@
+// @vitest-environment jsdom
+import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { expect, it, vi } from "vitest";
+import { SharedAgentInstructionsEditor } from "./SharedAgentInstructionsEditor";
+
+it("preserves external-update conflicts across scope switches and reloads without leaking drafts to another account", async () => {
+  sessionStorage.clear();
+  const container = document.createElement("div"); document.body.append(container);
+  let root = createRoot(container);
+  let client = new QueryClient();
+  const save = vi.fn(async () => {});
+  const render = (draftKey: string, value: string) => flushSync(() => root.render(<QueryClientProvider client={client}><SharedAgentInstructionsEditor key={draftKey} draftKey={draftKey} title="Rules" description="Every run" saveLabel="Save rules" value={value} onSave={save} /></QueryClientProvider>));
+  render("alice:studio-a", "Saved A");
+  const textarea = container.querySelector("textarea")!;
+  flushSync(() => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(textarea, "My draft"); textarea.dispatchEvent(new Event("input", { bubbles: true })); });
+  await vi.waitFor(() => expect(container.textContent).toContain("Unsaved draft"));
+  render("alice:studio-a", "Changed elsewhere");
+  await vi.waitFor(() => expect(container.textContent).toContain("Saved rules changed elsewhere"));
+  expect(container.querySelector("textarea")!.value).toBe("My draft");
+  expect(Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Save rules")!.disabled).toBe(true);
+  render("alice:studio-b", "Saved B");
+  expect(container.querySelector("textarea")!.value).toBe("Saved B");
+  render("alice:studio-a", "Changed elsewhere");
+  expect(container.querySelector("textarea")!.value).toBe("My draft");
+  flushSync(() => Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Keep my draft")!.click());
+  await vi.waitFor(() => expect(Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Save rules")!.disabled).toBe(false));
+  render("alice:studio-a", "Another update");
+  await vi.waitFor(() => expect(container.textContent).toContain("Saved rules changed elsewhere"));
+  flushSync(() => root.unmount()); client.clear();
+  root = createRoot(container); client = new QueryClient();
+  render("bob:studio-a", "Another update");
+  expect(container.querySelector("textarea")!.value).toBe("Another update");
+  render("alice:studio-a", "Another update");
+  expect(container.querySelector("textarea")!.value).toBe("My draft");
+  flushSync(() => Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Discard changes")!.click());
+  await vi.waitFor(() => expect(container.querySelector("textarea")!.value).toBe("Another update"));
+  expect(save).not.toHaveBeenCalled();
+  flushSync(() => root.unmount()); client.clear(); container.remove(); sessionStorage.clear();
+});

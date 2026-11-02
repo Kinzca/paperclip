@@ -50,6 +50,14 @@ Paperclip supports several ways to run an agent's heartbeat:
 
 Agent runs can use project and execution workspaces, managed runtime services such as preview/dev servers, adapter-specific session state, and HTTP/webhook-style execution. We provide sensible defaults, but the adapter is still the boundary: if a runtime can be invoked, observed, and authorized, Paperclip can coordinate it.
 
+### Shared agent instructions
+
+Operators configure instance-wide guidance once and optionally add
+organization-specific instructions. Existing and newly hired agents receive the
+current combined guidance on subsequent runs without rewriting each role's
+instructions. These prompts supplement existing roles and do not change runtime
+permissions, approvals, or budget gates. See [Shared Agent Instructions](shared-agent-instructions.md).
+
 ### Task Management
 
 Task management is hierarchical. At any moment, every piece of work must trace back to the company's top-level goal through a chain of parent tasks:

@@ -40,7 +40,7 @@ if (!existsSync(office)) {
     throw new Error(`已有 Office 工作区与固定版本不同，请保留后另行处理：${office}`);
   }
 }
-runNode([pnpm, 'install', '--frozen-lockfile', '--ignore-scripts'], { cwd: office });
+runNode([pnpm, 'install', '--ignore-workspace', '--frozen-lockfile', '--ignore-scripts'], { cwd: office });
 run('npm', ['run', 'build'], { cwd: office, env: { ...env, PAPERCLIP_SDK_DIST: path.join(root, 'packages/plugins/sdk/dist') } });
 const { readFileSync } = await import('node:fs');
 const wikiVersion = JSON.parse(readFileSync(path.join(wiki, 'package.json'), 'utf8')).version;

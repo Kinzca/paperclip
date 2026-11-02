@@ -629,6 +629,26 @@ describe("instance settings routes", () => {
     });
   });
 
+  it.each(["Use Chinese.\nRecord evidence.", ""])("saves global instructions and omits their text from audit details: %j", async (agentInstructions) => {
+    const app = createApp({ type: "board", userId: "local-board", source: "local_implicit", isInstanceAdmin: true });
+    mockInstanceSettingsService.updateGeneral.mockResolvedValue({ id: "settings-1", general: { agentInstructions } });
+    const res = await request(app).patch("/api/instance/settings/general").send({ agentInstructions }).expect(200);
+    expect(res.body.agentInstructions).toBe(agentInstructions);
+    expect(mockInstanceSettingsService.updateGeneral).toHaveBeenCalledWith({ agentInstructions });
+    expect(mockLogActivity).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      details: { general: { agentInstructions: undefined }, changedKeys: ["agentInstructions"] },
+    }));
+  });
+
+  it.each([
+    { type: "agent", agentId: "agent-1", companyId: "company-1", source: "agent_key" },
+    { type: "board", userId: "member", source: "session", isInstanceAdmin: false, companyIds: ["company-1"] },
+  ])("rejects global instruction edits by $type without instance administration", async (actor) => {
+    const app = createApp(actor);
+    await request(app).patch("/api/instance/settings/general").send({ agentInstructions: "Replace operator guidance" }).expect(403);
+    expect(mockInstanceSettingsService.updateGeneral).not.toHaveBeenCalled();
+  });
+
   it("rejects signed-in users without company access from reading general settings", async () => {
     const app = await createApp({
       type: "board",

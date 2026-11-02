@@ -87,13 +87,22 @@ async function executeProcess(ctx: AdapterExecutionContext): Promise<AdapterExec
   let instructionsDirectory: string | undefined;
   // Override configured/inherited paths even when the connection was removed.
   env.PAPERCLIP_CONNECTION_INSTRUCTIONS_FILE = "";
+  env.PAPERCLIP_SHARED_AGENT_INSTRUCTIONS_FILE = "";
+  const sharedInstructions = asString(parseObject(ctx.context.paperclipWake).sharedAgentInstructions, "");
   let proc: Awaited<ReturnType<typeof runChildProcess>>;
   try {
-    if (typeof instructions.text === "string" && instructions.text) {
+    if ((typeof instructions.text === "string" && instructions.text) || sharedInstructions) {
       instructionsDirectory = await mkdtemp(join(tmpdir(), "paperclip-connection-instructions-"));
+    }
+    if (instructionsDirectory && typeof instructions.text === "string" && instructions.text) {
       const instructionsFile = join(instructionsDirectory, "instructions.json");
       await writeFile(instructionsFile, JSON.stringify(instructions), { mode: 0o600 });
       env.PAPERCLIP_CONNECTION_INSTRUCTIONS_FILE = instructionsFile;
+    }
+    if (instructionsDirectory && sharedInstructions) {
+      const sharedInstructionsFile = join(instructionsDirectory, "shared-agent-instructions.md");
+      await writeFile(sharedInstructionsFile, sharedInstructions, { mode: 0o600 });
+      env.PAPERCLIP_SHARED_AGENT_INSTRUCTIONS_FILE = sharedInstructionsFile;
     }
     proc = await runChildProcess(runId, command, args, {
       cwd, env, timeoutSec, graceSec, onLog, onSpawn: ctx.onSpawn,

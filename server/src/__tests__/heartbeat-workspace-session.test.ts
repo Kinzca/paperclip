@@ -2340,6 +2340,14 @@ function sessionParamsWithConfigMetadata(
 }
 
 describe("effective run session config freshness", () => {
+  it("keeps unchanged shared guidance and resets sessions when guidance changes or is cleared", async () => {
+    const first = await buildSessionConfigMetadata({ effectiveAdapterConfig: { paperclipSharedInstructionsRevision: "revision-one" } });
+    for (const [revision, reset] of [["revision-one", false], ["revision-two", true], [null, true]] as const) {
+      const next = await buildSessionConfigMetadata({ effectiveAdapterConfig: revision ? { paperclipSharedInstructionsRevision: revision } : {} });
+      expect(resolveTaskSessionConfigFreshness({ hasTaskSession: true, configuredModel: "gpt-5.4-mini", taskSessionParams: sessionParamsWithConfigMetadata(first), configMetadata: next }).reset).toBe(reset);
+    }
+  });
+
   it("resets legacy sessions after connection instructions change or disappear", async () => {
     const first = await buildSessionConfigMetadata({ effectiveAdapterConfig: { paperclipConnectionInstructions: { text: "Use the handbook.", digest: "before" } } });
     for (const instructions of [null, { text: "Use the updated handbook.", digest: "after" }]) {

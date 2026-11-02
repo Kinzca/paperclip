@@ -17,6 +17,7 @@ describe("LCA-05 explicit native work mode", () => {
         agentId: "30000000-0000-4000-8000-000000000003",
         issue: { id: "20000000-0000-4000-8000-000000000002", identifier: "MODE-1", title: text, description: text, workMode },
         taskPrompt: text,
+        wakePayload: { sharedAgentInstructions: "CURRENT_SHARED_AGENT_GUIDANCE" },
         workspace: { id: "50000000-0000-4000-8000-000000000005", cwd: "/workspace", repoUrl: null, repoRef: null, branchName: null },
         normalizedSessionId: null,
         provider: "codex",
@@ -29,6 +30,7 @@ describe("LCA-05 explicit native work mode", () => {
       expect(input.provider).toMatchObject({ kind: "codex", reasoningEffort: "high" });
       expect(input.executionMode).toBe(workMode === "planning" ? "plan" : "default");
       expect(input.task.title).toBe(text);
+      expect(input.task.prompt).toContain("CURRENT_SHARED_AGENT_GUIDANCE");
     }
   });
 });

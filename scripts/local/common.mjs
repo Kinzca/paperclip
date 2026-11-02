@@ -28,6 +28,11 @@ export const env = {
 // 本安装入口只使用 Codex 订阅登录，避免环境中的 Key 覆盖订阅身份。
 delete env.OPENAI_API_KEY;
 export function run(command, args, options = {}) {
+  // Windows npm is a .cmd shim; invoke its JS entry without a shell.
+  if (process.platform === "win32" && command === "npm") {
+    args = [path.join(path.dirname(process.execPath), "node_modules/npm/bin/npm-cli.js"), ...args];
+    command = process.execPath;
+  }
   const result = spawnSync(command, args, { cwd: root, env, stdio: 'inherit', ...options });
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`${command} 退出：${result.status ?? result.signal}`);

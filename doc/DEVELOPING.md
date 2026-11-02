@@ -1,5 +1,8 @@
 # Developing
 
+The centrally configured prompt layers and adapter delivery contract are in
+[shared-agent-instructions.md](shared-agent-instructions.md).
+
 Native inherited task workflows are documented in
 [NATIVE-WORKFLOWS.md](NATIVE-WORKFLOWS.md), including targeted tests and deployment
 boundaries. Their integration tests use an isolated embedded PostgreSQL database

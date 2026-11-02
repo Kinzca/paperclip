@@ -1,5 +1,10 @@
 # Paperclip Specification
 
+Shared agent instructions provide centrally managed instance-wide guidance with
+organization-specific additions, attached to subsequent agent runs. These prompt
+layers preserve platform permissions, approval gates and company isolation.
+See [shared-agent-instructions.md](shared-agent-instructions.md).
+
 Native task workflows (2026-11-02) make bounded execution, verification, independent
 review and explicit repair a company/project-inherited control-plane capability.
 See the implementation contract in [NATIVE-WORKFLOWS.md](NATIVE-WORKFLOWS.md).

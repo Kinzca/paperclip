@@ -29,6 +29,8 @@ export const DEFAULT_BACKUP_RETENTION: BackupRetentionPolicy = {
 export type InstanceExecutionMode = "kubernetes" | "any";
 
 export interface InstanceGeneralSettings {
+  /** Shared guidance for every agent run, across organizations. */
+  agentInstructions?: string;
   censorUsernameInLogs: boolean;
   feedbackDataSharingPreference: FeedbackDataSharingPreference;
   backupRetention: BackupRetentionPolicy;

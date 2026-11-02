@@ -224,6 +224,20 @@ describe("company route cross-company authorization", () => {
     resetMockDefaults();
   });
 
+  it("limits organization instruction edits to board users in the target company", async () => {
+    const memberApp = await createApp(boardActor({ userId: "member-a", companyIds: [companyAId], memberships: [{ companyId: companyAId, membershipRole: "member", status: "active" }] }));
+    await request(memberApp).patch(`/api/companies/${companyAId}`).send({ agentInstructions: "Studio A guidance" }).expect(200);
+    expect(mockCompanyService.update).toHaveBeenCalledWith(companyAId, { agentInstructions: "Studio A guidance" }, expect.anything());
+    expect(mockLogActivity).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ details: { agentInstructions: undefined, changedKeys: ["agentInstructions"] } }));
+    vi.clearAllMocks();
+    await request(memberApp).patch(`/api/companies/${companyBId}`).send({ agentInstructions: "Cross-company edit" }).expect(403);
+    expect(mockCompanyService.update).not.toHaveBeenCalled();
+    const agentApp = await createApp(companyACeoActor());
+    await request(agentApp).patch(`/api/companies/${companyAId}`).send({ agentInstructions: "Agent replaces guidance" }).expect(400);
+    await request(agentApp).patch(`/api/companies/${companyAId}/branding`).send({ agentInstructions: "Agent replaces guidance" }).expect(400);
+    expect(mockCompanyService.update).not.toHaveBeenCalled();
+  });
+
   it.each(["session", "board_key", "cloud_tenant"])(
     "limits navigable companies to memberships for a %s instance admin",
     async (source) => {

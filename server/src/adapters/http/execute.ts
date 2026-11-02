@@ -16,6 +16,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     agentId: agent.id,
     runId,
     context,
+    sharedAgentInstructions: parseObject(context.paperclipWake).sharedAgentInstructions ?? "",
     connectionInstructions: context.connectionInstructions ?? null,
     ...(ctx.runtimeTools ? { paperclipRuntimeTools: ctx.runtimeTools } : {}),
   };

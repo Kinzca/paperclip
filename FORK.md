@@ -142,3 +142,27 @@ node scripts/local/install-wiki.mjs --upgrade
 固定 UI 资源位于 `ui/src/i18n/messages/{en,zh-CN}-ui.json`，与原有 app 命名空间分开。SDK 前端桥新增 `useHostLocale` / `translateUi`，为插件提供同一语言选择和译文。Office / Wiki 与宿主配套升级，不单独升级到缺少接口的旧宿主。详细维护说明见 [双语界面说明](doc/plugins/UI-LANGUAGE.md)。
 
 本轮只实现、构建、提交和部署，没有运行开发测试、单独类型检查、代码审查、机械设计检测、浏览器或 Agent 任务验收。构建包含生成必需 SDK 产物的 TypeScript 编译。
+
+
+## 本机 Windows 安装记录（2026-11-02）
+
+安装目录：`D:\Projects\Tool\paperclip`。使用目录内独立的 Node.js 24.22.2，不替换系统 Node。双击 `Start-Paperclip.cmd` 启动服务，再打开 http://127.0.0.1:3100 。双击 `Login-Codex.cmd` 完成此工具独立 Codex 目录的订阅登录；本次没有复制其他应用的凭据。后续重建可使用 `Setup-Paperclip.cmd`，先停止服务。
+
+本机兼容修正：npm 通过 Node 调用 JS 入口；补齐原 npm 锁文件缺失的 fsevents@2.3.3 记录，保留其余版本；Office 安装使用 --ignore-workspace；补丁目录强制 LF，保留原 SHA256 校验。源码采用部分克隆，仅检出根文件、scripts、patches、packages、ui，缺少的其他目录可按需通过 git sparse-checkout add 获取。
+
+已验证宿主 UI、SDK、Office 0.4.0、Wiki 0.1.3 构建成功，嵌入式数据库首次初始化、服务健康接口及正式插件登记通过。浏览器自动化因不能可靠确认当前网址而停止，页面渲染及实际 Agent 任务未验收。没有创建公司、员工或任务。详细版本与检查结果见 .paperclip-local/installation.json。
+
+## 共享 Agent 规则与设置草稿（2026-11-03）
+
+`codex/native-workflow-engine` 分支新增实例全局 Agent 提示词和组织补充规则。
+“设置 → 常规 → Agent 运行规则”集中展示两层规则，分别保存，并可查看已保存的共享规则预览。
+后续运行使用最新规则；修改或清空规则会更新会话配置，不会改变沙箱、审批和预算约束。
+
+草稿按账号和组织保留在当前浏览器标签页中。外部更新不会直接覆盖未保存内容，
+保存组织规则也不会清掉同页尚未保存的名称和描述。全局编辑入口对非实例管理员只读。
+接口、存储、迁移及适配器接入说明见 [共享规则文档](doc/shared-agent-instructions.md)。
+
+后端源码包含迁移 `0335`。固定安装器仍以发布服务 `2026.1023.0` 为基础；
+仅替换 UI 或运行旧的安装入口，不能视为已经升级这些后端功能。
+从其他电脑部署时，需要配套构建本分支后端并应用迁移；本机运行时覆盖和实例数据位于被忽略的
+`.paperclip-local/` 中，不随源码提交同步。

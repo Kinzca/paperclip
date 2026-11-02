@@ -30,6 +30,9 @@ import {
   ToggleField,
 } from "../components/agent-config-primitives";
 import { InstanceGeneralSettings } from "./InstanceGeneralSettings";
+import { SharedAgentInstructionsSettings } from "../components/SharedAgentInstructionsSettings";
+import { useSettingsDraft } from "../hooks/useSettingsDraft";
+import { useAccountIdentity } from "../api/companies-query";
 import { DecisionModelSettingsSection } from "../components/decision-models/DecisionModelSettings";
 import { useFastResponsesEnabled } from "../hooks/useFastResponsesEnabled";
 
@@ -51,8 +54,11 @@ export function CompanySettings() {
   // rename here also renumbers the existing task IDs.
   const isCloudManaged = Boolean(cloud);
   // General settings local state
-  const [companyName, setCompanyName] = useState("");
-  const [description, setDescription] = useState("");
+  const { userId } = useAccountIdentity();
+  const nameDraft = useSettingsDraft(JSON.stringify([userId ?? "local-board", selectedCompanyId, "name"]), selectedCompany?.name ?? "");
+  const descriptionDraft = useSettingsDraft(JSON.stringify([userId ?? "local-board", selectedCompanyId, "description"]), selectedCompany?.description ?? "");
+  const companyName = nameDraft.text;
+  const description = descriptionDraft.text;
   const [logoUrl, setLogoUrl] = useState("");
   const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
   const [governance, setGovernance] = useState<InteractionResolverGovernance>({});
@@ -60,8 +66,6 @@ export function CompanySettings() {
   // Sync local state from selected company
   useEffect(() => {
     if (!selectedCompany) return;
-    setCompanyName(selectedCompany.name);
-    setDescription(selectedCompany.description ?? "");
     setLogoUrl(selectedCompany.logoUrl ?? "");
     setGovernance(selectedCompany.interactionResolverGovernance ?? {});
   }, [selectedCompany]);
@@ -73,10 +77,13 @@ export function CompanySettings() {
 
   const generalMutation = useMutation({
     mutationFn: (data: {
-      name: string;
-      description: string | null;
-    }) => companiesApi.update(selectedCompanyId!, data),
-    onSuccess: () => {
+      companyId: string;
+      nameDraft: ReturnType<typeof useSettingsDraft>;
+      descriptionDraft: ReturnType<typeof useSettingsDraft>;
+    }) => companiesApi.update(data.companyId, { name: data.nameDraft.text.trim(), description: data.descriptionDraft.text.trim() || null }),
+    onSuccess: (company, submitted) => {
+      submitted.nameDraft.saved(submitted.nameDraft.text, company.name);
+      submitted.descriptionDraft.saved(submitted.descriptionDraft.text, company.description ?? "");
       queryClient.invalidateQueries({ queryKey: queryKeys.companies.all });
     }
   });
@@ -210,8 +217,9 @@ export function CompanySettings() {
 
   function handleSaveGeneral() {
     generalMutation.mutate({
-      name: companyName.trim(),
-      description: description.trim() || null
+      companyId: selectedCompanyId!,
+      nameDraft,
+      descriptionDraft,
     });
   }
 
@@ -231,7 +239,7 @@ export function CompanySettings() {
               className="w-full rounded-md border border-border bg-transparent px-2.5 py-1.5 text-sm outline-none"
               type="text"
               value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
+              onChange={(e) => nameDraft.change(e.target.value)}
             />
             {isCloudManaged && (
               <p className="mt-1 text-xs text-muted-foreground">{uiText("Renaming can change this company's task ID prefix. Existing task IDs are renumbered and old task links stop resolving.")}</p>
@@ -246,7 +254,7 @@ export function CompanySettings() {
               type="text"
               value={description}
               placeholder={uiText("Optional organization description")}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => descriptionDraft.change(e.target.value)}
             />
           </Field>
         </div>
@@ -334,6 +342,8 @@ export function CompanySettings() {
         </div>
       )}
 
+      <SharedAgentInstructionsSettings company={selectedCompany} />
+
       {/* Hiring */}
       <div className="max-w-2xl space-y-4" data-testid="company-settings-team-section">
         <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{uiText("Hiring")}</div>
@@ -366,7 +376,7 @@ export function CompanySettings() {
         <DecisionModelSettingsSection key={selectedCompanyId} companyId={selectedCompanyId!} />
       )}
 
-      <InstanceGeneralSettings embedded />
+      <InstanceGeneralSettings embedded showAgentInstructions={false} />
 
       {/* Danger Zone */}
       <div className="space-y-4">

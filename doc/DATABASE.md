@@ -1,5 +1,10 @@
 # Database
 
+Shared agent instructions: `instance_settings.general.agentInstructions` stores
+instance-wide guidance; `companies.agent_instructions` stores organization-scoped
+additions (migration 0335). Both default to no guidance. See
+[shared-agent-instructions.md](shared-agent-instructions.md).
+
 Native task workflows add company-scoped `workflow_template_revisions`,
 `workflow_policies`, `workflow_runs`, `workflow_node_attempts` and
 `workflow_evaluations`. Runs retain immutable JSON snapshots, node state, bounded

@@ -77,6 +77,7 @@ export type HideableCompanySection = (typeof HIDEABLE_COMPANY_SECTIONS)[number];
  * field; `deploymentStatus` and `signOut` are read-only UI with no field.
  */
 export const HIDEABLE_GENERAL_SECTIONS = [
+  "instance.general.agentInstructions",
   "instance.general.deploymentStatus",
   "instance.general.censorUsernameInLogs",
   "instance.general.backupRetention",

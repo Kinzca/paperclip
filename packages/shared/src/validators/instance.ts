@@ -23,6 +23,7 @@ export const backupRetentionPolicySchema = z.object({
 });
 
 export const instanceGeneralSettingsSchema = z.object({
+  agentInstructions: z.string().max(32000).optional(),
   censorUsernameInLogs: z.boolean().default(false),
   feedbackDataSharingPreference: feedbackDataSharingPreferenceSchema.default(
     DEFAULT_FEEDBACK_DATA_SHARING_PREFERENCE,
