@@ -41,7 +41,7 @@ import { usePublishSharedQueryData, useSharedPollingQuery } from "../hooks/useSh
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn, SIDEBAR_RAIL_HIDDEN_LABEL } from "../lib/utils";
 import { PluginSlotOutlet } from "@/plugins/slots";
-import { PluginLauncherOutlet } from "@/plugins/launchers";
+import { SidebarPlugins } from "./SidebarPlugins";
 import { SidebarCompanyMenu } from "./SidebarCompanyMenu.production";
 
 export function Sidebar() {
@@ -208,21 +208,6 @@ export function Sidebar() {
               <SidebarStarredProjects />
             </>
           ) : null}
-          <PluginSlotOutlet
-            errorBehavior="hidden"
-            slotTypes={["sidebar"]}
-            context={pluginContext}
-            className="flex flex-col gap-0.5"
-            itemClassName="text-(length:--text-compact) font-medium"
-            missingBehavior="placeholder"
-          />
-          <PluginLauncherOutlet
-            errorBehavior="hidden"
-            placementZones={["sidebar"]}
-            context={pluginContext}
-            className="flex flex-col gap-0.5"
-            itemClassName="text-(length:--text-compact) font-medium"
-          />
         </SidebarSection>
 
         {/* Classic mode restores the per-project collapsible below Work. */}
@@ -239,6 +224,8 @@ export function Sidebar() {
           <SidebarNavItem to="/activity" label="Activity" icon={History} />
           <SidebarNavItem to="/company/settings" label="Settings" icon={Settings} />
         </SidebarSection>
+
+        <SidebarPlugins context={pluginContext} />
 
         <PluginSlotOutlet
           errorBehavior="hidden"

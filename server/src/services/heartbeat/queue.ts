@@ -1,3 +1,4 @@
+import { isStageHandoff, isCurrentStageWait, stageWaitSnapshot } from "./stage-handoff.js";
 import { isAgentAwaitingSetup } from "../../modules/agent-lifecycle/index.js";
 import { normalizeAgentNameKey } from "./retries.js";
 import { publishActiveDotComment } from "../dot-assignment-follow-up.js";
@@ -2671,7 +2672,7 @@ export function createHeartbeatQueue(db: Db, dependencies: HeartbeatQueueDepende
               eq(agentWakeupRequests.agentId, agentId), eq(agentWakeupRequests.status, "deferred_issue_execution"),
               // A user message can join a queue originally created by a
               // system wake. Admission validates the saved user comment or board click.
-              (opts.queuedCommentInterruptId ?? opts.queuedCommentRequestId) === executionWaitRequestId
+              (opts.queuedCommentInterruptId ?? opts.queuedCommentRequestId ?? opts.executionStageWaitId) === executionWaitRequestId
                 ? undefined : eq(agentWakeupRequests.requestedByActorType, "user"),
               opts.queuedCommentInterruptId === executionWaitRequestId
                 ? sql`${agentWakeupRequests.payload}->'queuedCommentInterrupt'->>'actorId' = ${opts.requestedByActorId ?? ""}`
@@ -2681,7 +2682,11 @@ export function createHeartbeatQueue(db: Db, dependencies: HeartbeatQueueDepende
             ));
             // The issue lock serializes cleanup callbacks and periodic workers.
             // An adopted, discarded, or edited receipt is no longer authority.
-            if (!pending || (!(wakeCommentId && queuedCommentIdsFromWakePayload(pending.payload).includes(wakeCommentId)) &&
+            const stageReceipt = pending && opts.executionStageWaitId === executionWaitRequestId &&
+              isCurrentStageWait(await tx.select().from(issues).where(and(
+                eq(issues.id, issueId), eq(issues.companyId, agent.companyId),
+              )).then(rows => rows[0]), pending);
+            if (!pending || (!stageReceipt && !(wakeCommentId && queuedCommentIdsFromWakePayload(pending.payload).includes(wakeCommentId)) &&
                 !(opts.queuedCommentInterruptId && await readQueuedInteractionResponse(tx as unknown as Db,
                   agent.companyId, issueId, pending.payload)))) {
               return { kind: "deferred" as const };
@@ -2877,6 +2882,7 @@ export function createHeartbeatQueue(db: Db, dependencies: HeartbeatQueueDepende
               conversationState: issues.conversationState,
               status: issues.status,
               statusVersion: issues.statusVersion,
+              executionState: issues.executionState,
               projectId: issues.projectId,
               projectWorkspaceId: issues.projectWorkspaceId,
               executionWorkspaceId: issues.executionWorkspaceId,
@@ -3105,7 +3111,7 @@ export function createHeartbeatQueue(db: Db, dependencies: HeartbeatQueueDepende
               }).where(eq(agentWakeupRequests.id, executionWaitRequestId));
               return { kind: "deferred" as const };
             }
-            if (durableRequest || wakeCommentId ||
+            if (durableRequest || wakeCommentId || isStageHandoff(source, reason, enrichedContextSnapshot) ||
                 hasInteractionContinuationWakeContext(enrichedContextSnapshot) ||
                 readNonEmptyString(enrichedContextSnapshot.nativeStatusWakeIntentId)) {
               await tx.insert(agentWakeupRequests).values({
@@ -3115,6 +3121,8 @@ export function createHeartbeatQueue(db: Db, dependencies: HeartbeatQueueDepende
                   ...payload,
                   issueId: issue.id,
                   [DEFERRED_WAKE_CONTEXT_KEY]: enrichedContextSnapshot,
+                  ...(isStageHandoff(source, reason, enrichedContextSnapshot)
+                    ? { executionStageWait: stageWaitSnapshot(issue) } : {}),
                   executionWait: condition,
                 }, [...new Set([
                   ...queuedCommentIdsFromRunContext(enrichedContextSnapshot),
@@ -4500,6 +4508,7 @@ export function createHeartbeatQueue(db: Db, dependencies: HeartbeatQueueDepende
           .select({
             status: issues.status,
             statusVersion: issues.statusVersion,
+            executionState: issues.executionState,
             assigneeAgentId: issues.assigneeAgentId,
           })
           .from(issues)

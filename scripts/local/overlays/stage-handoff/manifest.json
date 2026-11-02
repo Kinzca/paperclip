@@ -1,0 +1,17 @@
+{
+  "package": "@paperclipai/server",
+  "version": "2026.1023.0",
+  "files": {
+    "queue.js": {
+      "patched": "d584335104b9b6a379471f518125b18bffcead9a3a79f731329a250205c831d2",
+      "original": "30fd59f55e0a67a5cddfc73d10214d00eac4aac5a1170680b7007eaffd6405c6"
+    },
+    "run-control.js": {
+      "patched": "4d444aadf90effe31ed98ea0c965b007434b2ad91ab24a18e8190a252d75f1e4",
+      "original": "a337063d296290ae63e03e424e25328fbb373e050dd496778fc9e2d29b2836a7"
+    },
+    "stage-handoff.js": {
+      "patched": "e09dffac1ea2b893a75f6dd01c8461bb9e12630c2c7b4b7a359120f1c3de8a6b"
+    }
+  }
+}

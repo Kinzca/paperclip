@@ -1,3 +1,5 @@
+> **本地定制版：** 请先阅读 [中文安装与定制说明](FORK.md)，使用 `codex-local` 分支。
+
 <p align="center">
   <img src="doc/assets/banner.jpg" alt="Paperclip is the app people use to manage AI agents for work." width="720" />
 </p>

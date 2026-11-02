@@ -46,7 +46,7 @@ import { usePublishSharedQueryData, useSharedPollingQuery } from "../hooks/useSh
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn, SIDEBAR_RAIL_HIDDEN_LABEL } from "../lib/utils";
 import { PluginSlotOutlet } from "@/plugins/slots";
-import { PluginLauncherOutlet } from "@/plugins/launchers";
+import { SidebarPlugins } from "./SidebarPlugins";
 import { SidebarCompanyMenu } from "./SidebarCompanyMenu";
 import { primarySidebarStyles } from "./primary-sidebar-styles";
 
@@ -252,21 +252,6 @@ export function Sidebar({ children }: { children?: ReactNode }) {
           {showWorkspacesLink ? (
             <SidebarNavItem to="/workspaces" label="Workspaces" icon={GitBranch} />
           ) : null}
-          <PluginSlotOutlet
-            errorBehavior="hidden"
-            slotTypes={["sidebar"]}
-            context={pluginContext}
-            className="flex flex-col gap-0.5"
-            itemClassName="text-(length:--text-compact) font-medium"
-            missingBehavior="placeholder"
-          />
-          <PluginLauncherOutlet
-            errorBehavior="hidden"
-            placementZones={["sidebar"]}
-            context={pluginContext}
-            className="flex flex-col gap-0.5"
-            itemClassName="text-(length:--text-compact) font-medium"
-          />
         </SidebarSection>
 
         {streamlinedUiEnabled ? (
@@ -280,6 +265,8 @@ export function Sidebar({ children }: { children?: ReactNode }) {
             <SidebarNavItem to="/activity" label="Audit" icon={History} />
           </SidebarSection>
         ) : null}
+
+        <SidebarPlugins context={pluginContext} />
 
         {children ?? (streamlinedUiEnabled ? <SidebarAgents streamlined /> : null)}
 

@@ -1,0 +1,10 @@
+import { spawn } from 'node:child_process';
+import { existsSync, mkdirSync } from 'node:fs';
+import { cli, codexHome, env, runNode, root } from './common.mjs';
+import path from 'node:path';
+mkdirSync(codexHome, { recursive: true });
+runNode([path.join(root, 'scripts/local/apply-runtime.mjs')]);
+const child = spawn(process.execPath, [cli, ...(existsSync(env.PAPERCLIP_CONFIG) ? ['run'] : ['onboard', '--yes', '--no-install-service'])], { env, stdio: 'inherit' });
+for (const signal of ['SIGTERM', 'SIGINT']) process.on(signal, () => child.kill(signal));
+child.on('error', err => { console.error(err.message); process.exitCode = 1; });
+child.on('exit', code => { process.exitCode = code ?? 1; });

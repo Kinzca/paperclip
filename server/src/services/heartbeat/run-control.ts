@@ -1,3 +1,4 @@
+import { isCurrentStageWait } from "./stage-handoff.js";
 import { isHeartbeatRunTerminalStatus } from "./run-lifecycle.js";
 import { DEFERRED_WAKE_CONTEXT_KEY } from "./queue.js";
 import { CANCELLABLE_HEARTBEAT_RUN_STATUSES } from "./recovery.js";
@@ -634,6 +635,37 @@ export function createHeartbeatRunControl(db: Db, dependencies: HeartbeatRunCont
 
   async function resumeExecutionWaitComments() {
     if ((await getSchedulingSuppression()).suppressed) return;
+    // 保留现有本地修复：环境释放后，持久回执继续交回原队列准入。
+    const stageWaits = await db.select({ wake: agentWakeupRequests, issue: issues })
+      .from(agentWakeupRequests)
+      .innerJoin(issues, and(eq(issues.companyId, agentWakeupRequests.companyId),
+        sql`${issues.id}::text = ${agentWakeupRequests.payload}->>'issueId'`))
+      .innerJoin(companies, and(eq(companies.id, issues.companyId), eq(companies.status, "active")))
+      .where(and(eq(agentWakeupRequests.status, "deferred_issue_execution"),
+        sql`${agentWakeupRequests.payload}->>'executionStageWait' is not null`,
+        lte(agentWakeupRequests.updatedAt, new Date(Date.now() - 5_000))))
+      .orderBy(asc(agentWakeupRequests.updatedAt)).limit(50);
+    for (const { wake, issue } of stageWaits) {
+      const [claimed] = await db.update(agentWakeupRequests).set({ updatedAt: new Date() })
+        .where(and(eq(agentWakeupRequests.id, wake.id), eq(agentWakeupRequests.status, "deferred_issue_execution"),
+          lte(agentWakeupRequests.updatedAt, new Date(Date.now() - 5_000)))).returning({ id: agentWakeupRequests.id });
+      if (!claimed) continue;
+      if (!isCurrentStageWait(issue, wake)) {
+        await db.update(agentWakeupRequests).set({ status: "cancelled", finishedAt: new Date(), error: "Execution stage superseded" })
+          .where(and(eq(agentWakeupRequests.id, wake.id), eq(agentWakeupRequests.status, "deferred_issue_execution")));
+        continue;
+      }
+      if (await getExecutionBlocker(db, wake.companyId, issue.id)) continue;
+      await enqueueWakeup(wake.agentId, {
+        source: wake.source as WakeupOptions["source"],
+        triggerDetail: wake.triggerDetail as WakeupOptions["triggerDetail"], reason: wake.reason,
+        payload: wake.payload,
+        contextSnapshot: wake.payload?._paperclipWakeContext as Record<string, unknown>,
+        requestedByActorType: wake.requestedByActorType as WakeupOptions["requestedByActorType"],
+        requestedByActorId: wake.requestedByActorId, executionStageWaitId: wake.id,
+        issueStateGuard: { assigneeAgentId: wake.agentId, statuses: [issue.status], statusVersion: issue.statusVersion },
+      }, wake.id).catch(err => logger.warn({ err, wakeId: wake.id }, "stage handoff remains queued"));
+    }
     const waits = await db.select({ wake: agentWakeupRequests })
       .from(agentWakeupRequests)
       .innerJoin(issues, and(eq(issues.companyId, agentWakeupRequests.companyId),
