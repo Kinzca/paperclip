@@ -5,7 +5,7 @@ import { SidebarNavItem } from "./SidebarNavItem";
 import { SidebarNavButton } from "./SidebarNavButton";
 import { PluginSlotMount, usePluginSlots, type PluginSlotContext, type ResolvedPluginSlot } from "@/plugins/slots";
 import { usePluginLaunchers, usePluginLauncherRuntime, launcherDisplayName } from "@/plugins/launchers";
-import { pluginSidebarIcon, resolvePluginSidebarNavigation } from "@/plugins/sidebar-navigation";
+import { pluginSidebarHref, pluginSidebarIcon, resolvePluginSidebarNavigation } from "@/plugins/sidebar-navigation";
 
 function LegacyPluginSidebarSlot({ slot, context }: { slot: ResolvedPluginSlot; context: PluginSlotContext }) {
   usePluginSlots({ slotTypes: ["sidebar"], pluginId: slot.pluginId, companyId: context.companyId, enabled: !!context.companyId });
@@ -34,7 +34,7 @@ export function SidebarPlugins({ context }: { context: PluginSlotContext }) {
           const navigation = resolvePluginSidebarNavigation(slot, slots);
           return navigation ? (
             <SidebarNavItem key={`${slot.pluginKey}:${slot.id}`} label={slot.pluginKey === "agent-pixels.compat" ? uiText("Office") : slot.pluginKey === "paperclipai.plugin-llm-wiki" ? uiText("Wiki") : slot.displayName}
-              to={`/${navigation.routePath}`} icon={pluginSidebarIcon(navigation.icon)} />
+              to={pluginSidebarHref(`/${navigation.routePath}`, context.companyPrefix, slots)} icon={pluginSidebarIcon(navigation.icon)} />
           ) : (
             <LegacyPluginSidebarSlot key={`${slot.pluginKey}:${slot.id}`} slot={slot} context={context} />
           );
@@ -48,7 +48,8 @@ export function SidebarPlugins({ context }: { context: PluginSlotContext }) {
             && target.startsWith("/") && !target.startsWith("//");
           const key = `${launcher.pluginKey}:launcher:${launcher.id}`;
           return internalLink ? (
-            <SidebarNavItem key={key} label={label} to={target} icon={pluginSidebarIcon()} />
+            <SidebarNavItem key={key} label={label}
+              to={pluginSidebarHref(target, context.companyPrefix, contribution.slots)} icon={pluginSidebarIcon()} />
           ) : (
             <SidebarNavButton key={key} label={label}
               onClick={event => { void activateLauncher(launcher, context, contribution, event.currentTarget); }} />

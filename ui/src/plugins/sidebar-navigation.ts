@@ -5,6 +5,20 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ResolvedPluginSlot } from "./slots";
+import { isGlobalPath, normalizeCompanyPrefix } from "@/lib/company-routes";
+
+/** 通用路由无法识别动态插件路径；仅给已注册的插件页面补上当前公司前缀。 */
+export function pluginSidebarHref(
+  target: string,
+  companyPrefix: string | null | undefined,
+  slots: ReadonlyArray<Pick<ResolvedPluginSlot, "type" | "routePath">>,
+): string {
+  const pathname = target.split(/[?#]/, 1)[0]!;
+  if (!companyPrefix || !target.startsWith("/") || target.startsWith("//") || isGlobalPath(pathname)) return target;
+  const root = target.slice(1).split(/[/?#]/, 1)[0];
+  if (!slots.some(slot => slot.type === "page" && slot.routePath === root)) return target;
+  return `/${normalizeCompanyPrefix(companyPrefix)}${target}`;
+}
 
 const icons: Record<string, LucideIcon> = {
   activity: Activity, bell: Bell, "book-open": BookOpen, bot: Bot, boxes: Boxes,

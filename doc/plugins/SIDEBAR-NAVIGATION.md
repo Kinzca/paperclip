@@ -19,6 +19,8 @@ Plugins 分组中的普通入口由 Paperclip 宿主绘制，复用 SidebarNavIt
 
 同一个插件必须同时注册 `type: "page", routePath: "my-plugin"` 的页面。路径为单段小写字母、数字和连字符，由宿主路由自动补上当前公司前缀。不得放外部 URL、跨公司地址或完整 HTML。
 
+宿主通过 `pluginSidebarHref` 从当前选中公司的上下文构造完整地址，例如 `/COD/wiki`。不能直接将 `/wiki` 交给通用 NavLink：通用公司路由只识别内置页面，动态插件路径会被误判成公司前缀。已注册插件页面对应的 sidebar launcher 内部链接也使用相同处理，保留查询参数和锚点；全局地址、外部地址及已有公司前缀的地址维持原语义。
+
 `navigation` 仅允许用于 sidebar 插槽；图标使用受限字符串，不接受插件 SVG/HTML 注入。宿主支持：activity、bell、book-open、bot、boxes、building-2、calendar、chart-no-axes-combined、database、file-text、folder-open、git-branch、globe、layout-dashboard、message-square、puzzle、search、settings、shield、terminal、users。未声明或无法识别的图标回退为 puzzle。
 
 Office 0.3.4 使用 `building-2`；LLM Wiki 0.1.1 使用 `book-open`。原页面、公司上下文、自动刷新和工作流实现没有修改。
