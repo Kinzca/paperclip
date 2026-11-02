@@ -1953,5 +1953,9 @@
   "Ingest": "导入",
   "Enabled": "已启用",
   "Disabled": "已禁用",
-  "Maintain": "维护"
+  "Maintain": "维护",
+  "Wiki directory": "Wiki 目录",
+  "Wiki content": "Wiki 内容",
+  "Show Wiki directory": "显示 Wiki 目录",
+  "Hide Wiki directory": "收起 Wiki 目录"
 }

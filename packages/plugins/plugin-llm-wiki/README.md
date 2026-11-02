@@ -2,6 +2,18 @@
 
 Local-file LLM Wiki plugin for source ingestion, wiki browsing, query, lint, and maintenance workflows.
 
+## 本 Fork 的界面布局（0.1.3）
+
+Wiki 保留 Paperclip 主侧栏，目录嵌在内容区左侧，文档和工具页面位于右侧。
+本 Fork 不再注册接管主侧栏的 `routeSidebar` 插槽；原导出仅保留兼容性。
+空间创建、切换、归档、目录展开状态、文档编辑与自动保存、查询、导入、历史和设置仍沿用原有功能及数据接口。
+窄内容区可通过“显示 Wiki 目录”展开目录，选择页面后收起；工具页面按可用内容宽度调整布局。
+文档标题、正文、路径及 Agent 名称保留原文，界面随宿主切换简体中文或 English。
+
+部署需要同时更新宿主前端与插件：宿主为 Wiki 提供完整内容区高度及新增界面文案；
+插件升级后才会移除旧的 `routeSidebar` 注册。保留原插件 ID、配置和 Wiki 根目录，使用正式 upgrade 接口更新。
+按用户要求，此次只做必要构建和部署，没有运行测试、独立类型检查、界面验收或 Agent 执行流程。
+
 ## Scope
 
 This package is the standalone home for LLM Wiki behavior. Wiki-specific routes,

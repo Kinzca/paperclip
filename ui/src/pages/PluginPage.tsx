@@ -163,10 +163,12 @@ export function PluginPage() {
     return <Navigate to={settingsPath} replace />;
   }
 
+  const isWiki = pageSlot.pluginKey === "paperclipai.plugin-llm-wiki";
+
   return (
-    <div className="space-y-4">
-      {/* Office 已有侧栏入口，不在内容区重复提供返回导航。 */}
-      {!routeSidebarActive && pageSlot.pluginKey !== "agent-pixels.compat" && (
+    <div className={isWiki ? "h-full min-h-0 min-w-0" : "space-y-4"}>
+      {/* Office 和 Wiki 已有主侧栏入口，不在内容区重复提供返回导航。 */}
+      {!routeSidebarActive && !isWiki && pageSlot.pluginKey !== "agent-pixels.compat" && (
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" asChild>
             <Link to={companyPrefix ? `/${companyPrefix}/dashboard` : "/dashboard"}>
@@ -177,7 +179,7 @@ export function PluginPage() {
       <PluginSlotMount
         slot={pageSlot}
         context={context}
-        className="min-h-(--sz-200px)"
+        className={isWiki ? "h-full min-h-0 min-w-0" : "min-h-(--sz-200px)"}
         missingBehavior="placeholder"
       />
     </div>

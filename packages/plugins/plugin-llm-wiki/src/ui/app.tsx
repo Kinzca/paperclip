@@ -1,4 +1,5 @@
 import { uiText, useUiLocale } from "./i18n.js";
+import { WIKI_WORKSPACE_STYLES } from "./workspace-styles.js";
 import {
   AssigneePicker,
   FileTree,
@@ -20,13 +21,11 @@ import {
   type PluginSettingsPageProps,
   type PluginSidebarProps,
 } from "@paperclipai/plugin-sdk/ui";
-import { useCallback, useEffect, useMemo, useRef, useState, type AnchorHTMLAttributes, type CSSProperties, type ReactElement, type ReactNode } from "react";
+import { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState, type AnchorHTMLAttributes, type CSSProperties, type ReactElement, type ReactNode } from "react";
 import { readIngestOperationIssueId, uploadIssueAttachmentFile } from "./issue-attachments.js";
 
 // ---------------------------------------------------------------------------
-// Shared design tokens — copied from the UX wireframe shared.css so the plugin
-// looks identical inside the host whether or not host theme tokens are
-// available at runtime.
+// 界面复用宿主的语义颜色与字体，随 Paperclip 主题保持一致。
 // ---------------------------------------------------------------------------
 
 const tokens = {
@@ -39,38 +38,43 @@ const tokens = {
   primary: "var(--primary, oklch(0.985 0 0))",
   primaryFg: "var(--primary-foreground, oklch(0.205 0 0))",
   destructive: "var(--destructive, oklch(0.637 0.237 25.331))",
-  pluginBg: "oklch(0.3 0.06 70)",
-  pluginFg: "oklch(0.92 0.08 80)",
-  pluginBorder: "oklch(0.55 0.15 70)",
-  hiddenOpBg: "oklch(0.27 0.04 280)",
-  hiddenOpFg: "oklch(0.85 0.08 280)",
-  hiddenOpBorder: "oklch(0.45 0.1 280)",
-  callout: { bg: "oklch(0.2 0.04 250)", fg: "oklch(0.85 0.08 250)", border: "oklch(0.4 0.1 250)" },
-  statusDone: "oklch(0.65 0.16 145)",
-  statusRunning: "oklch(0.7 0.13 200)",
-  statusBlocked: "oklch(0.6 0.21 25)",
-  statusInProgress: "oklch(0.58 0.18 280)",
-  statusTodo: "oklch(0.6 0.17 250)",
-  statusPaused: "oklch(0.72 0.15 70)",
+  pluginBg: "var(--secondary)",
+  pluginFg: "var(--secondary-foreground)",
+  pluginBorder: "var(--border)",
+  hiddenOpBg: "var(--muted)",
+  hiddenOpFg: "var(--muted-foreground)",
+  hiddenOpBorder: "var(--border)",
+  callout: { bg: "var(--muted)", fg: "var(--foreground)", border: "var(--border)" },
+  statusDone: "var(--status-task-done)",
+  statusRunning: "var(--status-agent-running)",
+  statusBlocked: "var(--status-task-blocked)",
+  statusInProgress: "var(--status-task-in_progress)",
+  statusTodo: "var(--status-task-todo)",
+  statusPaused: "var(--status-agent-paused)",
 };
 
 type Tone = "todo" | "in_progress" | "in_review" | "done" | "blocked" | "running" | "paused" | "failed" | "queued" | "default";
 
+function wikiStatusPalette(color: string): CSSProperties {
+  return { background: `color-mix(in oklab, ${color} 12%, var(--background))`, color };
+}
+
 const toneStyles: Record<Tone, CSSProperties> = {
-  default: { background: "var(--secondary, oklch(0.269 0 0))", color: tokens.fg, border: `1px solid ${tokens.border}` },
-  todo: { background: "oklch(0.27 0.06 250)", color: "oklch(0.85 0.1 250)" },
-  in_progress: { background: "oklch(0.27 0.06 280)", color: "oklch(0.85 0.1 280)" },
-  in_review: { background: "oklch(0.27 0.07 305)", color: "oklch(0.85 0.1 305)" },
-  done: { background: "oklch(0.27 0.06 145)", color: "oklch(0.85 0.1 145)" },
-  blocked: { background: "oklch(0.27 0.08 25)", color: "oklch(0.82 0.13 25)" },
-  running: { background: "oklch(0.27 0.06 200)", color: "oklch(0.83 0.11 200)" },
-  paused: { background: "oklch(0.27 0.07 70)", color: "oklch(0.85 0.1 70)" },
-  failed: { background: "oklch(0.27 0.08 25)", color: "oklch(0.82 0.13 25)" },
-  queued: { background: "oklch(0.27 0.06 250)", color: "oklch(0.85 0.1 250)" },
+  default: { background: "var(--secondary)", color: "var(--secondary-foreground)", border: `1px solid ${tokens.border}` },
+  todo: wikiStatusPalette("var(--status-task-icon-todo)"),
+  in_progress: wikiStatusPalette("var(--status-task-icon-in_progress)"),
+  in_review: wikiStatusPalette("var(--status-task-icon-in_review)"),
+  done: wikiStatusPalette("var(--status-task-icon-done)"),
+  blocked: wikiStatusPalette("var(--status-task-icon-blocked)"),
+  running: wikiStatusPalette("var(--status-task-icon-in_progress)"),
+  paused: wikiStatusPalette("var(--status-task-icon-todo)"),
+  failed: wikiStatusPalette("var(--status-task-icon-blocked)"),
+  queued: wikiStatusPalette("var(--status-task-icon-todo)"),
 };
 
-const fontStack = `ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+const fontStack = "var(--font-sans)";
 const mobileMediaQuery = "(max-width: 767px)";
+const WikiContentNarrowContext = createContext(false);
 const PLUGIN_ID = "paperclipai.plugin-llm-wiki";
 const WIKI_SIDEBAR_NAV_STATE_KEY = "paperclipWikiSidebarTreePath";
 const ROUTE_SIDEBAR_EXPANDED_STORAGE_PREFIX = `${PLUGIN_ID}:route-sidebar-expanded:v2`;
@@ -543,12 +547,14 @@ function Button({
     },
     destructive: {
       background: "transparent",
-      color: "oklch(0.7 0.2 25)",
-      border: `1px solid oklch(0.5 0.18 25)`,
+      color: tokens.destructive,
+      border: `1px solid ${tokens.destructive}`,
     },
   };
   return (
     <button
+      className="pc-wiki-button"
+      data-size={size}
       type={type}
       title={title}
       disabled={disabled || loading}
@@ -557,9 +563,7 @@ function Button({
         display: "inline-flex",
         alignItems: "center",
         gap: 6,
-        padding: size === "sm" ? "3px 8px" : "6px 12px",
-        borderRadius: 6,
-        fontSize: size === "sm" ? 11 : 13,
+        borderRadius: "calc(var(--radius) - var(--spacing))",
         fontWeight: 500,
         cursor: disabled || loading ? "not-allowed" : "pointer",
         opacity: disabled || loading ? 0.5 : 1,
@@ -577,8 +581,9 @@ function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
+      className={["pc-wiki-input", props.className].filter(Boolean).join(" ")}
       style={{
-        background: "oklch(0.2 0 0)",
+        background: "var(--background)",
         border: `1px solid ${tokens.border}`,
         borderRadius: 6,
         padding: "6px 10px",
@@ -598,8 +603,9 @@ function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea
       {...props}
+      className={["pc-wiki-input", props.className].filter(Boolean).join(" ")}
       style={{
-        background: "oklch(0.2 0 0)",
+        background: "var(--background)",
         border: `1px solid ${tokens.border}`,
         borderRadius: 6,
         padding: "6px 10px",
@@ -700,11 +706,12 @@ function AutosaveMarkdownEditor({
 }
 
 function Callout({ children, tone = "info" }: { children: ReactNode; tone?: "info" | "warn" | "danger" }) {
-  const palette = tone === "danger"
-    ? { bg: "oklch(0.22 0.06 25)", fg: "oklch(0.85 0.12 25)", border: "oklch(0.45 0.12 25)" }
-    : tone === "warn"
-      ? { bg: "oklch(0.22 0.06 70)", fg: "oklch(0.85 0.1 70)", border: "oklch(0.45 0.12 70)" }
-      : tokens.callout;
+  const color = tone === "danger" ? "var(--status-task-icon-blocked)" : "var(--status-task-icon-todo)";
+  const palette = tone === "info" ? tokens.callout : {
+    bg: `color-mix(in oklab, ${color} 8%, var(--background))`,
+    fg: tokens.fg,
+    border: `color-mix(in oklab, ${color} 40%, var(--border))`,
+  };
   return (
     <div style={{
       background: palette.bg,
@@ -746,7 +753,9 @@ function useMediaQuery(query: string): boolean {
 }
 
 function useIsMobileLayout(): boolean {
-  return useMediaQuery(mobileMediaQuery);
+  const mobileViewport = useMediaQuery(mobileMediaQuery);
+  const narrowContent = useContext(WikiContentNarrowContext);
+  return mobileViewport || narrowContent;
 }
 
 function useOverview(companyId: string | null) {
@@ -1593,13 +1602,26 @@ function isEditableWikiPagePath(path: string): boolean {
 export function WikiPage({ context }: PluginPageProps) {
   useUiLocale();
   const { pathname, search } = useHostLocation();
-  const isMobile = useIsMobileLayout();
+  const contentRef = useRef<HTMLElement | null>(null);
+  const [compactContent, setCompactContent] = useState(false);
+  useEffect(() => {
+    const content = contentRef.current;
+    if (!content) return;
+    const update = () => setCompactContent(content.clientWidth < 768);
+    update();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    observer?.observe(content);
+    return () => observer?.disconnect();
+  }, [context.companyId]);
   const section = useMemo(() => readSectionFromLocation(pathname, search), [pathname, search]);
   const settingsSection = useMemo(() => readSettingsSectionFromLocation(pathname), [pathname]);
   const activeSpaceSlug = useMemo(() => readActiveSpaceSlugFromLocation(pathname), [pathname]);
   const settingsSpaceSlug = useMemo(() => readSettingsSpaceSlugFromLocation(pathname), [pathname]);
   const overview = useOverview(context.companyId);
+  const [directoryOpen, setDirectoryOpen] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
+
+  useEffect(() => { setDirectoryOpen(false); }, [pathname, search]);
   const [stagedFiles, setStagedFiles] = useState<StagedIngestFile[]>([]);
   const [isIngestModalOpen, setIsIngestModalOpen] = useState(false);
 
@@ -1680,19 +1702,32 @@ export function WikiPage({ context }: PluginPageProps) {
   }, [isDragActive, resetDragState]);
 
   if (!context.companyId) {
-    return <main style={{ ...shellStyle, height: isMobile ? "auto" : "100%", minHeight: isMobile ? "auto" : 600 }}>{uiText("Choose a company to open the LLM Wiki.")}</main>;
+    return <main className="pc-wiki-workspace">{uiText("Choose a company to open the LLM Wiki.")}</main>;
   }
 
   return (
     <main
-      style={{ ...shellStyle, position: "relative", height: isMobile ? "auto" : "100%", minHeight: isMobile ? "auto" : 600 }}
+      className="pc-wiki-workspace"
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <style>{`@keyframes pcWikiPulse { 0%,100% { opacity:1 } 50% { opacity:0.45 } }`}</style>
-      <section style={{ flex: 1, minHeight: isMobile ? "auto" : 0, overflow: isMobile ? "visible" : "hidden", display: "flex" }}>
+      <style>{WIKI_WORKSPACE_STYLES}</style>
+      <div className="pc-wiki-mobile-toolbar">
+        <button type="button" className="pc-wiki-directory-toggle" aria-controls="pc-wiki-directory" aria-expanded={directoryOpen}
+          onClick={() => setDirectoryOpen(open => !open)}>
+          <BookOpenIcon size={16} />
+          {uiText(directoryOpen ? "Hide Wiki directory" : "Show Wiki directory")}
+          {directoryOpen ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
+        </button>
+      </div>
+      <div className="pc-wiki-layout">
+        <div id="pc-wiki-directory" className="pc-wiki-directory-wrapper" data-open={directoryOpen}>
+          <WikiDirectory key={context.companyId} context={context} />
+        </div>
+        <section ref={contentRef} className="pc-wiki-content" aria-label={uiText("Wiki content")}>
+          <WikiContentNarrowContext.Provider value={compactContent}>
         {overview.error ? (
           <div style={{ padding: 24, flex: 1 }}>
             <Callout tone="danger">{uiText("LLM Wiki bridge error: ")}{overview.error.message}</Callout>
@@ -1714,7 +1749,9 @@ export function WikiPage({ context }: PluginPageProps) {
         ) : (
           <SettingsTab context={context} initialSection={settingsSection} />
         )}
-      </section>
+          </WikiContentNarrowContext.Provider>
+        </section>
+      </div>
       {isDragActive ? <WikiPageDropOverlay onClose={resetDragState} /> : null}
       {isIngestModalOpen ? (
         <IngestFilesModal
@@ -2399,13 +2436,17 @@ function SpacePagesWarmup({ companyId, spaceSlug }: { companyId: string | null; 
   return selected ? <SpacePageContentWarmup companyId={companyId} path={selected} spaceSlug={spaceSlug} /> : null;
 }
 
-export function WikiRouteSidebar({ context }: PluginRouteSidebarProps) {
+// 旧导出保留给兼容调用；本 Fork 不再注册接管主侧栏的 routeSidebar 插槽。
+export function WikiRouteSidebar(props: PluginRouteSidebarProps) {
+  return <WikiDirectory {...props} />;
+}
+
+function WikiDirectory({ context }: PluginPageProps) {
   useUiLocale();
   const hostNavigation = useHostNavigation();
   const { pathname, search, state } = useHostLocation();
   const activeSection = useMemo(() => readSectionFromLocation(pathname, search), [pathname, search]);
   const activeSpaceSlug = useMemo(() => readActiveSpaceSlugFromLocation(pathname), [pathname]);
-  const companyName = context.companyPrefix ?? "Company";
   const spacesQuery = useSpaces(context.companyId);
   const spaces = useMemo(() => {
     const list = spacesQuery.data?.spaces ?? [];
@@ -2430,11 +2471,11 @@ export function WikiRouteSidebar({ context }: PluginRouteSidebarProps) {
   const [openMenuFor, setOpenMenuFor] = useState<string | null>(null);
 
   useEffect(() => {
-    if (activeSection !== "browse") return;
-    const sidebarSelectedPath = readSidebarSelectedPathFromNavigationState(state);
-    if (sidebarSelectedPath === null) return;
-    setSelectedTreePath(sidebarSelectedPath);
-  }, [activeSection, state]);
+    const path = readSelectedTreePathFromLocation(pathname, search)
+      ?? readSidebarSelectedPathFromNavigationState(state)
+      ?? firstSelectableTreePath(pages.data);
+    setSelectedTreePath(activeSection === "browse" ? path : null);
+  }, [activeSection, pathname, search, state, pages.data]);
 
   useEffect(() => {
     setExpandedRaw(readRouteSidebarExpandedPaths(storageKey));
@@ -2515,7 +2556,7 @@ export function WikiRouteSidebar({ context }: PluginRouteSidebarProps) {
         {...hostNavigation.linkProps(buildSectionHref(key, activeSpaceSlug))}
         aria-current={isActive ? "page" : undefined}
         className={[
-          "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors",
+          "pc-wiki-tool-link",
           isActive && !isLegacyLintSettingsActive
             ? "bg-accent text-foreground"
             : isActive
@@ -2533,29 +2574,22 @@ export function WikiRouteSidebar({ context }: PluginRouteSidebarProps) {
   };
 
   return (
-    <aside className="w-full h-full min-h-0 border-r border-border bg-background flex flex-col">
+    <aside className="pc-wiki-directory" aria-label={uiText("Wiki directory")}>
       {warmupSpaces.map((space) => (
         <SpacePagesWarmup key={space.slug} companyId={context.companyId} spaceSlug={space.slug} />
       ))}
-      <div className="flex flex-col gap-1 px-3 py-3 shrink-0">
-        <a
-          {...hostNavigation.linkProps("/dashboard")}
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
-          style={{ textDecoration: "none" }}
-        >
-          <span aria-hidden="true" className="shrink-0">
-            <ChevronLeftIcon size={14} />
-          </span>
-          <span className="truncate">{companyName}</span>
+      <header className="pc-wiki-directory-header">
+        <a {...hostNavigation.linkProps(buildSectionHref("browse", activeSpaceSlug))}>
+          <BookOpenIcon size={16} /><span>{uiText("Wiki")}</span>
         </a>
-      </div>
-      <div className="flex-1 min-h-0 overflow-y-auto border-t border-border px-3 py-3">
+      </header>
+      <div className="pc-wiki-directory-scroll">
         <nav aria-label={uiText("Wiki primary")} className="mb-3">
           <div className="flex flex-col gap-0.5">
             {TOP_TOOL_SECTIONS.map(renderToolLink)}
           </div>
         </nav>
-        <div className="mb-1 flex items-center gap-1 px-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground" style={{ height: 24 }}>
+        <div className="pc-wiki-directory-heading">
           <span
             className="flex-1 truncate"
             title={uiText("Destination spaces. Browsing and manual ingest happen in the active space; Paperclip distillation always writes into the default space in Phase 1.")}
@@ -2658,7 +2692,7 @@ export function WikiRouteSidebar({ context }: PluginRouteSidebarProps) {
       </div>
       <nav
         aria-label={uiText("Wiki secondary")}
-        className="shrink-0 border-t border-border px-3 py-3"
+        className="pc-wiki-directory-footer"
       >
         <div className="flex flex-col gap-0.5">
           {BOTTOM_TOOL_SECTIONS.map(renderToolLink)}
@@ -2967,16 +3001,7 @@ function SpaceMenuDivider() {
   return <div style={{ height: 1, background: tokens.border, margin: "4px 0" }} />;
 }
 
-const shellStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  height: "100%",
-  minHeight: 600,
-  background: tokens.bg,
-  color: tokens.fg,
-  fontFamily: fontStack,
-  fontSize: 14,
-};
+
 
 // ---------------------------------------------------------------------------
 // Pre-flight: prompt for folder before any tab can be useful.
@@ -3058,7 +3083,7 @@ function UnconfiguredFolder({ context, folder, refresh }: { context: { companyId
 }
 
 // ---------------------------------------------------------------------------
-// Browse tab: selected page detail. The route sidebar owns the file tree.
+// 阅读区显示文档，内容区左侧的 WikiDirectory 持有文件目录。
 // ---------------------------------------------------------------------------
 
 const TEMPLATE_PATHS = ["AGENTS.md", "IDEA.md"] as const;
@@ -3240,6 +3265,17 @@ function PageDetail({ context, path, spaceSlug }: { context: { companyId: string
   const hostNavigation = useHostNavigation();
   const isMobile = useIsMobileLayout();
   const markdownBodyRef = useRef<HTMLDivElement | null>(null);
+  const articleRef = useRef<HTMLElement | null>(null);
+  const [compactReading, setCompactReading] = useState(true);
+  useEffect(() => {
+    const article = articleRef.current;
+    if (!article) return;
+    const update = () => setCompactReading(article.clientWidth < 880);
+    update();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    observer?.observe(article);
+    return () => observer?.disconnect();
+  }, [path, Boolean(content.data)]);
   const [editing, setEditing] = useState(false);
   const [savedHash, setSavedHash] = useState<string | null>(null);
   const [provenanceOpen, setProvenanceOpen] = useState(false);
@@ -3361,7 +3397,7 @@ function PageDetail({ context, path, spaceSlug }: { context: { companyId: string
     .filter((ref) => ref.hasDisplayText);
 
   return (
-    <article style={{ padding: isMobile ? "16px" : "24px 28px", display: "grid", gap: isMobile ? 12 : 14, minWidth: 0 }}>
+    <article ref={articleRef} className="pc-wiki-article">
       <header style={{ display: "grid", gap: 8, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap", minWidth: 0 }}>
           <div style={{ flex: "1 1 260px", minWidth: 0 }}>
@@ -3406,8 +3442,8 @@ function PageDetail({ context, path, spaceSlug }: { context: { companyId: string
           data-testid="llm-wiki-page-content-layout"
           style={{
             display: "grid",
-            gridTemplateColumns: showToc && !isMobile ? `minmax(0, 1fr) ${tocOpen ? "minmax(180px, 240px)" : "36px"}` : "minmax(0, 1fr)",
-            gap: showToc && !isMobile ? (tocOpen ? 24 : 10) : 0,
+            gridTemplateColumns: showToc && !isMobile && !compactReading ? `minmax(0, 1fr) ${tocOpen ? "minmax(180px, 240px)" : "36px"}` : "minmax(0, 1fr)",
+            gap: showToc && !isMobile && !compactReading ? (tocOpen ? 24 : 10) : 0,
             alignItems: "start",
             minWidth: 0,
           }}
@@ -3439,7 +3475,7 @@ function PageDetail({ context, path, spaceSlug }: { context: { companyId: string
               open={tocOpen}
               onToggle={() => setTocOpen((current) => !current)}
               onHeadingClick={handleTocClick}
-              mobile={isMobile}
+              mobile={isMobile || compactReading}
             />
           ) : null}
         </div>

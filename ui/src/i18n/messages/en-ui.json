@@ -1952,5 +1952,9 @@
   "Ingest": "Ingest",
   "Enabled": "Enabled",
   "Disabled": "Disabled",
-  "Maintain": "Maintain"
+  "Maintain": "Maintain",
+  "Wiki directory": "Wiki directory",
+  "Wiki content": "Wiki content",
+  "Show Wiki directory": "Show Wiki directory",
+  "Hide Wiki directory": "Hide Wiki directory"
 }
