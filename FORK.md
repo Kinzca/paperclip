@@ -10,6 +10,8 @@
 
 按用户要求，此次只实现、构建、部署并交付，**未执行测试、类型检查、代码审查、设计检测或浏览器验收**。源码移植、跨电脑安装、不同平台和完整双 Agent 闭环均等待用户检查；构建完成不表示验收通过。
 
+构建兼容处理：该官方标签引用了未包含在 Git 仓库中的公告动画示例；此 Fork 从同版本已发布 UI 中恢复原示例到 `ui/src/lib/fixtures/announcement-animation.html`，不依赖外部缺失路径。同时让 service worker 构建钩子在构建提前失败时保留原始错误，避免被缺失产物错误遮盖。
+
 ## 在另一台电脑安装
 
 前提：Git、npm、Node.js >= 24.11；当前提供终端安装入口，适用于 macOS / Linux。Windows 可用 WSL2，但本轮未做跨平台验证。使用包内嵌入式 PostgreSQL；不用配置 GPT API Key。

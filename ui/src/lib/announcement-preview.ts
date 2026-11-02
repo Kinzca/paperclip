@@ -1,4 +1,4 @@
-import animatedHero from "../../../announcements/examples/animated/assets/78bafb6adbfd9da899cdbb5d934b4c0b9df5d419d6f0a5104a87a7b25dcc6bd8.html?raw";
+import animatedHero from "./fixtures/announcement-animation.html?raw";
 import type { Announcement } from "@paperclipai/shared";
 
 /** Design guide / Storybook only. Never a runtime feed fallback. */

@@ -72,6 +72,8 @@ export function serviceWorkerBuildIdPlugin(
       }
     },
     closeBundle() {
+      // 构建在生成入口前失败时，保留原始错误，不用缺失的 sw.js 覆盖它。
+      if (!buildId) return;
       const swPath = path.resolve(outDir, serviceWorkerFileName);
       const source = fs.readFileSync(swPath, "utf8");
       const stamped = stampServiceWorkerBuildId(source, buildId ?? "build");
