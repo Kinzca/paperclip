@@ -21,6 +21,7 @@ export const DELIVERY_QUEUES = {
   connection: "connection-continuations",
   question: "question-responses",
   toolAction: "tool-action-receipts",
+  workflows: "native-workflows",
 } as const;
 export type DeliveryQueue = typeof DELIVERY_QUEUES[keyof typeof DELIVERY_QUEUES];
 

@@ -235,6 +235,7 @@ export function Sidebar({ children }: { children?: ReactNode }) {
             </>
           ) : null}
           <SidebarNavItem to="/routines" label={uiText("Routines")} icon={Repeat} />
+          <SidebarNavItem to="/workflows" label={uiText("Task workflows")} icon={GitBranch} />
           <SidebarNavItem to="/artifacts" label={uiText("Artifacts")} icon={Package} />
           {showCases ? (
             <SidebarNavItem to="/cases" label={uiText("Cases")} icon={Layers} textBadge={uiText("beta")} />

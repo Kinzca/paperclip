@@ -1,4 +1,7 @@
 import { notifyChatPublicationWork } from "./chat-work-notifications.js";
+import { prepareWorkflowAdmission, persistWorkflowAdmission } from "./workflows/admission.js";
+import { workflowRuns, workflowNodeAttempts } from "@paperclipai/db";
+import type { WorkflowPolicy } from "@paperclipai/shared";
 import { recordChatHandoff, recordChatCompletion, existingChatCompletionReply, acknowledgeChatCompletionReply } from "./chat-completion-delivery.js";
 import { mirrorSlackBoardComment, slackBoardReplyBindings } from "./slack-board-messages.js";
 import { assertAgentRunWriteAllowed } from "../agent-run-cancellation.js";
@@ -1939,6 +1942,7 @@ async function assertExecutionTaskParent(db: Db, companyId: string, parentId?: s
 
 type DbTransaction = Parameters<Parameters<Db["transaction"]>[0]>[0];
 type IssueCreateInput = Omit<typeof issues.$inferInsert, "companyId" | "title" | "titleNeedsGeneration"> & {
+  workflow?: WorkflowPolicy;
   title?: string;
   initialPlan?: string | null;
   labelIds?: string[];
@@ -9914,6 +9918,7 @@ export function issueService(db: Db) {
       dbOrTx: Db | DbTransaction = db,
     ) => {
       const {
+        workflow,
         initialPlan,
         labelIds: inputLabelIds,
         blockedByIssueIds,
@@ -10413,7 +10418,9 @@ export function issueService(db: Db) {
           }),
         );
 
+        const admission = await prepareWorkflowAdmission(tx, values, workflow, initialPlan);
         const [issue] = await tx.insert(issues).values(values).returning();
+        if (admission) await persistWorkflowAdmission(tx, issue, admission);
         await attachOwnedDraftImages(tx, issue, issue.description, { userId: issueData.createdByUserId, agentId: issueData.createdByAgentId });
         if (issue.visibility === "private" && !inheritedPrivateSubtree && issueData.createdByAgentId) {
           await tx.insert(issueAccessGrants).values({
@@ -10840,7 +10847,7 @@ export function issueService(db: Db) {
       dbOrTx: any = db,
       postCommitActivityPublications?: ActivityPublication[],
       postCommitActions?: IssuePostCommitAction[],
-      options: { bindRuntimeSharedWorkspace?: boolean } = {},
+      options: { bindRuntimeSharedWorkspace?: boolean; workflowTransition?: boolean } = {},
     ) => {
       const ownedActivityPublications: ActivityPublication[] = [];
       const activityPublications =
@@ -11176,6 +11183,23 @@ export function issueService(db: Db) {
           .for("update")
           .then((rows: Array<typeof issues.$inferSelect>) => rows[0] ?? null);
         if (!receiptExisting) return null;
+        if (!options.workflowTransition && (patch.status === "done" || issueData.assigneeAgentId !== undefined || issueData.assigneeUserId !== undefined || issueData.description !== undefined || issueData.title !== undefined || issueData.projectId !== undefined || issueData.projectWorkspaceId !== undefined || issueData.executionPolicy !== undefined)) {
+          const [workflow] = await tx.select({ id: workflowRuns.id, status: workflowRuns.status }).from(workflowRuns)
+            .where(and(eq(workflowRuns.issueId, receiptExisting.id), eq(workflowRuns.companyId, receiptExisting.companyId)));
+          if (workflow && !["succeeded", "cancelled"].includes(workflow.status)) {
+            throw conflict("This task is managed by a workflow. Finish its stages or cancel the workflow before changing its objective or owner.", { code: "workflow_managed_task" });
+          }
+          if (patch.status === "done" && receiptExisting.originKind === "workflow_node" && receiptExisting.originId) {
+            const [run] = await tx.select({ snapshot: workflowRuns.snapshot }).from(workflowRuns)
+              .where(and(eq(workflowRuns.id, receiptExisting.originId), eq(workflowRuns.companyId, receiptExisting.companyId)));
+            const [attempt] = await tx.select({ nodeId: workflowNodeAttempts.nodeId, status: workflowNodeAttempts.status }).from(workflowNodeAttempts)
+              .where(and(eq(workflowNodeAttempts.issueId, receiptExisting.id), eq(workflowNodeAttempts.companyId, receiptExisting.companyId)));
+            const node = run?.snapshot.definition.nodes.find((entry: { id: string }) => entry.id === attempt?.nodeId);
+            if (node && ["review", "approval"].includes(node.kind) && attempt?.status === "running") {
+              throw conflict("Submit an explicit workflow verdict on this node before marking it done.", { code: "workflow_verdict_required" });
+            }
+          }
+        }
         if (expectedExecutionPolicy !== undefined && !isDeepStrictEqual(
           receiptExisting.executionPolicy ?? null,
           expectedExecutionPolicy,
@@ -11275,6 +11299,19 @@ export function issueService(db: Db) {
                 (blockedByIssueIds !== undefined || issueData.unblockDescriptor !== undefined)))) {
           patch.statusVersion = sql`${issues.statusVersion} + 1` as unknown as number;
         }
+        let workflowAdmission: Awaited<ReturnType<typeof prepareWorkflowAdmission>> = null;
+        if (!options.workflowTransition && issueData.assigneeAgentId && !receiptExisting.assigneeAgentId && !receiptExisting.executionRunId) {
+          const [priorWorkflow] = await tx.select({ id: workflowRuns.id }).from(workflowRuns).where(and(eq(workflowRuns.issueId, receiptExisting.id), eq(workflowRuns.companyId, receiptExisting.companyId)));
+          if (!priorWorkflow) {
+            const admissionValues: typeof issues.$inferInsert = { ...receiptExisting, ...patch, createdByAgentId: actorAgentId ?? receiptExisting.createdByAgentId };
+            const plan = await documentService(tx as unknown as Db).getIssueDocumentByKey(receiptExisting.id, "plan");
+            workflowAdmission = await prepareWorkflowAdmission(tx, admissionValues, undefined, plan?.body);
+            if (workflowAdmission) {
+              patch.assigneeAgentId = admissionValues.assigneeAgentId;
+              patch.assigneeUserId = admissionValues.assigneeUserId;
+            }
+          }
+        }
         const updated = await tx
           .update(issues)
           .set(patch)
@@ -11282,6 +11319,7 @@ export function issueService(db: Db) {
           .returning()
           .then((rows: Array<typeof issues.$inferSelect>) => rows[0] ?? null);
         if (!updated) return null;
+        if (workflowAdmission) await persistWorkflowAdmission(tx, updated, workflowAdmission);
         if (issueData.description !== undefined) await attachOwnedDraftImages(tx, updated, updated.description,
           { userId: actorUserId, agentId: actorAgentId });
         if (changesPrivacy && updated.visibility === "private") {

@@ -1,3 +1,4 @@
+import { IssueWorkflowPanel } from "../components/IssueWorkflowPanel";
 import { uiText, useUiLocale, getUiLocale } from "@/i18n/ui";
 import { WorkspaceBaseRefRecoveryProvider } from "../components/WorkspaceBaseRefRecovery";
 import { isLockedIssueStub, LockedIssueChip } from "@/components/LockedIssueChip";
@@ -722,8 +723,8 @@ function AttributionAvatar({
 }) {
   useUiLocale();
   const accessibleLabel = via
-    ? `${label}: ${actor.name} · via ${via}`
-    : `${label}: ${actor.name}`;
+    ? `${uiText(label)}: ${actor.name} · via ${via}`
+    : `${uiText(label)}: ${actor.name}`;
   const testIdLabel = label.toLowerCase();
 
   return (
@@ -751,7 +752,7 @@ function AttributionAvatar({
           )}
           <div className="min-w-0">
             <div className="text-(length:--text-nano) font-medium uppercase leading-none text-background/70">
-              {label}
+              {uiText(label)}
             </div>
             <div className="max-w-48 truncate text-xs font-medium leading-4 text-background">
               {actor.name}
@@ -838,11 +839,11 @@ function IssueAttributionByline({
         data-testid="issue-attribution-avatar-stack"
       >
         {assignee ? (
-          <AttributionAvatar label={uiText("Assignee")} actor={assignee} />
+          <AttributionAvatar label="Assignee" actor={assignee} />
         ) : null}
         {originator ? (
           <AttributionAvatar
-            label={uiText("Originating")}
+            label="Originating"
             actor={originator}
             via={originatorVia}
           />
@@ -7716,6 +7717,8 @@ export function TaskDetailSurface({ conversation, tasksTab }: { tasksTab?: TaskS
               agentMap={agentMap}
             />
           ) : null}
+
+          <IssueWorkflowPanel issueId={issue.id} />
 
           {/* Flag ON: attachments/work products/workspace live in the properties
           pane (Artifacts tab) — the center column belongs to the thread. */}

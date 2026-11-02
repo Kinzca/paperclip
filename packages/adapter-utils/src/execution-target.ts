@@ -275,6 +275,8 @@ export interface PreparedAdapterExecutionTargetRuntime {
 export interface AdapterExecutionTargetProcessOptions {
   cwd: string;
   env: Record<string, string>;
+  /** Local-only: false starts with the supplied environment instead of server credentials. */
+  inheritEnv?: boolean;
   stdin?: string;
   timeoutSec: number;
   graceSec: number;
@@ -921,6 +923,7 @@ export async function runAdapterExecutionTargetProcess(
   const result = await runChildProcess(runId, command, args, {
     cwd: options.cwd,
     env,
+    inheritEnv: options.inheritEnv,
     stdin: options.stdin,
     timeoutSec: options.timeoutSec,
     graceSec: options.graceSec,

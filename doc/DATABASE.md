@@ -1,5 +1,12 @@
 # Database
 
+Native task workflows add company-scoped `workflow_template_revisions`,
+`workflow_policies`, `workflow_runs`, `workflow_node_attempts` and
+`workflow_evaluations`. Runs retain immutable JSON snapshots, node state, bounded
+deadlines and cancellation outboxes; check attempts retain ownership leases and
+evidence. Composite foreign keys isolate run/attempt/evaluation references by
+company. See [NATIVE-WORKFLOWS.md](NATIVE-WORKFLOWS.md).
+
 Paperclip uses PostgreSQL via [Drizzle ORM](https://orm.drizzle.team/). There are three ways to run the database, from simplest to most production-ready.
 
 ## 1. Embedded PostgreSQL — zero config

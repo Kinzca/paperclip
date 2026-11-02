@@ -246,3 +246,4 @@ export { userCompanyPreferences } from "./user_company_preferences.js";
 export { aiSubscriptions, aiSubscriptionPrices, aiSubscriptionConnections } from "./ai_subscriptions.js";
 
 export * from "./fast_responses.js";
+export * from "./workflows.js";

@@ -1260,6 +1260,28 @@ async function startServerWithDatabaseTeardown(
     resolveNativeQuestion: (interaction) => deliverNativeQuestionResponse(db as any, interaction),
   });
   const deliveryWork = app.locals.deliveryWork as ReturnType<typeof createDeliveryWorkCoordinator>;
+  const nativeWorkflows = app.locals.nativeWorkflows as ReturnType<typeof import("./services/workflows/engine.js").workflowEngine>;
+  const workflowStore = (await import("./services/workflows/store.js")).workflowStore(db);
+  await nativeWorkflows.recover();
+  const workflowWorker = deliveryWork.register(DELIVERY_QUEUES.workflows, {
+    retryMs: config.heartbeatSchedulerIntervalMs,
+    run: signal => nativeWorkflows.sweepPending(signal),
+    hasPending: () => nativeWorkflows.hasPending(),
+    nextRunAt: () => nativeWorkflows.nextRunAt(),
+  });
+  const unsubscribeWorkflows = subscribeAllCompanyLiveEvents(event => {
+    if (isWarmStandby() || isIdleTaskDrainActive() || heartbeatSchedulerStopped) return;
+    const scopeChanged = event.type === "activity.logged" && ["company", "project", "agent", "cost_event"].includes(String(event.payload.entityType));
+    if (scopeChanged) trackHeartbeatSchedulerWork(workflowStore.markCompanyChanged(event.companyId)
+      .catch(err => logger.error({ err }, "Workflow scope reconciliation failed")));
+    const issueId = event.type === "activity.logged"
+      ? event.payload.issueId ?? (event.payload.entityType === "issue" ? event.payload.entityId : null)
+      : event.type === "heartbeat.run.status" ? event.payload.issueId : null;
+    if (typeof issueId !== "string") return;
+    trackHeartbeatSchedulerWork(workflowStore.markIssueChanged(event.companyId, issueId)
+      .catch(err => logger.error({ err }, "Workflow event reconciliation failed")));
+  });
+  server.on("close", unsubscribeWorkflows);
   const fastResponses = app.locals.fastResponses as ReturnType<typeof import("./services/fast-responses.js").fastResponseService>;
   const fastResponseWorker = deliveryWork.register(DELIVERY_QUEUES.fastResponse, {
     retryMs: 100, run: (signal) => fastResponses.sweepPending(signal), hasPending: () => fastResponses.hasPending(),
@@ -1335,7 +1357,7 @@ async function startServerWithDatabaseTeardown(
 
   await app.locals.toolGateway.sweepActionReviews().catch((err: unknown) => logger.error({ err }, "startup tool review recovery failed"));
   await app.locals.toolGateway.cleanupExpiredSessions().catch((err: unknown) => logger.error({ err }, "startup gateway token cleanup failed"));
-  await Promise.all([fastResponseWorker, ...deliveryWorkers].map(worker => worker.ready));
+  await Promise.all([workflowWorker, fastResponseWorker, ...deliveryWorkers].map(worker => worker.ready));
   scheduleGitHubConnectionEventPoll();
   scheduleGitHubConnectionContinuitySweep();
 

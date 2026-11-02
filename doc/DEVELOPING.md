@@ -1,5 +1,10 @@
 # Developing
 
+Native inherited task workflows are documented in
+[NATIVE-WORKFLOWS.md](NATIVE-WORKFLOWS.md), including targeted tests and deployment
+boundaries. Their integration tests use an isolated embedded PostgreSQL database
+and stub model wakeups; never point them at the active studio instance.
+
 This project can run fully in local dev without setting up PostgreSQL manually.
 
 ## Deployment Modes

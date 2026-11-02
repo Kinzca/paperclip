@@ -187,6 +187,7 @@ export function Sidebar() {
             <SidebarNavItem to="/cases" label={uiText("Cases")} icon={Layers} textBadge={uiText("beta")} />
           ) : null}
           <SidebarNavItem to="/routines" label={uiText("Routines")} icon={Repeat} />
+          <SidebarNavItem to="/workflows" label={uiText("Task workflows")} icon={GitBranch} />
           {showPipelines ? (
             <SidebarNavItem to="/pipelines" label={uiText("Pipelines")} icon={GitBranch} />
           ) : null}

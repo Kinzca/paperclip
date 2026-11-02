@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { workflowPolicySchema } from "../workflows.js";
 import {
   ISSUE_EXECUTION_DECISION_OUTCOMES,
   ISSUE_EXECUTION_MONITOR_CLEAR_REASONS,
@@ -696,6 +697,7 @@ function withCreateIssueStatusDefault<T extends z.ZodRawShape>(
 }
 
 const createIssueBaseSchema = z.object({
+  workflow: workflowPolicySchema.optional(),
   projectId: z.string().guid().optional().nullable(),
   projectWorkspaceId: z.string().guid().optional().nullable(),
   goalId: z.string().guid().optional().nullable(),
@@ -884,6 +886,7 @@ const issueCommentAttachmentIdsSchema = z
 
 export const updateIssueSchema = objectWithoutDefaults(
   createIssueBaseSchema.omit({
+    workflow: true,
     createdByUserId: true,
     responsibleUserId: true,
     watchdog: true,

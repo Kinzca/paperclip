@@ -52,8 +52,9 @@ describe("heartbeat run preparation module", () => {
   });
 
   it("binds each context loader to its database and company scope", async () => {
-    const first = databaseWithResults([{ id: "issue-one", title: "First company" }]);
-    const second = databaseWithResults([{ id: "issue-two", title: "Second company" }]);
+    // No active workflow root or node ancestor; then load the task context.
+    const first = databaseWithResults([], [], [{ id: "issue-one", title: "First company" }]);
+    const second = databaseWithResults([], [], [{ id: "issue-two", title: "Second company" }]);
     const firstPreparation = createHeartbeatRunPreparation(first.db);
     const secondPreparation = createHeartbeatRunPreparation(second.db);
     expect(first.select).not.toHaveBeenCalled();
@@ -66,8 +67,8 @@ describe("heartbeat run preparation module", () => {
     expect(secondIssue).toMatchObject({ id: "issue-two", title: "Second company" });
     expect(first.scopes[0]).toEqual(expect.arrayContaining(["company-one", "issue-one"]));
     expect(second.scopes[0]).toEqual(expect.arrayContaining(["company-two", "issue-two"]));
-    expect(first.select).toHaveBeenCalledTimes(1);
-    expect(second.select).toHaveBeenCalledTimes(1);
+    expect(first.select).toHaveBeenCalledTimes(3);
+    expect(second.select).toHaveBeenCalledTimes(3);
   });
 
   it("keeps the pinned routine environment and original run identity", async () => {

@@ -1,3 +1,4 @@
+import { assertWorkflowIssueExecutionAllowed } from "../workflows/execution-gate.js";
 import { spekoToolsForSession } from "../voice/speko-agent-tools.js";
 import { githubConfiguredInstructionSources } from "../chat-github-review-policy.js";
 import { CONFIGURED_ENVIRONMENT_KEYS } from "../../vendor/paperclip-runner/index.js";
@@ -2864,6 +2865,7 @@ export function createHeartbeatRunPreparation(db: Db) {
   }
 
   async function getIssueExecutionContext(companyId: string, issueId: string) {
+    await assertWorkflowIssueExecutionAllowed(db, companyId, issueId);
     return db
       .select({
         chatCommunicationGuidance: chatConversations.communicationGuidance,

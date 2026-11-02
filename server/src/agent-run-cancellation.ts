@@ -1,3 +1,4 @@
+import { assertWorkflowIssueExecutionAllowed } from "./services/workflows/execution-gate.js";
 import { and, eq } from "drizzle-orm";
 import { heartbeatRuns, type Db } from "@paperclipai/db";
 import { forbidden } from "./errors.js";
@@ -19,12 +20,13 @@ export async function assertAgentRunWriteAllowed(tx: Db, companyId: string, acto
   stopId?: string | null;
 }) {
   if (!actor.agentId || !actor.runId) return;
-  const [run] = await tx.select({ status: heartbeatRuns.status, resultJson: heartbeatRuns.resultJson })
+  const [run] = await tx.select({ status: heartbeatRuns.status, resultJson: heartbeatRuns.resultJson, issueId: heartbeatRuns.issueId, nativeIssueId: heartbeatRuns.nativeIssueId })
     .from(heartbeatRuns).where(and(eq(heartbeatRuns.id, actor.runId),
       eq(heartbeatRuns.companyId, companyId), eq(heartbeatRuns.agentId, actor.agentId)))
     .for("share");
   const stoppedForThisMutation = run?.status === "cancelled" && actor.stopId &&
     run.resultJson?.issueMutationStopId === actor.stopId;
+  if (!stoppedForThisMutation && (run?.nativeIssueId ?? run?.issueId)) await assertWorkflowIssueExecutionAllowed(tx, companyId, (run.nativeIssueId ?? run.issueId)!);
   if (agentRunWritesRevoked(run) && !stoppedForThisMutation) {
     throw forbidden("This run was cancelled", { code: "agent_run_cancelled" });
   }

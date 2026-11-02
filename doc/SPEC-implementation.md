@@ -1,5 +1,10 @@
 # Paperclip V1 Implementation Spec
 
+Addendum (2026-11-02): assigned standard roots support inherited, versioned native
+task workflows. See [NATIVE-WORKFLOWS.md](NATIVE-WORKFLOWS.md) for admission,
+bounded DAG execution, explicit review, recovery and governed template improvement.
+Single-assignee, checkout, budget and native execution-policy invariants remain.
+
 Status: Implementation contract for first release (V1)
 Date: 2026-04-28
 Audience: Product, engineering, and agent-integration authors
