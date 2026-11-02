@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "./i18n.js";
 import {
   AssigneePicker,
   FileTree,
@@ -402,6 +403,7 @@ function Badge({ children, tone = "default", style }: { children: ReactNode; ton
 }
 
 function HiddenOpBadge() {
+  useUiLocale();
   return (
     <span style={{
       display: "inline-flex",
@@ -414,7 +416,7 @@ function HiddenOpBadge() {
       background: tokens.hiddenOpBg,
       color: tokens.hiddenOpFg,
       border: `1px solid ${tokens.hiddenOpBorder}`,
-    }}>📖 wiki task</span>
+    }}>{uiText("📖 wiki task")}</span>
   );
 }
 
@@ -618,11 +620,12 @@ function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
 type AutosaveStatus = "idle" | "dirty" | "saving" | "saved" | "error";
 
 function AutosaveStatusLabel({ status, error }: { status: AutosaveStatus; error: string | null }) {
-  if (status === "saving") return <Tiny>Saving…</Tiny>;
-  if (status === "saved") return <Tiny>Saved</Tiny>;
-  if (status === "dirty") return <Tiny>Unsaved changes</Tiny>;
-  if (status === "error") return <Tiny style={{ color: "oklch(0.7 0.2 25)" }}>{error ?? "Autosave failed"}</Tiny>;
-  return <Tiny>Autosave on</Tiny>;
+  useUiLocale();
+  if (status === "saving") return <Tiny>{uiText("Saving…")}</Tiny>;
+  if (status === "saved") return <Tiny>{uiText("Saved")}</Tiny>;
+  if (status === "dirty") return <Tiny>{uiText("Unsaved changes")}</Tiny>;
+  if (status === "error") return <Tiny style={{ color: "oklch(0.7 0.2 25)" }}>{error ?? uiText("Autosave failed")}</Tiny>;
+  return <Tiny>{uiText("Autosave on")}</Tiny>;
 }
 
 function AutosaveMarkdownEditor({
@@ -1303,6 +1306,7 @@ const PencilIcon = makeLucideIcon(
 );
 
 export function SidebarLink({ context }: PluginSidebarProps) {
+  useUiLocale();
   const hostNavigation = useHostNavigation();
   return (
     <a
@@ -1313,7 +1317,7 @@ export function SidebarLink({ context }: PluginSidebarProps) {
       <span aria-hidden="true" className="shrink-0">
         <BookOpenIcon />
       </span>
-      <span className="flex-1 truncate">Wiki</span>
+      <span className="flex-1 truncate">{uiText("Wiki")}</span>
     </a>
   );
 }
@@ -1342,12 +1346,12 @@ const SECTIONS: ReadonlyArray<{
   Icon: (props: LucideIconProps) => ReactElement;
   description: string;
 }> = [
-  { key: "browse", label: "Wiki", Icon: BookOpenIcon, description: "Open wiki pages and raw sources from the sidebar." },
-  { key: "query", label: "Ask", Icon: MessageSquareTextIcon, description: "Ask the Wiki Maintainer agent a cited question against the local wiki." },
-  { key: "ingest", label: "Add Content", Icon: PlusCircleIcon, description: "Capture a new source into the active space and queue an ingest operation." },
-  { key: "lint", label: "Lint", Icon: ListChecksIcon, description: "Run structural checks for orphan pages, missing backlinks, and stale provenance." },
-  { key: "history", label: "History", Icon: HistoryIcon, description: "Inspect recent LLM Wiki operation issues." },
-  { key: "settings", label: "Settings", Icon: SlidersHorizontalIcon, description: "Folder, agent, project, and routine configuration scoped to this company." },
+  { key: "browse", get label() { return uiText("Wiki"); }, Icon: BookOpenIcon, description: "Open wiki pages and raw sources from the sidebar." },
+  { key: "query", get label() { return uiText("Ask"); }, Icon: MessageSquareTextIcon, description: "Ask the Wiki Maintainer agent a cited question against the local wiki." },
+  { key: "ingest", get label() { return uiText("Add Content"); }, Icon: PlusCircleIcon, description: "Capture a new source into the active space and queue an ingest operation." },
+  { key: "lint", get label() { return uiText("Lint"); }, Icon: ListChecksIcon, description: "Run structural checks for orphan pages, missing backlinks, and stale provenance." },
+  { key: "history", get label() { return uiText("History"); }, Icon: HistoryIcon, description: "Inspect recent LLM Wiki operation issues." },
+  { key: "settings", get label() { return uiText("Settings"); }, Icon: SlidersHorizontalIcon, description: "Folder, agent, project, and routine configuration scoped to this company." },
 ];
 
 const TOP_TOOL_KEYS: ReadonlySet<SectionKey> = new Set<SectionKey>(["query", "ingest"]);
@@ -1587,6 +1591,7 @@ function isEditableWikiPagePath(path: string): boolean {
 }
 
 export function WikiPage({ context }: PluginPageProps) {
+  useUiLocale();
   const { pathname, search } = useHostLocation();
   const isMobile = useIsMobileLayout();
   const section = useMemo(() => readSectionFromLocation(pathname, search), [pathname, search]);
@@ -1675,7 +1680,7 @@ export function WikiPage({ context }: PluginPageProps) {
   }, [isDragActive, resetDragState]);
 
   if (!context.companyId) {
-    return <main style={{ ...shellStyle, height: isMobile ? "auto" : "100%", minHeight: isMobile ? "auto" : 600 }}>Choose a company to open the LLM Wiki.</main>;
+    return <main style={{ ...shellStyle, height: isMobile ? "auto" : "100%", minHeight: isMobile ? "auto" : 600 }}>{uiText("Choose a company to open the LLM Wiki.")}</main>;
   }
 
   return (
@@ -1690,10 +1695,10 @@ export function WikiPage({ context }: PluginPageProps) {
       <section style={{ flex: 1, minHeight: isMobile ? "auto" : 0, overflow: isMobile ? "visible" : "hidden", display: "flex" }}>
         {overview.error ? (
           <div style={{ padding: 24, flex: 1 }}>
-            <Callout tone="danger">LLM Wiki bridge error: {overview.error.message}</Callout>
+            <Callout tone="danger">{uiText("LLM Wiki bridge error: ")}{overview.error.message}</Callout>
           </div>
         ) : !overview.data ? (
-          <div style={{ padding: 24, flex: 1, color: tokens.muted, fontSize: 13 }}>Loading wiki…</div>
+          <div style={{ padding: 24, flex: 1, color: tokens.muted, fontSize: 13 }}>{uiText("Loading wiki…")}</div>
         ) : !overview.data.folder.healthy ? (
           <UnconfiguredFolder context={context} folder={overview.data.folder} refresh={overview.refresh} />
         ) : section === "browse" ? (
@@ -1744,6 +1749,7 @@ function isFileDrag(event: React.DragEvent<HTMLElement>): boolean {
 }
 
 function WikiPageDropOverlay({ onClose }: { onClose: () => void }) {
+  useUiLocale();
   return (
     <div
       data-testid="llm-wiki-page-drop-overlay"
@@ -1761,8 +1767,8 @@ function WikiPageDropOverlay({ onClose }: { onClose: () => void }) {
     >
       <button
         type="button"
-        aria-label="Close ingest drop overlay"
-        title="Close"
+        aria-label={uiText("Close ingest drop overlay")}
+        title={uiText("Close")}
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -1799,8 +1805,8 @@ function WikiPageDropOverlay({ onClose }: { onClose: () => void }) {
         <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, borderRadius: 8, background: tokens.pluginBg, color: tokens.pluginFg, marginBottom: 12 }}>
           <DownloadCloudIcon size={24} />
         </div>
-        <div style={{ fontSize: 18, fontWeight: 650, marginBottom: 6 }}>Drop to ingest into LLM Wiki</div>
-        <Tiny>Files will be staged for review before the wiki maintainer queues ingest operations.</Tiny>
+        <div style={{ fontSize: 18, fontWeight: 650, marginBottom: 6 }}>{uiText("Drop to ingest into LLM Wiki")}</div>
+        <Tiny>{uiText("Files will be staged for review before the wiki maintainer queues ingest operations.")}</Tiny>
       </div>
     </div>
   );
@@ -1823,6 +1829,7 @@ function IngestFilesModal({
   onIngested: () => void;
   initialSpaceSlug: string;
 }) {
+  useUiLocale();
   const ingest = usePluginAction("ingest-source");
   const toast = usePluginToast();
   const spacesQuery = useSpaces(companyId);
@@ -1887,7 +1894,7 @@ function IngestFilesModal({
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setErrorMsg(message);
-      toast({ tone: "error", title: "File ingest failed", body: message });
+      toast({ tone: "error", title: uiText("File ingest failed"), body: message });
     } finally {
       setBusy(false);
     }
@@ -1927,14 +1934,10 @@ function IngestFilesModal({
             <DownloadCloudIcon size={18} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h2 id="llm-wiki-ingest-modal-title" style={{ margin: 0, fontSize: 16, fontWeight: 650 }}>Ingest files into {targetSpace?.displayName ?? targetSpaceSlug}</h2>
-            <Tiny style={{ marginTop: 4 }}>
-              Review the staged files, switch the destination space if needed, then queue them as LLM
-              Wiki ingest operations. This is manual file ingest - Paperclip-derived distillation always
-              routes to the default space regardless of the destination picked here.
-            </Tiny>
+            <h2 id="llm-wiki-ingest-modal-title" style={{ margin: 0, fontSize: 16, fontWeight: 650 }}>{uiText("Ingest files into ")}{targetSpace?.displayName ?? targetSpaceSlug}</h2>
+            <Tiny style={{ marginTop: 4 }}>{uiText("Review the staged files, switch the destination space if needed, then queue them as LLM Wiki ingest operations. This is manual file ingest - Paperclip-derived distillation always routes to the default space regardless of the destination picked here.")}</Tiny>
           </div>
-          <Button size="sm" variant="ghost" onClick={requestClose} disabled={busy} title="Close ingest modal">Close</Button>
+          <Button size="sm" variant="ghost" onClick={requestClose} disabled={busy} title={uiText("Close ingest modal")}>{uiText("Close")}</Button>
         </div>
         <div style={{ padding: 18, display: "grid", gap: 14 }}>
           <SpacePicker
@@ -1955,8 +1958,8 @@ function IngestFilesModal({
             }}
           />
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <Badge tone="running">{files.length} staged</Badge>
-            <Button size="sm" onClick={() => inputRef.current?.click()} disabled={busy}>Add files</Button>
+            <Badge tone="running">{files.length}{uiText(" staged")}</Badge>
+            <Button size="sm" onClick={() => inputRef.current?.click()} disabled={busy}>{uiText("Add files")}</Button>
             <input
               ref={inputRef}
               type="file"
@@ -1970,24 +1973,22 @@ function IngestFilesModal({
           </div>
           <div style={{ border: `1px solid ${tokens.border}`, borderRadius: 8, overflow: "hidden" }}>
             {files.length === 0 ? (
-              <div style={{ padding: 16 }}><Tiny>No files staged.</Tiny></div>
+              <div style={{ padding: 16 }}><Tiny>{uiText("No files staged.")}</Tiny></div>
             ) : files.map((item) => (
               <div key={item.id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px 12px", borderBottom: `1px solid ${tokens.border}`, minWidth: 0 }}>
                 <div style={{ flex: "1 1 auto", minWidth: 0 }}>
                   <strong style={{ display: "block", fontSize: 13, overflowWrap: "anywhere" }}>{item.file.name}</strong>
                   <Tiny>{formatFileSize(item.file.size)}{item.file.type ? ` · ${item.file.type}` : ""}</Tiny>
                 </div>
-                <Button size="sm" variant="ghost" onClick={() => onRemoveFile(item.id)} disabled={busy}>Remove</Button>
+                <Button size="sm" variant="ghost" onClick={() => onRemoveFile(item.id)} disabled={busy}>{uiText("Remove")}</Button>
               </div>
             ))}
           </div>
           {errorMsg ? <Callout tone="danger">{errorMsg}</Callout> : null}
-          <Callout>
-            Confirming captures each file into <Mono>{targetSpaceSlug}/raw/</Mono>, attaches the original file to the ingest task, and initiates a task for the Wiki Maintainer to process.
-          </Callout>
+          <Callout>{uiText("Confirming captures each file into ")}<Mono>{targetSpaceSlug}{uiText("/raw/")}</Mono>{uiText(", attaches the original file to the ingest task, and initiates a task for the Wiki Maintainer to process.")}</Callout>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
-            <Button variant="ghost" onClick={requestClose} disabled={busy}>Cancel</Button>
-            <Button variant="primary" onClick={confirm} disabled={files.length === 0} loading={busy}>Capture & ingest into {targetSpace?.displayName ?? targetSpaceSlug}</Button>
+            <Button variant="ghost" onClick={requestClose} disabled={busy}>{uiText("Cancel")}</Button>
+            <Button variant="primary" onClick={confirm} disabled={files.length === 0} loading={busy}>{uiText("Capture & ingest into ")}{targetSpace?.displayName ?? targetSpaceSlug}</Button>
           </div>
         </div>
       </div>
@@ -2051,6 +2052,7 @@ function CreateSpaceModal({
   onClose: () => void;
   onCreated: (space: WikiSpace) => void;
 }) {
+  useUiLocale();
   const create = usePluginAction("create-space");
   const toast = usePluginToast();
   const [displayName, setDisplayName] = useState("");
@@ -2092,12 +2094,12 @@ function CreateSpaceModal({
         folderMode,
         accessScope,
       }) as { status: "created"; space: WikiSpace };
-      toast({ tone: "success", title: "Space created", body: `${result.space.displayName} is ready for ingest.` });
+      toast({ tone: "success", title: uiText("Space created"), body: `${result.space.displayName} is ready for ingest.` });
       onCreated(result.space);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setErrorMsg(msg);
-      toast({ tone: "error", title: "Could not create space", body: msg });
+      toast({ tone: "error", title: uiText("Could not create space"), body: msg });
     } finally {
       setBusy(false);
     }
@@ -2141,18 +2143,13 @@ function CreateSpaceModal({
             <FolderIcon size={18} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h2 id="create-space-modal-title" style={{ margin: 0, fontSize: 17, fontWeight: 650 }}>Create a shared space</h2>
-            <Tiny style={{ marginTop: 4 }}>
-              Spaces partition wiki pages, sources, and manual ingest into separate slug-prefixed folders
-              under the wiki root. Paperclip distillation and event capture always write into the
-              default space and skip new spaces created here - per-space Paperclip routing is a later
-              phase.
-            </Tiny>
+            <h2 id="create-space-modal-title" style={{ margin: 0, fontSize: 17, fontWeight: 650 }}>{uiText("Create a shared space")}</h2>
+            <Tiny style={{ marginTop: 4 }}>{uiText("Spaces partition wiki pages, sources, and manual ingest into separate slug-prefixed folders under the wiki root. Paperclip distillation and event capture always write into the default space and skip new spaces created here - per-space Paperclip routing is a later phase.")}</Tiny>
           </div>
-          <Button size="sm" variant="ghost" onClick={onClose} disabled={busy} title="Close">Close</Button>
+          <Button size="sm" variant="ghost" onClick={onClose} disabled={busy} title={uiText("Close")}>{uiText("Close")}</Button>
         </div>
         <div style={{ padding: 20, display: "grid", gap: 16 }}>
-          <FormField label="Display name">
+          <FormField label={uiText("Display name")}>
             <TextInput
               value={displayName}
               autoFocus
@@ -2160,12 +2157,12 @@ function CreateSpaceModal({
                 setDisplayName(event.target.value);
                 if (!slugDirty) setSlug("");
               }}
-              placeholder="Team research"
+              placeholder={uiText("Team research")}
               maxLength={120}
             />
           </FormField>
           <FormField
-            label="Slug"
+            label={uiText("Slug")}
             help={slugError ?? `Stored as the URL segment and the on-disk folder. Defaults to ${slugify(displayName) || "auto-derived from display name"}.`}
             tone={slugError ? "danger" : "muted"}
           >
@@ -2175,60 +2172,60 @@ function CreateSpaceModal({
                 setSlugDirty(true);
                 setSlug(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
               }}
-              placeholder="team-research"
+              placeholder={uiText("team-research")}
               style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}
             />
           </FormField>
-          <FormField label="Type">
+          <FormField label={uiText("Type")}>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <SegmentedOption selected label="Folder" onClick={() => undefined} />
-              <SegmentedOption disabled label="Cloud" suffix="Coming soon" onClick={() => undefined} />
+              <SegmentedOption selected label={uiText("Folder")} onClick={() => undefined} />
+              <SegmentedOption disabled label={uiText("Cloud")} suffix="Coming soon" onClick={() => undefined} />
             </div>
           </FormField>
-          <FormField label="Folder source" help="New managed folders create a slug-scoped subfolder under your wiki root. Existing folders must already live under the same wiki root.">
+          <FormField label={uiText("Folder source")} help={uiText("New managed folders create a slug-scoped subfolder under your wiki root. Existing folders must already live under the same wiki root.")}>
             <div style={{ display: "grid", gap: 8 }}>
               <FolderModeRow
                 checked={folderMode === "managed_subfolder"}
                 onSelect={() => setFolderMode("managed_subfolder")}
-                label="New managed folder"
+                label={uiText("New managed folder")}
                 help={`Creates spaces/${previewName.replace(/\s+/g, "-").toLowerCase()}/ under the configured wiki root with the standard skeleton.`}
               />
               <FolderModeRow
                 checked={folderMode === "existing_local_folder"}
                 onSelect={() => setFolderMode("existing_local_folder")}
-                label="Existing folder under wiki root"
-                help="Re-use a sub-folder you've already created inside the wiki root. The folder path is stored in the space settings."
+                label={uiText("Existing folder under wiki root")}
+                help={uiText("Re-use a sub-folder you've already created inside the wiki root. The folder path is stored in the space settings.")}
               />
               <FolderModeRow
                 disabled
                 checked={false}
                 onSelect={() => undefined}
-                label="Existing absolute path"
-                help="Pending host capability — security review (PAP-3640) gates this until host-managed dynamic local-folder bindings ship."
+                label={uiText("Existing absolute path")}
+                help={uiText("Pending host capability — security review (PAP-3640) gates this until host-managed dynamic local-folder bindings ship.")}
                 suffix="Disabled"
               />
             </div>
           </FormField>
-          <FormField label="Access scope" help="Access scope is metadata only. It does not currently enforce who can read or write the space, and it does not change which Paperclip sources reach the space.">
+          <FormField label={uiText("Access scope")} help={uiText("Access scope is metadata only. It does not currently enforce who can read or write the space, and it does not change which Paperclip sources reach the space.")}>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 8 }}>
               <ScopeTile
                 selected={accessScope === "shared"}
                 onSelect={() => setAccessScope("shared")}
-                label="Shared"
-                help="Visible to everyone in this company."
+                label={uiText("Shared")}
+                help={uiText("Visible to everyone in this company.")}
               />
               <ScopeTile
                 selected={accessScope === "personal"}
                 onSelect={() => setAccessScope("personal")}
-                label="Personal"
-                help="Future scope — stored only."
+                label={uiText("Personal")}
+                help={uiText("Future scope — stored only.")}
                 tag="Future"
               />
               <ScopeTile
                 selected={accessScope === "team"}
                 onSelect={() => setAccessScope("team")}
-                label="Team"
-                help="Future scope — stored only."
+                label={uiText("Team")}
+                help={uiText("Future scope — stored only.")}
                 tag="Future"
               />
             </div>
@@ -2246,8 +2243,8 @@ function CreateSpaceModal({
           bottom: 0,
           background: tokens.card,
         }}>
-          <Button variant="ghost" onClick={onClose} disabled={busy} style={{ flex: isMobile ? 1 : undefined }}>Cancel</Button>
-          <Button variant="primary" onClick={submit} disabled={!canSubmit} loading={busy} style={{ flex: isMobile ? 1 : undefined }}>Create space</Button>
+          <Button variant="ghost" onClick={onClose} disabled={busy} style={{ flex: isMobile ? 1 : undefined }}>{uiText("Cancel")}</Button>
+          <Button variant="primary" onClick={submit} disabled={!canSubmit} loading={busy} style={{ flex: isMobile ? 1 : undefined }}>{uiText("Create space")}</Button>
         </div>
       </div>
     </div>
@@ -2403,6 +2400,7 @@ function SpacePagesWarmup({ companyId, spaceSlug }: { companyId: string | null; 
 }
 
 export function WikiRouteSidebar({ context }: PluginRouteSidebarProps) {
+  useUiLocale();
   const hostNavigation = useHostNavigation();
   const { pathname, search, state } = useHostLocation();
   const activeSection = useMemo(() => readSectionFromLocation(pathname, search), [pathname, search]);
@@ -2552,7 +2550,7 @@ export function WikiRouteSidebar({ context }: PluginRouteSidebarProps) {
         </a>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto border-t border-border px-3 py-3">
-        <nav aria-label="Wiki primary" className="mb-3">
+        <nav aria-label={uiText("Wiki primary")} className="mb-3">
           <div className="flex flex-col gap-0.5">
             {TOP_TOOL_SECTIONS.map(renderToolLink)}
           </div>
@@ -2560,14 +2558,12 @@ export function WikiRouteSidebar({ context }: PluginRouteSidebarProps) {
         <div className="mb-1 flex items-center gap-1 px-2 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground" style={{ height: 24 }}>
           <span
             className="flex-1 truncate"
-            title="Destination spaces. Browsing and manual ingest happen in the active space; Paperclip distillation always writes into the default space in Phase 1."
-          >
-            Shared Spaces
-          </span>
+            title={uiText("Destination spaces. Browsing and manual ingest happen in the active space; Paperclip distillation always writes into the default space in Phase 1.")}
+          >{uiText("Shared Spaces")}</span>
           <button
             type="button"
-            aria-label="Create space"
-            title="Create space"
+            aria-label={uiText("Create space")}
+            title={uiText("Create space")}
             onClick={() => setCreateOpen(true)}
             style={{
               width: 22,
@@ -2586,12 +2582,11 @@ export function WikiRouteSidebar({ context }: PluginRouteSidebarProps) {
           </button>
         </div>
         {spacesQuery.error ? (
-          <div style={{ padding: "6px 8px", fontSize: 11, color: tokens.statusBlocked }}>
-            Failed to load spaces: {spacesQuery.error.message}
+          <div style={{ padding: "6px 8px", fontSize: 11, color: tokens.statusBlocked }}>{uiText("Failed to load spaces: ")}{spacesQuery.error.message}
           </div>
         ) : null}
         {spaces.length === 0 && spacesQuery.loading ? (
-          <Tiny style={{ padding: "6px 8px" }}>Loading spaces…</Tiny>
+          <Tiny style={{ padding: "6px 8px" }}>{uiText("Loading spaces…")}</Tiny>
         ) : null}
         <div style={{ display: "flex", flexDirection: "column" }}>
           {spaces.map((space) => {
@@ -2651,7 +2646,7 @@ export function WikiRouteSidebar({ context }: PluginRouteSidebarProps) {
                       wrapLabels={false}
                       loading={pages.loading}
                       error={pages.error ? { message: pages.error.message } : null}
-                      empty={{ title: "No pages yet", description: "Add content to populate this space." }}
+                      empty={{ title: uiText("No pages yet"), description: uiText("Add content to populate this space.") }}
                       ariaLabel={`Wiki pages in ${space.displayName}`}
                     />
                   </div>
@@ -2662,7 +2657,7 @@ export function WikiRouteSidebar({ context }: PluginRouteSidebarProps) {
         </div>
       </div>
       <nav
-        aria-label="Wiki secondary"
+        aria-label={uiText("Wiki secondary")}
         className="shrink-0 border-t border-border px-3 py-3"
       >
         <div className="flex flex-col gap-0.5">
@@ -2710,6 +2705,7 @@ function SpaceRow({
   activeSpaceSlug: string;
   companyId: string | null;
 }) {
+  useUiLocale();
   const [hover, setHover] = useState(false);
   const isDefault = space.slug === DEFAULT_SPACE_SLUG;
   return (
@@ -2717,7 +2713,7 @@ function SpaceRow({
       role="button"
       tabIndex={0}
       aria-expanded={expanded}
-      aria-label={`${expanded ? "Collapse" : active ? "Expand" : "Open"} ${space.displayName} space`}
+      aria-label={uiText("{{value0}} {{value1}} space", { value0: String(expanded ? "Collapse" : active ? "Expand" : "Open"), value1: String(space.displayName) })}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
@@ -2748,14 +2744,14 @@ function SpaceRow({
         {space.displayName}
       </span>
       {space.accessScope === "personal" ? (
-        <Badge tone="default" style={{ height: 18, padding: "0 6px", fontSize: 10 }}>personal</Badge>
+        <Badge tone="default" style={{ height: 18, padding: "0 6px", fontSize: 10 }}>{uiText("personal")}</Badge>
       ) : space.accessScope === "team" ? (
-        <Badge tone="default" style={{ height: 18, padding: "0 6px", fontSize: 10 }}>team</Badge>
+        <Badge tone="default" style={{ height: 18, padding: "0 6px", fontSize: 10 }}>{uiText("team")}</Badge>
       ) : null}
       <button
         type="button"
-        aria-label={`${space.displayName} space menu`}
-        title="Space menu"
+        aria-label={uiText("{{value0}} space menu", { value0: String(space.displayName) })}
+        title={uiText("Space menu")}
         onClick={(event) => {
           event.stopPropagation();
           onMenuToggle();
@@ -2809,6 +2805,7 @@ function SpaceRowMenu({
   onClose: () => void;
   onArchived: (slug: string) => void;
 }) {
+  useUiLocale();
   const ref = useRef<HTMLDivElement>(null);
   const archive = usePluginAction("archive-space");
   const bootstrap = usePluginAction("bootstrap-space");
@@ -2840,10 +2837,10 @@ function SpaceRowMenu({
     setBusy(true);
     try {
       await archive({ companyId, spaceSlug: space.slug });
-      toast({ tone: "success", title: "Space archived", body: `${space.displayName} hidden from sidebar.` });
+      toast({ tone: "success", title: uiText("Space archived"), body: `${space.displayName} hidden from sidebar.` });
       onArchived(space.slug);
     } catch (err) {
-      toast({ tone: "error", title: "Archive failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Archive failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setBusy(false);
     }
@@ -2854,10 +2851,10 @@ function SpaceRowMenu({
     setBusy(true);
     try {
       await bootstrap({ companyId, spaceSlug: space.slug });
-      toast({ tone: "success", title: "Space refreshed", body: `${space.displayName} index re-bootstrapped.` });
+      toast({ tone: "success", title: uiText("Space refreshed"), body: `${space.displayName} index re-bootstrapped.` });
       onClose();
     } catch (err) {
-      toast({ tone: "error", title: "Refresh failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Refresh failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setBusy(false);
     }
@@ -2882,7 +2879,7 @@ function SpaceRowMenu({
       }}
     >
       <SpaceMenuItem
-        label="Edit space"
+        label={uiText("Edit space")}
         Icon={PencilIcon}
         onClick={() => {
           onClose();
@@ -2890,13 +2887,13 @@ function SpaceRowMenu({
         }}
       />
       <SpaceMenuItem
-        label="Refresh index"
+        label={uiText("Refresh index")}
         Icon={RefreshIcon}
         onClick={handleRefresh}
         disabled={busy}
       />
       <SpaceMenuItem
-        label="Open ingest"
+        label={uiText("Open ingest")}
         Icon={PlusCircleIcon}
         onClick={() => {
           onClose();
@@ -2905,7 +2902,7 @@ function SpaceRowMenu({
       />
       <SpaceMenuDivider />
       <SpaceMenuItem
-        label={isDefault ? "Archive space (default cannot be archived)" : "Archive space…"}
+        label={isDefault ? uiText("Archive space (default cannot be archived)") : uiText("Archive space…")}
         Icon={ArchiveIcon}
         onClick={handleArchive}
         disabled={isDefault || busy}
@@ -2986,6 +2983,7 @@ const shellStyle: CSSProperties = {
 // ---------------------------------------------------------------------------
 
 function UnconfiguredFolder({ context, folder, refresh }: { context: { companyId: string | null }; folder?: FolderStatus; refresh: () => void }) {
+  useUiLocale();
   const bootstrap = usePluginAction("bootstrap-root");
   const toast = usePluginToast();
   const isMobile = useIsMobileLayout();
@@ -3005,12 +3003,12 @@ function UnconfiguredFolder({ context, folder, refresh }: { context: { companyId
     try {
       const result = await bootstrap({ companyId: context.companyId, path: path.trim() });
       const written = (result as { writtenFiles?: string[] }).writtenFiles ?? [];
-      toast({ tone: "success", title: "Wiki root configured", body: written.length ? `Created ${written.length} bootstrap file(s).` : "Existing files preserved." });
+      toast({ tone: "success", title: uiText("Wiki root configured"), body: written.length ? `Created ${written.length} bootstrap file(s).` : "Existing files preserved." });
       refresh();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setErrorMsg(message);
-      toast({ tone: "error", title: "Could not configure wiki root", body: message });
+      toast({ tone: "error", title: uiText("Could not configure wiki root"), body: message });
     } finally {
       setBusy(false);
     }
@@ -3019,13 +3017,13 @@ function UnconfiguredFolder({ context, folder, refresh }: { context: { companyId
   return (
     <div style={{ flex: 1, padding: isMobile ? 16 : 28, display: "grid", placeItems: "start", overflow: isMobile ? "visible" : "auto", minWidth: 0 }}>
       <Card style={{ maxWidth: 720, width: "100%" }}>
-        <CardHeader title={configuredButUnhealthy ? "Repair wiki root folder" : "Choose a wiki root folder"} />
+        <CardHeader title={configuredButUnhealthy ? uiText("Repair wiki root folder") : uiText("Choose a wiki root folder")} />
         <CardBody>
           <Tiny style={{ marginBottom: 12 }}>
             {configuredButUnhealthy
-              ? "The configured wiki root is not ready. Update the path or repair it to recreate required baseline files."
-              : "Pick an absolute path on this machine. The plugin creates "}
-            {!configuredButUnhealthy ? <><Mono>raw/</Mono>, <Mono>wiki/</Mono>, <Mono>AGENTS.md</Mono>, <Mono>IDEA.md</Mono>, <Mono>wiki/index.md</Mono>, and <Mono>wiki/log.md</Mono> if they don't already exist.</> : null}
+              ? uiText("The configured wiki root is not ready. Update the path or repair it to recreate required baseline files.")
+              : uiText("Pick an absolute path on this machine. The plugin creates ")}
+            {!configuredButUnhealthy ? <><Mono>{uiText("raw/")}</Mono>, <Mono>{uiText("wiki/")}</Mono>, <Mono>{uiText("AGENTS.md")}</Mono>, <Mono>{uiText("IDEA.md")}</Mono>, <Mono>{uiText("wiki/index.md")}</Mono>{uiText(", and ")}<Mono>{uiText("wiki/log.md")}</Mono>{uiText(" if they don't already exist.")}</> : null}
           </Tiny>
           {folder?.problems?.length ? (
             <Callout tone="danger">
@@ -3049,7 +3047,7 @@ function UnconfiguredFolder({ context, folder, refresh }: { context: { companyId
               disabled={!path.trim()}
             />
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <Button variant="ghost" onClick={() => refresh()}>I already configured it</Button>
+              <Button variant="ghost" onClick={() => refresh()}>{uiText("I already configured it")}</Button>
             </div>
             {errorMsg ? <Callout tone="danger">{errorMsg}</Callout> : null}
           </div>
@@ -3213,6 +3211,7 @@ function expandedAncestors(path: string | null): string[] {
 }
 
 function BrowseTab({ context }: { context: { companyId: string | null } }) {
+  useUiLocale();
   const { pathname, search } = useHostLocation();
   const activeSpaceSlug = useMemo(() => readActiveSpaceSlugFromLocation(pathname), [pathname]);
   const pages = usePages(context.companyId, { includeRaw: true, spaceSlug: activeSpaceSlug });
@@ -3223,9 +3222,9 @@ function BrowseTab({ context }: { context: { companyId: string | null } }) {
   return (
     <div style={{ flex: 1, minWidth: 0, overflow: isMobile ? "visible" : "auto" }}>
       {pages.loading && !selected ? (
-        <div style={{ padding: isMobile ? 16 : 28, color: tokens.muted, fontSize: 13 }}>Loading pages…</div>
+        <div style={{ padding: isMobile ? 16 : 28, color: tokens.muted, fontSize: 13 }}>{uiText("Loading pages…")}</div>
       ) : pages.error && !selected ? (
-        <div style={{ padding: isMobile ? 16 : 28 }}><Callout tone="danger">Failed to load pages: {pages.error.message}</Callout></div>
+        <div style={{ padding: isMobile ? 16 : 28 }}><Callout tone="danger">{uiText("Failed to load pages: ")}{pages.error.message}</Callout></div>
       ) : (
         <PageDetail context={context} path={selected} spaceSlug={activeSpaceSlug} />
       )}
@@ -3234,6 +3233,7 @@ function BrowseTab({ context }: { context: { companyId: string | null } }) {
 }
 
 function PageDetail({ context, path, spaceSlug }: { context: { companyId: string | null }; path: string | null; spaceSlug?: string }) {
+  useUiLocale();
   const content = usePageContent(context.companyId, path, spaceSlug ?? null);
   const writePage = usePluginAction("write-page");
   const toast = usePluginToast();
@@ -3333,20 +3333,18 @@ function PageDetail({ context, path, spaceSlug }: { context: { companyId: string
     if (typeof result.hash === "string") setSavedHash(result.hash);
   }, [context.companyId, content.data, editable, path, savedHash, writePage, spaceSlug]);
 
-  if (!path) return <div style={{ padding: isMobile ? 16 : 28, color: tokens.muted, fontSize: 13 }}>Pick a page from the tree.</div>;
-  if (content.loading) return <div style={{ padding: isMobile ? 16 : 28, color: tokens.muted, fontSize: 13 }}>Loading {path}…</div>;
+  if (!path) return <div style={{ padding: isMobile ? 16 : 28, color: tokens.muted, fontSize: 13 }}>{uiText("Pick a page from the tree.")}</div>;
+  if (content.loading) return <div style={{ padding: isMobile ? 16 : 28, color: tokens.muted, fontSize: 13 }}>{uiText("Loading ")}{path}…</div>;
   if (content.error && path.startsWith("raw/")) {
     return (
       <div style={{ padding: isMobile ? 16 : 28, display: "grid", gap: 12 }}>
-        <Callout tone="warn">
-          The captured source <Mono>{path}</Mono> is indexed but no longer exists in the configured wiki folder. Refresh the wiki or re-ingest the source to restore it.
-        </Callout>
+        <Callout tone="warn">{uiText("The captured source ")}<Mono>{path}</Mono>{uiText(" is indexed but no longer exists in the configured wiki folder. Refresh the wiki or re-ingest the source to restore it.")}</Callout>
         <Tiny>{content.error.message}</Tiny>
       </div>
     );
   }
-  if (content.error) return <div style={{ padding: isMobile ? 16 : 28 }}><Callout tone="danger">Failed to read {path}: {content.error.message}</Callout></div>;
-  if (!content.data) return <div style={{ padding: isMobile ? 16 : 28, color: tokens.muted, fontSize: 13 }}>No content for {path}.</div>;
+  if (content.error) return <div style={{ padding: isMobile ? 16 : 28 }}><Callout tone="danger">{uiText("Failed to read ")}{path}: {content.error.message}</Callout></div>;
+  if (!content.data) return <div style={{ padding: isMobile ? 16 : 28, color: tokens.muted, fontSize: 13 }}>{uiText("No content for ")}{path}.</div>;
   const { contents, title, sourceRefs, updatedAt, hash } = content.data;
   const visibleFrontmatter = parsedMarkdown.frontmatter.filter((property) => property.key.toLowerCase() !== "title");
   const displayTitle = (BASELINE_FILES as readonly string[]).includes(path) ? basename(path) : title ?? basename(path);
@@ -3372,20 +3370,19 @@ function PageDetail({ context, path, spaceSlug }: { context: { companyId: string
           </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             {isDistilledProjectPage ? (
-              <Button size="sm" variant="ghost" onClick={() => setProvenanceOpen(true)} title="Show source provenance and freshness">
-                <InfoIcon size={12} /> Provenance
-              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setProvenanceOpen(true)} title={uiText("Show source provenance and freshness")}>
+                <InfoIcon size={12} />{uiText(" Provenance")}</Button>
             ) : null}
             {editable && !editing ? (
-              <Button size="sm" onClick={() => { setSavedHash(hash); setEditing(true); }}>Edit page</Button>
+              <Button size="sm" onClick={() => { setSavedHash(hash); setEditing(true); }}>{uiText("Edit page")}</Button>
             ) : editable ? (
-              <Button size="sm" variant="ghost" onClick={() => { setEditing(false); content.refresh(); }}>Done</Button>
+              <Button size="sm" variant="ghost" onClick={() => { setEditing(false); content.refresh(); }}>{uiText("Done")}</Button>
             ) : (
-              <Badge>read-only source</Badge>
+              <Badge>{uiText("read-only source")}</Badge>
             )}
           </div>
         </div>
-        <Tiny>Updated {updatedAt ? formatTime(updatedAt) : "—"}</Tiny>
+        <Tiny>{uiText("Updated ")}{updatedAt ? formatTime(updatedAt) : "—"}</Tiny>
       </header>
       {isDistilledProjectPage && path ? (
         <FreshnessChip companyId={context.companyId} pagePath={path} companyPrefix={(context as { companyPrefix?: string | null }).companyPrefix ?? null} />
@@ -3396,7 +3393,7 @@ function PageDetail({ context, path, spaceSlug }: { context: { companyId: string
             key={`${path}:${hash}`}
             resetKey={`${path}:${hash}`}
             value={contents}
-            placeholder={`Edit ${path}`}
+            placeholder={uiText("Edit {{value0}}", { value0: String(path) })}
             minHeight={isMobile ? 260 : 420}
             onSave={async (nextContents) => {
               await savePageContents(nextContents);
@@ -3424,8 +3421,8 @@ function PageDetail({ context, path, spaceSlug }: { context: { companyId: string
                 resolveWikiLinkHref={resolveWikiLinkHref}
               />
               {displaySourceRefs.length > 0 ? (
-                <section aria-label="Paperclip source refs" style={{ marginTop: 16, display: "grid", gap: 6 }}>
-                  <Tiny style={{ fontWeight: 650 }}>Paperclip source refs</Tiny>
+                <section aria-label={uiText("Paperclip source refs")} style={{ marginTop: 16, display: "grid", gap: 6 }}>
+                  <Tiny style={{ fontWeight: 650 }}>{uiText("Paperclip source refs")}</Tiny>
                   <ul style={{ margin: 0, paddingLeft: 18, color: tokens.muted, fontSize: 12, lineHeight: 1.5 }}>
                     {displaySourceRefs.map((ref) => (
                       <li key={ref.id}>{ref.label}</li>
@@ -3486,6 +3483,7 @@ function OnThisPagePane({
   onHeadingClick: (event: React.MouseEvent<HTMLAnchorElement>, id: string) => void;
   mobile: boolean;
 }) {
+  useUiLocale();
   const contentId = "llm-wiki-on-this-page";
   const currentHeadingId = activeHeadingId ?? headings[0]?.id ?? null;
   const shellRef = useRef<HTMLElement | null>(null);
@@ -3548,7 +3546,7 @@ function OnThisPagePane({
   return (
     <aside
       ref={shellRef}
-      aria-label="On this page"
+      aria-label={uiText("On this page")}
       style={{
         order: mobile ? -1 : 0,
         minWidth: 0,
@@ -3563,7 +3561,7 @@ function OnThisPagePane({
       }}>
         <button
           type="button"
-          aria-label={open ? "Collapse on this page" : "Expand on this page"}
+          aria-label={open ? uiText("Collapse on this page") : uiText("Expand on this page")}
           aria-expanded={open}
           aria-controls={contentId}
           onClick={onToggle}
@@ -3584,7 +3582,7 @@ function OnThisPagePane({
             textAlign: "left",
           }}
         >
-          {open ? <span>On this page</span> : null}
+          {open ? <span>{uiText("On this page")}</span> : null}
           <span aria-hidden="true" style={{ color: tokens.muted, transform: open ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 120ms ease" }}>
             <ChevronLeftIcon size={13} />
           </span>
@@ -3622,12 +3620,13 @@ function OnThisPagePane({
 }
 
 function FreshnessChip({ companyId, pagePath, companyPrefix }: { companyId: string | null; pagePath: string; companyPrefix: string | null }) {
+  useUiLocale();
   const provenance = useDistillationProvenance(companyId, pagePath);
   const binding = provenance.data?.binding ?? null;
   const cursor = provenance.data?.cursor ?? null;
 
   if (provenance.loading && !provenance.data) {
-    return <FreshnessChipShell tone="info" icon={<ClockIcon size={14} />}>Checking distillation cursor…</FreshnessChipShell>;
+    return <FreshnessChipShell tone="info" icon={<ClockIcon size={14} />}>{uiText("Checking distillation cursor…")}</FreshnessChipShell>;
   }
   if (!binding) return null;
 
@@ -3655,14 +3654,11 @@ function FreshnessChip({ companyId, pagePath, companyPrefix }: { companyId: stri
       tone={tone}
       icon={isFailed ? <AlertTriangleIcon size={14} /> : isRunning ? <ActivityIcon size={14} /> : <ClockIcon size={14} />}
     >
-      <span><strong>Current as of {lastEnd ? formatTimestamp(lastEnd) : "—"}.</strong>
-        {sourceCount ? ` ${sourceCount} sources in this window. ` : " "}
-        Cursor at <Mono>{lastEnd ?? "—"}</Mono>.
+      <span><strong>{uiText("Current as of ")}{lastEnd ? formatTimestamp(lastEnd) : "—"}.</strong>
+        {sourceCount ? uiText(" {{value0}} sources in this window. ", { value0: String(sourceCount) }) : " "}{uiText("Cursor at ")}<Mono>{lastEnd ?? "—"}</Mono>.
       </span>
       {projectLink ? (
-        <a href={projectLink} style={{ marginLeft: 8, color: "inherit", textDecoration: "underline" }}>
-          Open Paperclip for live state →
-        </a>
+        <a href={projectLink} style={{ marginLeft: 8, color: "inherit", textDecoration: "underline" }}>{uiText("Open Paperclip for live state →")}</a>
       ) : null}
     </FreshnessChipShell>
   );
@@ -3735,6 +3731,7 @@ function formatSourceRef(ref: Record<string, unknown> | string, fallbackIndex: n
 }
 
 function ProvenanceDrawer({ companyId, pagePath, onClose }: { companyId: string | null; pagePath: string; onClose: () => void }) {
+  useUiLocale();
   const isMobile = useIsMobileLayout();
   const provenance = useDistillationProvenance(companyId, pagePath);
   const data = provenance.data;
@@ -3771,42 +3768,42 @@ function ProvenanceDrawer({ companyId, pagePath, onClose }: { companyId: string 
       >
         <div style={{ padding: "14px 18px", borderBottom: `1px solid ${tokens.border}`, display: "flex", alignItems: "center", gap: 10 }}>
           <InfoIcon size={16} />
-          <strong style={{ fontSize: 14, flex: 1 }}>Provenance</strong>
+          <strong style={{ fontSize: 14, flex: 1 }}>{uiText("Provenance")}</strong>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <XIcon size={14} />
           </Button>
         </div>
         <div style={{ overflow: "auto", flex: 1, padding: 18, display: "flex", flexDirection: "column", gap: 14 }}>
-          {provenance.loading && !data ? <Tiny>Loading provenance…</Tiny> : null}
-          {!binding && !provenance.loading ? <Callout>This page is not currently bound to a distillation cursor. It may be hand-authored or pre-distillation.</Callout> : null}
+          {provenance.loading && !data ? <Tiny>{uiText("Loading provenance…")}</Tiny> : null}
+          {!binding && !provenance.loading ? <Callout>{uiText("This page is not currently bound to a distillation cursor. It may be hand-authored or pre-distillation.")}</Callout> : null}
           {binding ? (
             <Card>
               <CardBody padding={14}>
-                <PropRow label="Page path" value={<Mono>{binding.pagePath}</Mono>} />
-                <PropRow label="Source hash" value={<Mono>{binding.lastRunSourceHash?.slice(0, 16) ?? "—"}…</Mono>} />
-                <PropRow label="Cursor end" value={<Mono>{binding.lastRunSourceWindowEnd ? formatTimestamp(binding.lastRunSourceWindowEnd) : "—"}</Mono>} />
-                <PropRow label="Last run status" value={<Badge tone={runStatusTone(binding.lastRunStatus ?? "")}>{binding.lastRunStatus ?? "—"}</Badge>} />
-                <PropRow label="Project" value={binding.projectName ?? "—"} />
-                <PropRow label="Updated" value={formatTimestamp(binding.updatedAt)} />
+                <PropRow label={uiText("Page path")} value={<Mono>{binding.pagePath}</Mono>} />
+                <PropRow label={uiText("Source hash")} value={<Mono>{binding.lastRunSourceHash?.slice(0, 16) ?? "—"}…</Mono>} />
+                <PropRow label={uiText("Cursor end")} value={<Mono>{binding.lastRunSourceWindowEnd ? formatTimestamp(binding.lastRunSourceWindowEnd) : "—"}</Mono>} />
+                <PropRow label={uiText("Last run status")} value={<Badge tone={runStatusTone(binding.lastRunStatus ?? "")}>{binding.lastRunStatus ?? "—"}</Badge>} />
+                <PropRow label={uiText("Project")} value={binding.projectName ?? "—"} />
+                <PropRow label={uiText("Updated")} value={formatTimestamp(binding.updatedAt)} />
               </CardBody>
             </Card>
           ) : null}
           {cursor ? (
             <Card>
-              <CardHeader title="Cursor" />
+              <CardHeader title={uiText("Cursor")} />
               <CardBody padding={14}>
-                <PropRow label="Scope" value={cursor.sourceScope} />
-                <PropRow label="Pending events" value={String(cursor.pendingEventCount)} />
-                <PropRow label="Last observed" value={formatTimestamp(cursor.lastObservedAt)} />
-                <PropRow label="Last processed" value={formatTimestamp(cursor.lastProcessedAt)} />
+                <PropRow label={uiText("Scope")} value={cursor.sourceScope} />
+                <PropRow label={uiText("Pending events")} value={String(cursor.pendingEventCount)} />
+                <PropRow label={uiText("Last observed")} value={formatTimestamp(cursor.lastObservedAt)} />
+                <PropRow label={uiText("Last processed")} value={formatTimestamp(cursor.lastProcessedAt)} />
               </CardBody>
             </Card>
           ) : null}
           {snapshot ? (
             <Card>
-              <CardHeader title="Sources in this window" />
+              <CardHeader title={uiText("Sources in this window")} />
               <CardBody padding={14}>
-                <Tiny style={{ marginBottom: 8 }}>{snapshot.sourceRefs.length} ref{snapshot.sourceRefs.length === 1 ? "" : "s"}{snapshot.clipped ? " · clipped" : ""}</Tiny>
+                <Tiny style={{ marginBottom: 8 }}>{snapshot.sourceRefs.length}{uiText(" ref")}{snapshot.sourceRefs.length === 1 ? "" : uiText("s")}{snapshot.clipped ? uiText(" · clipped") : ""}</Tiny>
                 <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: tokens.muted, lineHeight: 1.5 }}>
                   {snapshot.sourceRefs.slice(0, 8).map((ref, index) => {
                     const obj = typeof ref === "object" && ref ? ref as Record<string, unknown> : null;
@@ -3822,18 +3819,18 @@ function ProvenanceDrawer({ companyId, pagePath, onClose }: { companyId: string 
                     );
                   })}
                 </ul>
-                {snapshot.sourceRefs.length > 8 ? <Tiny style={{ marginTop: 6 }}>{`+${snapshot.sourceRefs.length - 8} more`}</Tiny> : null}
+                {snapshot.sourceRefs.length > 8 ? <Tiny style={{ marginTop: 6 }}>{uiText("+{{value0}} more", { value0: String(snapshot.sourceRefs.length - 8) })}</Tiny> : null}
               </CardBody>
             </Card>
           ) : null}
           {runs.length > 0 ? (
             <Card>
-              <CardHeader title="Operations affecting this page" />
+              <CardHeader title={uiText("Operations affecting this page")} />
               <CardBody padding={0}>
                 <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
                   {runs.slice(0, 8).map((run) => (
                     <li key={run.id} style={{ padding: "10px 14px", borderBottom: `1px solid ${tokens.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      <Mono style={{ fontSize: 12 }}>{run.operationIssueIdentifier ?? `op-${run.id.slice(0, 6)}`}</Mono>
+                      <Mono style={{ fontSize: 12 }}>{run.operationIssueIdentifier ?? uiText("op-{{value0}}", { value0: String(run.id.slice(0, 6)) })}</Mono>
                       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                         <Tiny>{formatTimestamp(run.updatedAt)}</Tiny>
                         <Mono style={{ fontSize: 11 }}>{formatCostCents(run.costCents)}</Mono>
@@ -3852,6 +3849,7 @@ function ProvenanceDrawer({ companyId, pagePath, onClose }: { companyId: string 
 }
 
 function FrontmatterProperties({ properties }: { properties: WikiFrontmatterProperty[] }) {
+  useUiLocale();
   if (properties.length === 0) return null;
 
   return (
@@ -3872,9 +3870,7 @@ function FrontmatterProperties({ properties }: { properties: WikiFrontmatterProp
           listStylePosition: "outside",
           marginBottom: 10,
         }}
-      >
-        Properties
-      </summary>
+      >{uiText("Properties")}</summary>
       <dl style={{ display: "grid", gap: 8, margin: 0, maxWidth: 720 }}>
         {properties.map((property) => (
           <div
@@ -3976,6 +3972,7 @@ function formatTime(iso: string | null | undefined): string {
 // ---------------------------------------------------------------------------
 
 function IngestTab({ context, refreshOverview }: { context: { companyId: string | null }; refreshOverview: () => void }) {
+  useUiLocale();
   const { pathname } = useHostLocation();
   const activeSpaceSlug = useMemo(() => readActiveSpaceSlugFromLocation(pathname), [pathname]);
   const spacesQuery = useSpaces(context.companyId);
@@ -4041,7 +4038,7 @@ function IngestTab({ context, refreshOverview }: { context: { companyId: string 
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setErrorMsg(message);
-      toast({ tone: "error", title: "Ingest failed", body: message });
+      toast({ tone: "error", title: uiText("Ingest failed"), body: message });
     } finally {
       setBusy(false);
     }
@@ -4056,11 +4053,9 @@ function IngestTab({ context, refreshOverview }: { context: { companyId: string 
         maxWidth: 920,
         minWidth: 0,
       }}>
-        <div style={{ marginBottom: 4, fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: tokens.muted }}>Add Content</div>
-        <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 650 }}>Capture into <span style={{ color: tokens.fg }}>{spaceLabel}</span></h2>
-        <Tiny style={{ marginBottom: 18 }}>
-          Each capture queues an ingest operation scoped to <Mono>{activeSpaceSlug}</Mono>. Files land in that space's <Mono>raw/</Mono> folder and the Wiki Maintainer proposes a patch.
-        </Tiny>
+        <div style={{ marginBottom: 4, fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: tokens.muted }}>{uiText("Add Content")}</div>
+        <h2 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 650 }}>{uiText("Capture into ")}<span style={{ color: tokens.fg }}>{spaceLabel}</span></h2>
+        <Tiny style={{ marginBottom: 18 }}>{uiText("Each capture queues an ingest operation scoped to ")}<Mono>{activeSpaceSlug}</Mono>{uiText(". Files land in that space's ")}<Mono>{uiText("raw/")}</Mono>{uiText(" folder and the Wiki Maintainer proposes a patch.")}</Tiny>
         <div style={{ display: "grid", gap: 14, marginBottom: 18 }}>
           <SpacePicker
             spaces={spaces}
@@ -4080,7 +4075,7 @@ function IngestTab({ context, refreshOverview }: { context: { companyId: string 
             }}
           />
           <div>
-            <label style={{ fontSize: 11, color: tokens.muted, display: "block", marginBottom: 6 }}>Drop files anywhere on this page</label>
+            <label style={{ fontSize: 11, color: tokens.muted, display: "block", marginBottom: 6 }}>{uiText("Drop files anywhere on this page")}</label>
             <div style={{
               minHeight: isMobile ? 180 : 230,
               border: `1.5px dashed ${tokens.pluginBorder}`,
@@ -4098,30 +4093,30 @@ function IngestTab({ context, refreshOverview }: { context: { companyId: string 
               <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 46, height: 46, borderRadius: 8, background: tokens.card, color: tokens.pluginFg, border: `1px solid ${tokens.pluginBorder}` }}>
                 <DownloadCloudIcon size={24} />
               </div>
-              <div style={{ fontSize: 16, fontWeight: 650, color: tokens.fg }}>Drop source files here</div>
-              <Tiny>Review staged files before queueing maintainer tasks.</Tiny>
+              <div style={{ fontSize: 16, fontWeight: 650, color: tokens.fg }}>{uiText("Drop source files here")}</div>
+              <Tiny>{uiText("Review staged files before queueing maintainer tasks.")}</Tiny>
             </div>
           </div>
           <div data-testid="llm-wiki-ingest-manual-separator" aria-hidden="true" style={{ display: "flex", alignItems: "center", gap: 12, color: tokens.muted, fontSize: 11, fontWeight: 650, textTransform: "uppercase", letterSpacing: "0.04em" }}>
             <span style={{ height: 1, flex: 1, background: tokens.border }} />
-            <span>or</span>
+            <span>{uiText("or")}</span>
             <span style={{ height: 1, flex: 1, background: tokens.border }} />
           </div>
           <div>
-            <label style={{ fontSize: 11, color: tokens.muted, display: "block", marginBottom: 4 }}>Source title (optional)</label>
-            <TextInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Karpathy LLM Wiki gist" />
+            <label style={{ fontSize: 11, color: tokens.muted, display: "block", marginBottom: 4 }}>{uiText("Source title (optional)")}</label>
+            <TextInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder={uiText("e.g. Karpathy LLM Wiki gist")} />
           </div>
           <div>
-            <label style={{ fontSize: 11, color: tokens.muted, display: "block", marginBottom: 4 }}>URL</label>
-            <TextInput value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com/article" />
+            <label style={{ fontSize: 11, color: tokens.muted, display: "block", marginBottom: 4 }}>{uiText("URL")}</label>
+            <TextInput value={url} onChange={(e) => setUrl(e.target.value)} placeholder={uiText("https://example.com/article")} />
           </div>
           <div>
-            <label style={{ fontSize: 11, color: tokens.muted, display: "block", marginBottom: 4 }}>Paste markdown / text</label>
-            <TextArea value={pasted} onChange={(e) => setPasted(e.target.value)} placeholder="Paste source content…" rows={8} />
+            <label style={{ fontSize: 11, color: tokens.muted, display: "block", marginBottom: 4 }}>{uiText("Paste markdown / text")}</label>
+            <TextArea value={pasted} onChange={(e) => setPasted(e.target.value)} placeholder={uiText("Paste source content…")} rows={8} />
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <Button variant="primary" onClick={submit} disabled={!canSubmit} loading={busy}>+ Capture & ingest</Button>
+          <Button variant="primary" onClick={submit} disabled={!canSubmit} loading={busy}>{uiText("+ Capture & ingest")}</Button>
         </div>
         {errorMsg ? <div style={{ marginTop: 14 }}><Callout tone="danger">{errorMsg}</Callout></div> : null}
       </div>
@@ -4162,6 +4157,7 @@ function SpacePicker({
   onSelect: (slug: string) => void;
   onCreate: () => void;
 }) {
+  useUiLocale();
   const ref = useRef<HTMLDivElement>(null);
   const active = spaces.find((s) => s.slug === activeSpaceSlug);
   useEffect(() => {
@@ -4176,7 +4172,7 @@ function SpacePicker({
   }, [isOpen, onClose]);
   return (
     <div ref={ref} style={{ position: "relative" }}>
-      <label style={{ fontSize: 11, color: tokens.muted, display: "block", marginBottom: 4 }}>Space</label>
+      <label style={{ fontSize: 11, color: tokens.muted, display: "block", marginBottom: 4 }}>{uiText("Space")}</label>
       <button
         type="button"
         onClick={onToggle}
@@ -4205,9 +4201,7 @@ function SpacePicker({
         ) : null}
         <ChevronDownIcon size={14} />
       </button>
-      <div style={{ marginTop: 6, fontSize: 11, color: tokens.muted, lineHeight: 1.4 }}>
-        Defaults to the space you opened. Switching now re-routes the page so deep links carry the destination.
-      </div>
+      <div style={{ marginTop: 6, fontSize: 11, color: tokens.muted, lineHeight: 1.4 }}>{uiText("Defaults to the space you opened. Switching now re-routes the page so deep links carry the destination.")}</div>
       {isOpen ? (
         <div
           role="listbox"
@@ -4227,7 +4221,7 @@ function SpacePicker({
           }}
         >
           {error ? <div style={{ padding: 10, fontSize: 12, color: tokens.statusBlocked }}>{error}</div> : null}
-          {loading ? <div style={{ padding: 10 }}><Tiny>Loading spaces…</Tiny></div> : null}
+          {loading ? <div style={{ padding: 10 }}><Tiny>{uiText("Loading spaces…")}</Tiny></div> : null}
           {spaces.map((space) => (
             <button
               key={space.slug}
@@ -4278,7 +4272,7 @@ function SpacePicker({
             }}
           >
             <PlusIcon size={14} />
-            <span>New shared space…</span>
+            <span>{uiText("New shared space…")}</span>
           </button>
         </div>
       ) : null}
@@ -4287,21 +4281,22 @@ function SpacePicker({
 }
 
 function OperationCard({ op }: { op: WikiOperationRow }) {
+  useUiLocale();
   return (
     <Card>
       <div style={{ padding: "12px 14px" }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", minWidth: 0 }}>
           <StatusIcon status={op.status} />
-          <strong style={{ flex: "1 1 180px", minWidth: 0, fontSize: 13, overflowWrap: "anywhere" }}>{op.hiddenIssueTitle ?? `LLM Wiki ${op.operationType}`}</strong>
+          <strong style={{ flex: "1 1 180px", minWidth: 0, fontSize: 13, overflowWrap: "anywhere" }}>{op.hiddenIssueTitle ?? uiText("LLM Wiki {{value0}}", { value0: String(op.operationType) })}</strong>
           <Badge tone={statusTone(op.status)} style={{ marginLeft: "auto" }}>{op.status}</Badge>
         </div>
         <Tiny style={{ marginTop: 4 }}>
-          {op.operationType.toUpperCase()} · started {formatTime(op.createdAt)} · op-{op.id.slice(0, 6)}
+          {op.operationType.toUpperCase()}{uiText(" · started ")}{formatTime(op.createdAt)}{uiText(" · op-")}{op.id.slice(0, 6)}
           {op.hiddenIssueIdentifier ? <> · <Mono>{op.hiddenIssueIdentifier}</Mono></> : null}
         </Tiny>
         {Array.isArray(op.warnings) && op.warnings.length > 0 ? (
           <Tiny style={{ marginTop: 4, color: tokens.statusBlocked }}>
-            {op.warnings.length} warning{op.warnings.length === 1 ? "" : "s"}
+            {op.warnings.length}{uiText(" warning")}{op.warnings.length === 1 ? "" : uiText("s")}
           </Tiny>
         ) : null}
       </div>
@@ -4347,6 +4342,7 @@ type QueryStreamEvent = {
 };
 
 function QueryTab({ context, overview }: { context: { companyId: string | null }; overview: OverviewData }) {
+  useUiLocale();
   const startQuery = usePluginAction("start-query");
   const fileAsPage = usePluginAction("file-as-page");
   const toast = usePluginToast();
@@ -4439,7 +4435,7 @@ function QueryTab({ context, overview }: { context: { companyId: string | null }
       setThread((prev) => prev.map((entry) =>
         entry.id === entryId ? { ...entry, status: "error", errorMessage: message } : entry,
       ));
-      toast({ tone: "error", title: "Ask failed", body: message });
+      toast({ tone: "error", title: uiText("Ask failed"), body: message });
     } finally {
       setBusy(false);
     }
@@ -4460,11 +4456,11 @@ function QueryTab({ context, overview }: { context: { companyId: string | null }
         answer,
         querySessionId: source?.querySessionId,
       });
-      toast({ tone: "success", title: "Answer filed", body: `Wrote ${filePath.trim()} and recorded a file-as-page task.` });
+      toast({ tone: "success", title: uiText("Answer filed"), body: `Wrote ${filePath.trim()} and recorded a file-as-page task.` });
       setFileBody("");
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      toast({ tone: "error", title: "Could not file answer", body: message });
+      toast({ tone: "error", title: uiText("Could not file answer"), body: message });
     } finally {
       setFiling(null);
     }
@@ -4474,17 +4470,14 @@ function QueryTab({ context, overview }: { context: { companyId: string | null }
     <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", flex: 1, minHeight: isMobile ? "auto" : 0, minWidth: 0 }}>
       <div style={{ flex: 1, padding: isMobile ? "16px" : "24px 28px", overflow: isMobile ? "visible" : "auto", minWidth: 0 }}>
         {thread.length === 0 ? (
-          <Callout>
-            Ask the wiki anything. Each question initiates a task assigned to the Wiki Maintainer. The answer streams below; you can promote useful answers into a wiki page.
-          </Callout>
+          <Callout>{uiText("Ask the wiki anything. Each question initiates a task assigned to the Wiki Maintainer. The answer streams below; you can promote useful answers into a wiki page.")}</Callout>
         ) : null}
         <div style={{ display: "grid", gap: 22, marginTop: 18 }}>
           {thread.map((entry) => (
             <div key={entry.id}>
-              <Tiny style={{ marginBottom: 4 }}>You · {formatTime(entry.createdAt)}</Tiny>
+              <Tiny style={{ marginBottom: 4 }}>{uiText("You · ")}{formatTime(entry.createdAt)}</Tiny>
               <div style={{ background: tokens.card, border: `1px solid ${tokens.border}`, padding: "10px 12px", borderRadius: 8, fontSize: 13 }}>{entry.prompt}</div>
-              <Tiny style={{ marginTop: 8 }}>
-                Wiki Maintainer · {entry.status}
+              <Tiny style={{ marginTop: 8 }}>{uiText("Wiki Maintainer · ")}{entry.status}
                 {entry.hiddenIssueIdentifier ? <> · <Mono>{entry.hiddenIssueIdentifier}</Mono></> : null}
               </Tiny>
               {entry.status === "error" ? (
@@ -4503,12 +4496,12 @@ function QueryTab({ context, overview }: { context: { companyId: string | null }
               {entry.answer.trim() && entry.status === "done" ? (
                 <div style={{ marginTop: 10, border: `1px dashed ${tokens.border}`, borderRadius: 8, padding: "10px 12px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <strong style={{ fontSize: 13 }}>📑 File this answer as a wiki page?</strong>
-                    <Tiny style={{ marginLeft: isMobile ? 0 : "auto", width: isMobile ? "100%" : undefined }}>Path: <Mono>{filePath}</Mono></Tiny>
+                    <strong style={{ fontSize: 13 }}>{uiText("📑 File this answer as a wiki page?")}</strong>
+                    <Tiny style={{ marginLeft: isMobile ? 0 : "auto", width: isMobile ? "100%" : undefined }}>{uiText("Path: ")}<Mono>{filePath}</Mono></Tiny>
                   </div>
                   <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
                     <TextInput value={filePath} onChange={(e) => setFilePath(e.target.value)} style={{ maxWidth: isMobile ? "none" : 360 }} />
-                    <Button size="sm" variant="primary" onClick={() => fileAnswer(entry)} disabled={!filePath.trim()} loading={filing === entry.id}>Accept &amp; file</Button>
+                    <Button size="sm" variant="primary" onClick={() => fileAnswer(entry)} disabled={!filePath.trim()} loading={filing === entry.id}>{uiText("Accept & file")}</Button>
                   </div>
                 </div>
               ) : null}
@@ -4516,12 +4509,12 @@ function QueryTab({ context, overview }: { context: { companyId: string | null }
           ))}
         </div>
         <div style={{ borderTop: `1px solid ${tokens.border}`, paddingTop: 14, marginTop: 22 }}>
-          <TextArea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Ask the wiki…" rows={3} />
+          <TextArea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={uiText("Ask the wiki…")} rows={3} />
           <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <Button variant="primary" size="sm" onClick={send} disabled={!prompt.trim()} loading={busy}>Send (⌘↵)</Button>
-            <Badge>Cite: wiki + raw</Badge>
-            <Badge>Max steps: 6</Badge>
-            <Tiny style={{ marginLeft: "auto" }}>Streamed via agent session · maintainer task</Tiny>
+            <Button variant="primary" size="sm" onClick={send} disabled={!prompt.trim()} loading={busy}>{uiText("Send (⌘↵)")}</Button>
+            <Badge>{uiText("Cite: wiki + raw")}</Badge>
+            <Badge>{uiText("Max steps: 6")}</Badge>
+            <Tiny style={{ marginLeft: "auto" }}>{uiText("Streamed via agent session · maintainer task")}</Tiny>
           </div>
         </div>
       </div>
@@ -4533,14 +4526,14 @@ function QueryTab({ context, overview }: { context: { companyId: string | null }
         overflow: isMobile ? "visible" : "auto",
         minWidth: 0,
       }}>
-        <Tiny style={{ marginBottom: 8 }}>SESSION</Tiny>
-        <PropRow label="Wiki" value={overview.wikiId} />
-        <PropRow label="Project" value={overview.managedProject.details?.name ?? overview.managedProject.status} />
-        <PropRow label="Agent" value={overview.managedAgent.details?.name ?? overview.managedAgent.status} />
-        <PropRow label="Operations" value={overview.operationCount} />
-        <PropRow label="Stream" value={stream.connected ? "live" : stream.connecting ? "connecting…" : "idle"} />
+        <Tiny style={{ marginBottom: 8 }}>{uiText("SESSION")}</Tiny>
+        <PropRow label={uiText("Wiki")} value={overview.wikiId} />
+        <PropRow label={uiText("Project")} value={overview.managedProject.details?.name ?? overview.managedProject.status} />
+        <PropRow label={uiText("Agent")} value={overview.managedAgent.details?.name ?? overview.managedAgent.status} />
+        <PropRow label={uiText("Operations")} value={overview.operationCount} />
+        <PropRow label={uiText("Stream")} value={stream.connected ? "live" : stream.connecting ? "connecting…" : "idle"} />
         <Divider />
-        <Tiny style={{ marginBottom: 8 }}>ASK PROMPT</Tiny>
+        <Tiny style={{ marginBottom: 8 }}>{uiText("ASK PROMPT")}</Tiny>
         <pre style={{ margin: 0, whiteSpace: "pre-wrap", fontFamily: "ui-monospace, monospace", fontSize: 12, color: tokens.muted }}>{overview.prompts.query}</pre>
       </aside>
     </div>
@@ -4561,25 +4554,26 @@ function LintTab({ context, overview, refreshOverview }: { context: { companyId:
 }
 
 function SettingsLintPanel({ context }: { context: { companyId: string | null } }) {
+  useUiLocale();
   const overview = useOverview(context.companyId);
 
   if (overview.error) {
-    return <SettingsPanel title="Lint" badge={<HiddenOpBadge />} description="Run structural checks for orphan pages, missing backlinks, and stale provenance.">
-      <Callout tone="danger">LLM Wiki bridge error: {overview.error.message}</Callout>
+    return <SettingsPanel title={uiText("Lint")} badge={<HiddenOpBadge />} description={uiText("Run structural checks for orphan pages, missing backlinks, and stale provenance.")}>
+      <Callout tone="danger">{uiText("LLM Wiki bridge error: ")}{overview.error.message}</Callout>
     </SettingsPanel>;
   }
 
   if (!overview.data) {
-    return <SettingsPanel title="Lint" badge={<HiddenOpBadge />} description="Run structural checks for orphan pages, missing backlinks, and stale provenance.">
-      <Tiny>Loading lint controls…</Tiny>
+    return <SettingsPanel title={uiText("Lint")} badge={<HiddenOpBadge />} description={uiText("Run structural checks for orphan pages, missing backlinks, and stale provenance.")}>
+      <Tiny>{uiText("Loading lint controls…")}</Tiny>
     </SettingsPanel>;
   }
 
   return (
     <SettingsPanel
-      title="Lint"
+      title={uiText("Lint")}
       badge={<HiddenOpBadge />}
-      description="Run structural checks for orphan pages, missing backlinks, and stale provenance."
+      description={uiText("Run structural checks for orphan pages, missing backlinks, and stale provenance.")}
     >
       <LintPanelContent context={context} overview={overview.data} refreshOverview={overview.refresh} showHeading={false} />
     </SettingsPanel>
@@ -4597,6 +4591,7 @@ function LintPanelContent({
   refreshOverview: () => void;
   showHeading?: boolean;
 }) {
+  useUiLocale();
   const create = usePluginAction("create-operation");
   const { pathname } = useHostLocation();
   const activeSpaceSlug = useMemo(() => readActiveSpaceSlugFromLocation(pathname), [pathname]);
@@ -4616,11 +4611,11 @@ function LintPanelContent({
         title: `Run LLM Wiki lint · ${activeSpaceSlug}`,
         prompt: overview.prompts.lint,
       });
-      toast({ tone: "success", title: "Lint queued", body: "Lint runs as a Wiki Maintainer task. Findings will appear here once the run completes." });
+      toast({ tone: "success", title: uiText("Lint queued"), body: uiText("Lint runs as a Wiki Maintainer task. Findings will appear here once the run completes.") });
       operations.refresh();
       refreshOverview();
     } catch (err) {
-      toast({ tone: "error", title: "Could not run lint", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Could not run lint"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setBusy(false);
     }
@@ -4634,23 +4629,23 @@ function LintPanelContent({
   return (
     <div style={{ display: "grid", gap: isMobile ? 14 : 18, minWidth: 0 }}>
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-        {showHeading ? <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Lint</h2> : null}
-        <Badge style={unfilledSurfaceStyle}>{recent.length} run{recent.length === 1 ? "" : "s"}</Badge>
-        <Button variant="primary" size="sm" onClick={runLint} loading={busy} style={{ marginLeft: isMobile ? 0 : "auto" }}>▶ Run lint now</Button>
+        {showHeading ? <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{uiText("Lint")}</h2> : null}
+        <Badge style={unfilledSurfaceStyle}>{recent.length}{uiText(" run")}{recent.length === 1 ? "" : uiText("s")}</Badge>
+        <Button variant="primary" size="sm" onClick={runLint} loading={busy} style={{ marginLeft: isMobile ? 0 : "auto" }}>{uiText("▶ Run lint now")}</Button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
-        <StatCard label="Findings" value={String(counts.total)} hint={latestDone ? `last run ${formatTime(latestDone.createdAt)}` : "no runs yet"} />
-        <StatCard label="Critical" value={String(counts.critical)} hint="contradictions / conflict" tone={counts.critical > 0 ? "danger" : undefined} />
-        <StatCard label="Orphans" value={String(counts.orphan)} hint="no inbound backlinks" />
-        <StatCard label="Stale" value={String(counts.stale)} hint="provenance > 30d" />
-        <StatCard label="Index drift" value={String(counts.index)} hint="wiki/index.md / wiki/log.md" />
+        <StatCard label={uiText("Findings")} value={String(counts.total)} hint={latestDone ? uiText("last run {{value0}}", { value0: String(formatTime(latestDone.createdAt)) }) : uiText("no runs yet")} />
+        <StatCard label={uiText("Critical")} value={String(counts.critical)} hint={uiText("contradictions / conflict")} tone={counts.critical > 0 ? "danger" : undefined} />
+        <StatCard label={uiText("Orphans")} value={String(counts.orphan)} hint={uiText("no inbound backlinks")} />
+        <StatCard label={uiText("Stale")} value={String(counts.stale)} hint={uiText("provenance > 30d")} />
+        <StatCard label={uiText("Index drift")} value={String(counts.index)} hint={uiText("wiki/index.md / wiki/log.md")} />
       </div>
       <Card style={unfilledSurfaceStyle}>
-        <CardHeader title="Findings" badges={<HiddenOpBadge />} right={<Tiny>Lint runs as a Wiki Maintainer task. Critical findings can optionally open visible follow-up issues — toggle in Settings → Lint policy.</Tiny>} />
+        <CardHeader title={uiText("Findings")} badges={<HiddenOpBadge />} right={<Tiny>{uiText("Lint runs as a Wiki Maintainer task. Critical findings can optionally open visible follow-up issues — toggle in Settings → Lint policy.")}</Tiny>} />
         <CardBody padding={0}>
           {findings.length === 0 ? (
             <div style={{ padding: 16, color: tokens.muted, fontSize: 13 }}>
-              {latestDone ? "Latest lint run reported no findings." : "No completed lint runs yet. Use ▶ Run lint now to start one."}
+              {latestDone ? uiText("Latest lint run reported no findings.") : uiText("No completed lint runs yet. Use ▶ Run lint now to start one.")}
             </div>
           ) : findings.map((f, idx) => {
             const severityTone: Tone = f.severity === "critical" ? "failed" : f.severity === "orphan" ? "paused" : "default";
@@ -4672,12 +4667,12 @@ function LintPanelContent({
         </CardBody>
       </Card>
       <Card style={unfilledSurfaceStyle}>
-        <CardHeader title="Recent lint runs" />
+        <CardHeader title={uiText("Recent lint runs")} />
         <CardBody padding={0}>
-          {recent.length === 0 ? <div style={{ padding: 12, color: tokens.muted, fontSize: 13 }}>No lint runs yet.</div> : recent.map((op) => (
+          {recent.length === 0 ? <div style={{ padding: 12, color: tokens.muted, fontSize: 13 }}>{uiText("No lint runs yet.")}</div> : recent.map((op) => (
             <Row
               key={op.id}
-              primary={<><Mono>op-{op.id.slice(0, 6)}</Mono> {op.hiddenIssueTitle ?? "Wiki lint"}</>}
+              primary={<><Mono>{uiText("op-")}{op.id.slice(0, 6)}</Mono> {op.hiddenIssueTitle ?? uiText("Wiki lint")}</>}
               secondary={formatTime(op.createdAt)}
               right={<Badge tone={statusTone(op.status)}>{op.status}</Badge>}
             />
@@ -4742,29 +4737,30 @@ function runStatusTone(status: string): Tone {
 function runStatusLabel(status: string): string {
   switch (status) {
     case "review_required":
-      return "review required";
+      return uiText("review required");
     case "refused_cost_cap":
-      return "cost capped";
+      return uiText("cost capped");
     case "source_ready":
-      return "source ready";
+      return uiText("source ready");
     default:
-      return status.replace(/_/g, " ");
+      return uiText(status.replace(/_/g, " "));
   }
 }
 
 function HistoryTab({ context, overview }: { context: { companyId: string | null; companyPrefix?: string | null }; overview: OverviewData }) {
+  useUiLocale();
   const isMobile = useIsMobileLayout();
   const projectId = overview.managedProject.projectId;
   const originKindPrefix = `plugin:${PLUGIN_ID}:operation`;
 
   if (!context.companyId) {
-    return <div style={{ padding: isMobile ? 16 : 24, flex: 1 }}><Callout>Choose a company to view LLM Wiki history.</Callout></div>;
+    return <div style={{ padding: isMobile ? 16 : 24, flex: 1 }}><Callout>{uiText("Choose a company to view LLM Wiki history.")}</Callout></div>;
   }
 
   if (!projectId) {
     return (
       <div style={{ padding: isMobile ? 16 : 24, flex: 1 }}>
-        <Callout tone="warn">The LLM Wiki operations project is not resolved yet. Reconcile the managed project in Settings, then history will show its issues here.</Callout>
+        <Callout tone="warn">{uiText("The LLM Wiki operations project is not resolved yet. Reconcile the managed project in Settings, then history will show its issues here.")}</Callout>
       </div>
     );
   }
@@ -4877,7 +4873,7 @@ function buildProjectHealthItems(managedProject: ManagedProject): RoutineHealthI
 function buildSkillHealthItems(skills: ManagedSkill[]): RoutineHealthItem[] {
   if (skills.length === 0) {
     return [{
-      label: "Managed skill",
+      get label() { return uiText("Managed skill"); },
       ok: false,
       detail: "No plugin-managed skills are installed in the company skill library.",
     }];
@@ -4934,11 +4930,12 @@ function buildRoutineHealthItems(
 }
 
 function RoutineHealthChecklist({ items }: { items: RoutineHealthItem[] }) {
+  useUiLocale();
   return (
     <ManagedResourceHealthChecklist
       items={items}
       ariaLabel="Wiki routines health checklist"
-      heading="Routine health"
+      heading={uiText("Routine health")}
     />
   );
 }
@@ -4997,11 +4994,12 @@ function ManagedResourceHealthChecklist({
 }
 
 function SkillHealthChecklist({ items }: { items: RoutineHealthItem[] }) {
+  useUiLocale();
   return (
     <ManagedResourceHealthChecklist
       items={items}
       ariaLabel="Wiki skills health checklist"
-      heading="Skill health"
+      heading={uiText("Skill health")}
     />
   );
 }
@@ -5013,12 +5011,12 @@ const SETTINGS_SECTIONS: ReadonlyArray<{
   label: string;
   description: string;
 }> = [
-  { key: "root", label: "Setup", description: "" },
-  { key: "spaces", label: "Spaces", description: "Destination spaces - folders, slugs, and folder health. Per-space Paperclip indexing is not configurable yet." },
-  { key: "distillation", label: "Distillation", description: "Paperclip -> default space. Cursors, caps, and routines for the company-wide distillation pipeline." },
-  { key: "routines", label: "Managed Routines", description: "Scheduled wiki maintenance." },
-  { key: "lint", label: "Lint", description: "Run checks and review wiki health findings." },
-  { key: "events", label: "Ingestion Settings", description: "Paperclip event capture into the default space (issues, comments, documents)." },
+  { key: "root", get label() { return uiText("Setup"); }, description: "" },
+  { key: "spaces", get label() { return uiText("Spaces"); }, description: "Destination spaces - folders, slugs, and folder health. Per-space Paperclip indexing is not configurable yet." },
+  { key: "distillation", get label() { return uiText("Distillation"); }, description: "Paperclip -> default space. Cursors, caps, and routines for the company-wide distillation pipeline." },
+  { key: "routines", get label() { return uiText("Managed Routines"); }, description: "Scheduled wiki maintenance." },
+  { key: "lint", get label() { return uiText("Lint"); }, description: "Run checks and review wiki health findings." },
+  { key: "events", get label() { return uiText("Ingestion Settings"); }, description: "Paperclip event capture into the default space (issues, comments, documents)." },
 ];
 
 function SettingsSectionButton({
@@ -5126,6 +5124,7 @@ function detectPathPlatform(): PathPlatform {
 }
 
 function PathInstructionsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  useUiLocale();
   const [platform, setPlatform] = useState<PathPlatform>(detectPathPlatform);
 
   useEffect(() => {
@@ -5172,10 +5171,10 @@ function PathInstructionsDialog({ open, onClose }: { open: boolean; onClose: () 
       >
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start" }}>
           <div style={{ display: "grid", gap: 4 }}>
-            <h3 id="wiki-path-help-title" style={{ margin: 0, fontSize: 15, fontWeight: 650 }}>Get a full folder path</h3>
-            <Tiny>Paste an absolute path such as <Mono>/Users/you/company-wiki</Mono>.</Tiny>
+            <h3 id="wiki-path-help-title" style={{ margin: 0, fontSize: 15, fontWeight: 650 }}>{uiText("Get a full folder path")}</h3>
+            <Tiny>{uiText("Paste an absolute path such as ")}<Mono>{uiText("/Users/you/company-wiki")}</Mono>.</Tiny>
           </div>
-          <Button size="sm" variant="ghost" onClick={onClose} title="Close path help">Close</Button>
+          <Button size="sm" variant="ghost" onClick={onClose} title={uiText("Close path help")}>{uiText("Close")}</Button>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 4, border: `1px solid ${tokens.border}`, borderRadius: 7, padding: 3 }}>
           {(Object.keys(PATH_PLATFORM_LABELS) as PathPlatform[]).map((key) => (
@@ -5223,6 +5222,7 @@ function FolderPathPicker({
   disabled?: boolean;
   onRefresh?: () => void;
 }) {
+  useUiLocale();
   const [helpOpen, setHelpOpen] = useState(false);
 
   return (
@@ -5248,20 +5248,20 @@ function FolderPathPicker({
           <FolderOpenIcon />
         </span>
         <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
-          <span style={{ fontSize: 13, fontWeight: 650 }}>Local wiki folder</span>
-          <Tiny>Absolute path on this machine</Tiny>
+          <span style={{ fontSize: 13, fontWeight: 650 }}>{uiText("Local wiki folder")}</span>
+          <Tiny>{uiText("Absolute path on this machine")}</Tiny>
         </div>
       </div>
       <div style={{ display: "flex", gap: 8, padding: 12, alignItems: "center", flexWrap: "wrap" }}>
         <TextInput
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          placeholder="/absolute/path/to/wiki-root"
+          placeholder={uiText("/absolute/path/to/wiki-root")}
           style={{ flex: "1 1 320px", fontFamily: "ui-monospace, SFMono-Regular, monospace" }}
         />
-        <Button size="sm" onClick={() => setHelpOpen(true)}><FolderOpenIcon size={13} /> Choose</Button>
+        <Button size="sm" onClick={() => setHelpOpen(true)}><FolderOpenIcon size={13} />{uiText(" Choose")}</Button>
         <Button variant="primary" size="sm" onClick={onApply} loading={busy} disabled={disabled || !value.trim()}>{applyLabel}</Button>
-        {onRefresh ? <Button size="sm" variant="ghost" onClick={onRefresh}>Run health check</Button> : null}
+        {onRefresh ? <Button size="sm" variant="ghost" onClick={onRefresh}>{uiText("Run health check")}</Button> : null}
       </div>
       <PathInstructionsDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
@@ -5275,19 +5275,20 @@ type FolderHealthItem = {
 
 function folderHealthItems(folder: FolderStatus): FolderHealthItem[] {
   return [
-    { label: "Path configured", ok: folder.configured },
-    { label: "Readable", ok: folder.readable },
+    { get label() { return uiText("Path configured"); }, ok: folder.configured },
+    { get label() { return uiText("Readable"); }, ok: folder.readable },
     { label: folder.access === "readWrite" ? "Writable" : "Read-only access", ok: folder.access === "read" || folder.writable },
-    { label: "Baseline files", ok: folder.missingFiles.length === 0 },
-    { label: "Wiki folders", ok: folder.missingDirectories.length === 0 },
+    { get label() { return uiText("Baseline files"); }, ok: folder.missingFiles.length === 0 },
+    { get label() { return uiText("Wiki folders"); }, ok: folder.missingDirectories.length === 0 },
   ];
 }
 
 function FolderHealthChecklist({ folder }: { folder: FolderStatus }) {
+  useUiLocale();
   const items = folderHealthItems(folder);
   return (
-    <div style={{ display: "grid", gap: 8 }} aria-label="Wiki root health checklist">
-      <div style={{ fontSize: 12, fontWeight: 650, color: tokens.muted }}>Health check</div>
+    <div style={{ display: "grid", gap: 8 }} aria-label={uiText("Wiki root health checklist")}>
+      <div style={{ fontSize: 12, fontWeight: 650, color: tokens.muted }}>{uiText("Health check")}</div>
       <div role="list" style={{ position: "relative", display: "grid", gap: 0, padding: "2px 0" }}>
         {items.length > 1 ? (
           <span
@@ -5332,13 +5333,13 @@ type MaintainerAgentOption = SettingsData["agentOptions"][number];
 type ProjectOption = SettingsData["projectOptions"][number];
 
 function agentStatusLabel(status?: string | null) {
-  if (!status) return "unknown";
-  return status.replace(/_/g, " ");
+  if (!status) return uiText("unknown");
+  return uiText(status.replace(/_/g, " "));
 }
 
 function projectStatusLabel(status?: string | null) {
-  if (!status) return "unknown";
-  return status.replace(/_/g, " ");
+  if (!status) return uiText("unknown");
+  return uiText(status.replace(/_/g, " "));
 }
 
 function adapterTypeLabel(adapterType?: string | null) {
@@ -5398,6 +5399,7 @@ function MaintainerAgentLink({
   agent: MaintainerAgentOption;
   hrefProps?: Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "style">;
 }) {
+  useUiLocale();
   return (
     <a
       {...hrefProps}
@@ -5412,9 +5414,7 @@ function MaintainerAgentLink({
     >
       <AgentAvatar agent={agent} />
       <span style={{ display: "grid", gap: 1, minWidth: 0, textAlign: "left" }}>
-        <span style={{ fontSize: 13, fontWeight: 650, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          Resolve agent wiki maintainer
-        </span>
+        <span style={{ fontSize: 13, fontWeight: 650, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{uiText("Resolve agent wiki maintainer")}</span>
         <span style={{ fontSize: 11, color: tokens.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {agent.name} · {agentStatusLabel(agent.status)} · {adapterTypeLabel(agent.adapterType)}
         </span>
@@ -5431,6 +5431,7 @@ function MaintainerAgentLink({
 // ---------------------------------------------------------------------------
 
 function DistillationSettingsPanel({ context, settings }: { context: { companyId: string | null }; settings: SettingsData }) {
+  useUiLocale();
   const overview = useDistillationOverview(context.companyId);
   const distillNow = usePluginAction("distill-paperclip-now");
   const enableActiveProjects = usePluginAction("enable-paperclip-distillation-active-projects");
@@ -5455,7 +5456,7 @@ function DistillationSettingsPanel({ context, settings }: { context: { companyId
   async function runDistillNow() {
     if (!context.companyId) return;
     if (cursors.length === 0) {
-      toast({ tone: "warn", title: "Distill now needs at least one cursor" });
+      toast({ tone: "warn", title: uiText("Distill now needs at least one cursor") });
       return;
     }
     setBusy("distill-now");
@@ -5466,12 +5467,12 @@ function DistillationSettingsPanel({ context, settings }: { context: { companyId
       });
       toast({
         tone: "success",
-        title: "Distill now queued",
-        body: "Wiki Maintainer will scan changed projects in the company and write into the default wiki space.",
+        title: uiText("Distill now queued"),
+        body: uiText("Wiki Maintainer will scan changed projects in the company and write into the default wiki space."),
       });
       overview.refresh();
     } catch (err) {
-      toast({ tone: "error", title: "Distill now failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Distill now failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setBusy(null);
     }
@@ -5494,7 +5495,7 @@ function DistillationSettingsPanel({ context, settings }: { context: { companyId
       });
       overview.refresh();
     } catch (err) {
-      toast({ tone: "error", title: "Enable distillation failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Enable distillation failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setBusy(null);
     }
@@ -5504,7 +5505,7 @@ function DistillationSettingsPanel({ context, settings }: { context: { companyId
     if (!context.companyId || cursors.length === 0) return;
     const target = cursors.find((cursor) => cursor.projectId) ?? cursors[0];
     if (!target.projectId && !target.rootIssueId) {
-      toast({ tone: "warn", title: "Backfill needs a project or root issue scope" });
+      toast({ tone: "warn", title: uiText("Backfill needs a project or root issue scope") });
       return;
     }
     setBusy("backfill");
@@ -5514,17 +5515,17 @@ function DistillationSettingsPanel({ context, settings }: { context: { companyId
         projectId: target.projectId ?? undefined,
         rootIssueId: target.rootIssueId ?? undefined,
       });
-      toast({ tone: "success", title: "Backfill queued", body: target.projectName ?? target.rootIssueIdentifier ?? "Selected scope" });
+      toast({ tone: "success", title: uiText("Backfill queued"), body: target.projectName ?? target.rootIssueIdentifier ?? "Selected scope" });
       overview.refresh();
     } catch (err) {
-      toast({ tone: "error", title: "Backfill failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Backfill failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setBusy(null);
     }
   }
 
   if (overview.loading && !data) {
-    return <Tiny>Loading distillation overview…</Tiny>;
+    return <Tiny>{uiText("Loading distillation overview…")}</Tiny>;
   }
 
   if (!isConfigured) {
@@ -5535,48 +5536,39 @@ function DistillationSettingsPanel({ context, settings }: { context: { companyId
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12 }}>
               <SparklesIcon size={36} />
               <div>
-                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 650 }}>Distillation is off</h3>
-                <Tiny style={{ marginTop: 6, fontSize: 13, color: tokens.fg, lineHeight: 1.55, maxWidth: 540 }}>
-                  When enabled, the Wiki Maintainer reads Paperclip issues, comments, and documents for this
-                  company and keeps <Mono>wiki/projects/&lt;slug&gt;/standup.md</Mono> plus <Mono>wiki/projects/&lt;slug&gt;/index.md</Mono> pages in the
-                  <strong> default wiki space</strong>. Pages stay marked stale until a cursor window succeeds -
-                  they never imply live state.
-                </Tiny>
-                <Tiny style={{ marginTop: 6, fontSize: 13, color: tokens.fg, lineHeight: 1.55, maxWidth: 540 }}>
-                  Other spaces do not receive Paperclip-derived pages yet. They stay on manual and raw-file
-                  ingest until per-space Paperclip ingestion profiles ship.
-                </Tiny>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 650 }}>{uiText("Distillation is off")}</h3>
+                <Tiny style={{ marginTop: 6, fontSize: 13, color: tokens.fg, lineHeight: 1.55, maxWidth: 540 }}>{uiText("When enabled, the Wiki Maintainer reads Paperclip issues, comments, and documents for this company and keeps ")}<Mono>{uiText("wiki/projects/<slug>/standup.md")}</Mono>{uiText(" plus ")}<Mono>{uiText("wiki/projects/<slug>/index.md")}</Mono>{uiText(" pages in the")}<strong>{uiText(" default wiki space")}</strong>{uiText(". Pages stay marked stale until a cursor window succeeds - they never imply live state.")}</Tiny>
+                <Tiny style={{ marginTop: 6, fontSize: 13, color: tokens.fg, lineHeight: 1.55, maxWidth: 540 }}>{uiText("Other spaces do not receive Paperclip-derived pages yet. They stay on manual and raw-file ingest until per-space Paperclip ingestion profiles ship.")}</Tiny>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <Button variant="primary" size="md" onClick={enableForActiveProjects} loading={busy === "enable-active-projects"}>
-                  <SparklesIcon size={14} /> Enable for active projects
-                </Button>
-                <Button variant="default" size="md" onClick={() => overview.refresh()}>Configure manually</Button>
+                  <SparklesIcon size={14} />{uiText(" Enable for active projects")}</Button>
+                <Button variant="default" size="md" onClick={() => overview.refresh()}>{uiText("Configure manually")}</Button>
               </div>
-              <Tiny>Suggested defaults: 3 active projects in the default space · all-section auto-apply where allowed · routines paused for 24h.</Tiny>
+              <Tiny>{uiText("Suggested defaults: 3 active projects in the default space · all-section auto-apply where allowed · routines paused for 24h.")}</Tiny>
             </div>
           </CardBody>
         </Card>
 
         <div style={{ display: "grid", gap: 12, gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr" }}>
           <Card>
-            <CardHeader title="What gets created" />
+            <CardHeader title={uiText("What gets created")} />
             <CardBody padding={14}>
               <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: tokens.muted, lineHeight: 1.5 }}>
-                <li>Project overviews at <Mono>wiki/projects/&lt;slug&gt;/index.md</Mono></li>
-                <li>Executive standups at <Mono>wiki/projects/&lt;slug&gt;/standup.md</Mono></li>
-                <li>Decisions and history under <Mono>wiki/projects/&lt;slug&gt;/</Mono></li>
-                <li>Source bundles cached under <Mono>raw/distill/</Mono></li>
+                <li>{uiText("Project overviews at ")}<Mono>{uiText("wiki/projects/<slug>/index.md")}</Mono></li>
+                <li>{uiText("Executive standups at ")}<Mono>{uiText("wiki/projects/<slug>/standup.md")}</Mono></li>
+                <li>{uiText("Decisions and history under ")}<Mono>{uiText("wiki/projects/<slug>/")}</Mono></li>
+                <li>{uiText("Source bundles cached under ")}<Mono>{uiText("raw/distill/")}</Mono></li>
               </ul>
             </CardBody>
           </Card>
           <Card>
-            <CardHeader title="What it never does" />
+            <CardHeader title={uiText("What it never does")} />
             <CardBody padding={14}>
               <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: tokens.muted, lineHeight: 1.5 }}>
-                <li>Read across companies — strict per-company isolation.</li>
-                <li>Re-distill its own plugin operation issues.</li>
-                <li>Auto-apply patches when source hashes drift.</li>
+                <li>{uiText("Read across companies — strict per-company isolation.")}</li>
+                <li>{uiText("Re-distill its own plugin operation issues.")}</li>
+                <li>{uiText("Auto-apply patches when source hashes drift.")}</li>
               </ul>
             </CardBody>
           </Card>
@@ -5589,66 +5581,60 @@ function DistillationSettingsPanel({ context, settings }: { context: { companyId
     <div style={{ display: "grid", gap: 16, minWidth: 0 }}>
       {autoApplyRestriction ? (
         <Callout tone="warn">
-          {autoApplyRestriction} The plugin ignores auto-apply requests from config and manual distill actions on this instance.
-        </Callout>
+          {autoApplyRestriction}{uiText(" The plugin ignores auto-apply requests from config and manual distill actions on this instance.")}</Callout>
       ) : null}
       <Callout>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <InfoIcon size={16} />
-            <strong style={{ fontSize: 13 }}>Active for {projectsCovered} project{projectsCovered === 1 ? "" : "s"} · {counts.cursors} cursor{counts.cursors === 1 ? "" : "s"} catching up · default space</strong>
+            <strong style={{ fontSize: 13 }}>{uiText("Active for ")}{projectsCovered}{uiText(" project")}{projectsCovered === 1 ? "" : uiText("s")} · {counts.cursors}{uiText(" cursor")}{counts.cursors === 1 ? "" : uiText("s")}{uiText(" catching up · default space")}</strong>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <Button variant="ghost" size="sm" onClick={() => overview.refresh()}><RefreshIcon size={12} /> Refresh</Button>
-            <Button variant="primary" size="sm" onClick={runDistillNow} loading={busy === "distill-now"}><SparklesIcon size={12} /> Distill now</Button>
+            <Button variant="ghost" size="sm" onClick={() => overview.refresh()}><RefreshIcon size={12} />{uiText(" Refresh")}</Button>
+            <Button variant="primary" size="sm" onClick={runDistillNow} loading={busy === "distill-now"}><SparklesIcon size={12} />{uiText(" Distill now")}</Button>
           </div>
         </div>
-        <Tiny style={{ marginTop: 6 }}>
-          Distillation runs on the assigned Wiki Maintainer agent and writes only into the default space.
-        </Tiny>
+        <Tiny style={{ marginTop: 6 }}>{uiText("Distillation runs on the assigned Wiki Maintainer agent and writes only into the default space.")}</Tiny>
       </Callout>
 
       <Card>
-        <CardHeader title="Source filters" />
+        <CardHeader title={uiText("Source filters")} />
         <CardBody padding={14}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
             <fieldset style={{ border: 0, padding: 0, margin: 0, display: "grid", gap: 6 }}>
-              <legend style={{ fontSize: 12, color: tokens.muted, marginBottom: 4 }}>Issue scope</legend>
-              <CheckboxRow label="Active projects" defaultChecked help="Cursors are created for projects with recent activity." />
-              <CheckboxRow label="Root issues marked distillable" defaultChecked />
-              <CheckboxRow label="All company issues" help="May create large source windows." />
-              <Tiny>
-                These filters narrow the Paperclip source scope. The destination is always the default
-                wiki space in Phase 1.
-              </Tiny>
-              <Tiny>Plugin-operation issues are always excluded to prevent feedback loops.</Tiny>
+              <legend style={{ fontSize: 12, color: tokens.muted, marginBottom: 4 }}>{uiText("Issue scope")}</legend>
+              <CheckboxRow label={uiText("Active projects")} defaultChecked help={uiText("Cursors are created for projects with recent activity.")} />
+              <CheckboxRow label={uiText("Root issues marked distillable")} defaultChecked />
+              <CheckboxRow label={uiText("All company issues")} help={uiText("May create large source windows.")} />
+              <Tiny>{uiText("These filters narrow the Paperclip source scope. The destination is always the default wiki space in Phase 1.")}</Tiny>
+              <Tiny>{uiText("Plugin-operation issues are always excluded to prevent feedback loops.")}</Tiny>
             </fieldset>
             <fieldset style={{ border: 0, padding: 0, margin: 0, display: "grid", gap: 6 }}>
-              <legend style={{ fontSize: 12, color: tokens.muted, marginBottom: 4 }}>Source kinds</legend>
-              <CheckboxRow label="Issue title + description" defaultChecked locked />
-              <CheckboxRow label="Comments (ranked, clipped)" defaultChecked />
-              <CheckboxRow label="Documents (plan, spec, report)" defaultChecked />
-              <CheckboxRow label="Work products / attachments" suffix="coming soon" />
-              <Tiny>Heartbeats and hidden documents are never included.</Tiny>
+              <legend style={{ fontSize: 12, color: tokens.muted, marginBottom: 4 }}>{uiText("Source kinds")}</legend>
+              <CheckboxRow label={uiText("Issue title + description")} defaultChecked locked />
+              <CheckboxRow label={uiText("Comments (ranked, clipped)")} defaultChecked />
+              <CheckboxRow label={uiText("Documents (plan, spec, report)")} defaultChecked />
+              <CheckboxRow label={uiText("Work products / attachments")} suffix="coming soon" />
+              <Tiny>{uiText("Heartbeats and hidden documents are never included.")}</Tiny>
             </fieldset>
           </div>
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader title="Cursor windows" />
+        <CardHeader title={uiText("Cursor windows")} />
         <CardBody padding={14}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
-            <SettingField label="Max source characters per project" hint="Source bundles above this size are clipped and the page warns 'source clipped'.">
+            <SettingField label={uiText("Max source characters per project")} hint={uiText("Source bundles above this size are clipped and the page warns 'source clipped'.")}>
               <TextInput defaultValue="48000" />
             </SettingField>
-            <SettingField label="Min source age before processing" hint="Debounces a hot project so a flurry of comments collapses into one cursor window.">
+            <SettingField label={uiText("Min source age before processing")} hint={uiText("Debounces a hot project so a flurry of comments collapses into one cursor window.")}>
               <SelectInput defaultValue="15" options={[["5", "5 min"], ["15", "15 min"], ["30", "30 min"], ["60", "1 hour"]]} />
             </SettingField>
-            <SettingField label="Max cursor windows per routine run" hint="Routine runs that hit this cap split the remainder into the next routine fire.">
+            <SettingField label={uiText("Max cursor windows per routine run")} hint={uiText("Routine runs that hit this cap split the remainder into the next routine fire.")}>
               <TextInput defaultValue="6" />
             </SettingField>
-            <SettingField label="Stale window threshold" hint="After this, project pages render a 'Stale' badge until a successful run advances the cursor.">
+            <SettingField label={uiText("Stale window threshold")} hint={uiText("After this, project pages render a 'Stale' badge until a successful run advances the cursor.")}>
               <SelectInput defaultValue="72" options={[["24", "24 h"], ["48", "48 h"], ["72", "72 h"], ["168", "7 days"]]} />
             </SettingField>
           </div>
@@ -5656,14 +5642,14 @@ function DistillationSettingsPanel({ context, settings }: { context: { companyId
       </Card>
 
       <Card>
-        <CardHeader title="Agent execution" />
+        <CardHeader title={uiText("Agent execution")} />
         <CardBody padding={14}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
-            <SettingField label="Assigned maintainer" hint="Model selection comes from the agent adapter and its runtime config. The plugin does not choose Claude/Codex/Gemini models here.">
+            <SettingField label={uiText("Assigned maintainer")} hint={uiText("Model selection comes from the agent adapter and its runtime config. The plugin does not choose Claude/Codex/Gemini models here.")}>
               <div style={{ minHeight: 34, display: "flex", alignItems: "center", border: `1px solid ${tokens.border}`, borderRadius: 6, padding: "6px 10px", fontSize: 13 }}>
                 {settings.managedAgent.details
                   ? `${settings.managedAgent.details.name} · ${adapterTypeLabel(settings.managedAgent.details.adapterType)}`
-                  : "No maintainer agent resolved"}
+                  : uiText("No maintainer agent resolved")}
               </div>
             </SettingField>
           </div>
@@ -5671,43 +5657,41 @@ function DistillationSettingsPanel({ context, settings }: { context: { companyId
       </Card>
 
       <Card>
-        <CardHeader title="Auto-apply policy" />
+        <CardHeader title={uiText("Auto-apply policy")} />
         <CardBody padding={14}>
           <div style={{ display: "grid", gap: 8 }}>
-            <RadioRow name="autoapply" value="never" label="Never — every patch goes to review-required." />
-            <RadioRow name="autoapply" value="status" label="Executive-status sections only — standup, current direction, and risks." />
-            <RadioRow name="autoapply" value="all" label="All sections — apply when source hash matches and confidence ≥ 0.8 (default)." defaultChecked />
-            <Tiny>Stale-hash collisions always fall through to review, regardless of policy.</Tiny>
+            <RadioRow name="autoapply" value="never" label={uiText("Never — every patch goes to review-required.")} />
+            <RadioRow name="autoapply" value="status" label={uiText("Executive-status sections only — standup, current direction, and risks.")} />
+            <RadioRow name="autoapply" value="all" label={uiText("All sections — apply when source hash matches and confidence ≥ 0.8 (default).")} defaultChecked />
+            <Tiny>{uiText("Stale-hash collisions always fall through to review, regardless of policy.")}</Tiny>
           </div>
         </CardBody>
       </Card>
 
       <Card>
         <CardHeader
-          title="Backfill"
-          right={<Button variant="default" size="sm" onClick={runBackfill} loading={busy === "backfill"}>Queue backfill</Button>}
+          title={uiText("Backfill")}
+          right={<Button variant="default" size="sm" onClick={runBackfill} loading={busy === "backfill"}>{uiText("Queue backfill")}</Button>}
         />
         <CardBody padding={14}>
-          <Tiny style={{ marginBottom: 6 }}>Backfills replay a bounded source window for a single scope so newly-enabled projects can catch up to fresh state.</Tiny>
+          <Tiny style={{ marginBottom: 6 }}>{uiText("Backfills replay a bounded source window for a single scope so newly-enabled projects can catch up to fresh state.")}</Tiny>
           <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
-            <PropRow label="Default scope" value={cursors.find((c) => c.projectName)?.projectName ?? cursors[0]?.scopeKey ?? "—"} />
-            <PropRow label="Cursors active" value={String(counts.cursors)} />
-            <PropRow label="Runs in flight" value={String(counts.runningRuns)} />
-            <PropRow label="Failed (24h)" value={String(counts.failedRuns24h)} />
-            <PropRow label="Review queue" value={String(counts.reviewRequired)} />
+            <PropRow label={uiText("Default scope")} value={cursors.find((c) => c.projectName)?.projectName ?? cursors[0]?.scopeKey ?? "—"} />
+            <PropRow label={uiText("Cursors active")} value={String(counts.cursors)} />
+            <PropRow label={uiText("Runs in flight")} value={String(counts.runningRuns)} />
+            <PropRow label={uiText("Failed (24h)")} value={String(counts.failedRuns24h)} />
+            <PropRow label={uiText("Review queue")} value={String(counts.reviewRequired)} />
           </div>
         </CardBody>
       </Card>
 
-      <Tiny>
-        Active cursors:&nbsp;
-        {cursors.slice(0, 6).map((cursor, idx) => (
+      <Tiny>{uiText("Active cursors: ")}{cursors.slice(0, 6).map((cursor, idx) => (
           <span key={cursor.id}>
             {idx > 0 ? " · " : ""}
             {cursor.projectName ?? cursor.rootIssueIdentifier ?? cursor.scopeKey}
           </span>
         ))}
-        {cursors.length > 6 ? <span>{` +${cursors.length - 6} more`}</span> : null}
+        {cursors.length > 6 ? <span>{uiText(" +{{value0}} more", { value0: String(cursors.length - 6) })}</span> : null}
       </Tiny>
     </div>
   );
@@ -5786,6 +5770,7 @@ function SelectInput({ defaultValue, options }: { defaultValue: string; options:
 }
 
 function SettingsBody({ context, initialSection = "root" }: { context: { companyId: string | null; companyPrefix?: string | null }; initialSection?: SettingsSectionKey }) {
+  useUiLocale();
   const settings = useSettings(context.companyId);
   const hostNavigation = useHostNavigation();
   const { pathname } = useHostLocation();
@@ -5831,10 +5816,10 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
     setActiveSettingsSection(initialSection);
   }, [initialSection]);
 
-  if (!context.companyId) return <Callout>Choose a company to view LLM Wiki settings.</Callout>;
-  if (settings.loading) return <Tiny>Loading settings…</Tiny>;
+  if (!context.companyId) return <Callout>{uiText("Choose a company to view LLM Wiki settings.")}</Callout>;
+  if (settings.loading) return <Tiny>{uiText("Loading settings…")}</Tiny>;
   if (settings.error) return <Callout tone="danger">{settings.error.message}</Callout>;
-  if (!settings.data) return <Tiny>No settings available.</Tiny>;
+  if (!settings.data) return <Tiny>{uiText("No settings available.")}</Tiny>;
 
   const data = settings.data;
   const maintainerFallbackAgent: MaintainerAgentOption | null = data.managedAgent.agentId
@@ -5944,10 +5929,10 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
     setFolderBusy(true);
     try {
       await bootstrap({ companyId: context.companyId, path: folderPath.trim() });
-      toast({ tone: "success", title: "Folder updated" });
+      toast({ tone: "success", title: uiText("Folder updated") });
       settings.refresh();
     } catch (err) {
-      toast({ tone: "error", title: "Folder update failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Folder update failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setFolderBusy(false);
     }
@@ -5959,10 +5944,10 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
     setAgentBusy(true);
     try {
       await selectAgent({ companyId: context.companyId, agentId });
-      toast({ tone: "success", title: "Maintainer agent selected" });
+      toast({ tone: "success", title: uiText("Maintainer agent selected") });
       settings.refresh();
     } catch (err) {
-      toast({ tone: "error", title: "Agent selection failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Agent selection failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setAgentBusy(false);
     }
@@ -5974,10 +5959,10 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
     setProjectBusy(true);
     try {
       await selectProject({ companyId: context.companyId, projectId });
-      toast({ tone: "success", title: "Project selected" });
+      toast({ tone: "success", title: uiText("Project selected") });
       settings.refresh();
     } catch (err) {
-      toast({ tone: "error", title: "Project selection failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Project selection failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setProjectBusy(false);
     }
@@ -5989,10 +5974,10 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
     try {
       const next = await updateEventIngestion({ companyId: context.companyId, ...eventPolicy }) as EventIngestionSettings;
       setEventPolicy(next);
-      toast({ tone: "success", title: "Event ingestion controls saved" });
+      toast({ tone: "success", title: uiText("Event ingestion controls saved") });
       settings.refresh();
     } catch (err) {
-      toast({ tone: "error", title: "Could not save event controls", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Could not save event controls"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setEventPolicyBusy(false);
     }
@@ -6003,10 +5988,10 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
     setRoutineRepairBusy(true);
     try {
       await reconcileRoutines({ companyId: context.companyId });
-      toast({ tone: "success", title: "Routines fixed" });
+      toast({ tone: "success", title: uiText("Routines fixed") });
       settings.refresh();
     } catch (err) {
-      toast({ tone: "error", title: "Routine repair failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Routine repair failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setRoutineRepairBusy(false);
     }
@@ -6017,10 +6002,10 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
     setSkillBusy(true);
     try {
       await resetSkills({ companyId: context.companyId });
-      toast({ tone: "success", title: "Skills synced" });
+      toast({ tone: "success", title: uiText("Skills synced") });
       settings.refresh();
     } catch (err) {
-      toast({ tone: "error", title: "Skill sync failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Skill sync failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setSkillBusy(false);
     }
@@ -6029,7 +6014,7 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
   async function fixAllConfigurationErrors() {
     if (!context.companyId || !hasConfigurationErrors) return;
     const confirmed = typeof window === "undefined" || window.confirm(
-      "Fix all detected LLM Wiki configuration errors? This may recreate missing wiki baseline files and restore plugin-managed agents, projects, routines, and skills to their current defaults.",
+      uiText("Fix all detected LLM Wiki configuration errors? This may recreate missing wiki baseline files and restore plugin-managed agents, projects, routines, and skills to their current defaults."),
     );
     if (!confirmed) return;
 
@@ -6071,10 +6056,10 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
         await reconcileRoutines({ companyId: context.companyId });
       }
 
-      toast({ tone: "success", title: "Configuration errors fixed" });
+      toast({ tone: "success", title: uiText("Configuration errors fixed") });
       settings.refresh();
     } catch (err) {
-      toast({ tone: "error", title: "Fix all failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Fix all failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setAllRepairBusy(false);
     }
@@ -6083,7 +6068,7 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
   async function toggleManagedRoutine(routine: ManagedRoutinesListItem, enabled: boolean) {
     if (!context.companyId || !routine.resourceKey) return;
     if (!enabled && !routine.assigneeAgentId) {
-      toast({ tone: "warn", title: "Default agent required", body: "Set a default maintainer before enabling this routine." });
+      toast({ tone: "warn", title: uiText("Default agent required"), body: uiText("Set a default maintainer before enabling this routine.") });
       return;
     }
     setRoutineBusyKey(`status:${routine.key}`);
@@ -6092,7 +6077,7 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
       toast({ tone: "success", title: enabled ? "Routine paused" : "Routine enabled" });
       settings.refresh();
     } catch (err) {
-      toast({ tone: "error", title: "Routine update failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Routine update failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setRoutineBusyKey(null);
     }
@@ -6103,7 +6088,7 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
     const assigneeAgentId = routine.assigneeAgentId ?? data.managedAgent.agentId ?? null;
     const projectId = routine.projectId ?? data.managedProject.projectId ?? null;
     if (!assigneeAgentId) {
-      toast({ tone: "warn", title: "Default agent required", body: "Set a default maintainer before running this routine." });
+      toast({ tone: "warn", title: uiText("Default agent required"), body: uiText("Set a default maintainer before running this routine.") });
       return;
     }
 
@@ -6115,10 +6100,10 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
         assigneeAgentId,
         projectId,
       });
-      toast({ tone: "success", title: "Routine run started" });
+      toast({ tone: "success", title: uiText("Routine run started") });
       settings.refresh();
     } catch (err) {
-      toast({ tone: "error", title: "Routine run failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Routine run failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setRoutineBusyKey(null);
     }
@@ -6143,10 +6128,10 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
         assigneeAgentId,
         projectId,
       });
-      toast({ tone: "success", title: "Routine defaults updated" });
+      toast({ tone: "success", title: uiText("Routine defaults updated") });
       settings.refresh();
     } catch (err) {
-      toast({ tone: "error", title: "Routine reset failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Routine reset failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setRoutineBusyKey(null);
     }
@@ -6164,10 +6149,10 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
     setAgentBusy(true);
     try {
       await resetAgent({ companyId: context.companyId });
-      toast({ tone: "success", title: "Agent reset to plugin defaults" });
+      toast({ tone: "success", title: uiText("Agent reset to plugin defaults") });
       settings.refresh();
     } catch (err) {
-      toast({ tone: "error", title: "Reset failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Reset failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setAgentBusy(false);
     }
@@ -6192,7 +6177,7 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
         paddingRight: isMobile ? 0 : 16,
         paddingBottom: isMobile ? 12 : 0,
       }}>
-        <nav aria-label="LLM Wiki settings sections" style={{
+        <nav aria-label={uiText("LLM Wiki settings sections")} style={{
           display: "flex",
           flexDirection: isMobile ? "row" : "column",
           gap: 4,
@@ -6220,22 +6205,19 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
             <Callout tone="warn">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                 <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
-                  <strong>configuration errors detected, fix them all?</strong>
+                  <strong>{uiText("configuration errors detected, fix them all?")}</strong>
                   <Tiny>
-                    {configurationErrors.join(", ")} {configurationErrors.length === 1 ? "needs" : "need"} attention.
-                  </Tiny>
+                    {configurationErrors.join(", ")} {configurationErrors.length === 1 ? uiText("needs") : uiText("need")}{uiText(" attention.")}</Tiny>
                 </div>
-                <Button size="sm" variant="primary" onClick={fixAllConfigurationErrors} loading={allRepairBusy}>
-                  Fix them all
-                </Button>
+                <Button size="sm" variant="primary" onClick={fixAllConfigurationErrors} loading={allRepairBusy}>{uiText("Fix them all")}</Button>
               </div>
             </Callout>
           </div>
         ) : null}
         {activeSettingsSection === "root" ? (
           <section style={{ display: "grid", gap: 22, minWidth: 0 }}>
-            <h1 style={{ margin: 0, fontSize: isMobile ? 20 : 22, fontWeight: 700 }}>Setup</h1>
-            <SetupSection title="Base Folder">
+            <h1 style={{ margin: 0, fontSize: isMobile ? 20 : 22, fontWeight: 700 }}>{uiText("Setup")}</h1>
+            <SetupSection title={uiText("Base Folder")}>
               <div style={{ display: "grid", gap: 12 }}>
                 <FolderPathPicker
                   value={folderPath}
@@ -6248,21 +6230,21 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
                 />
                 <FolderHealthChecklist folder={data.folder} />
                 {data.folder.problems.length > 0 ? (
-                  <Callout tone="warn">{data.folder.problems.length} folder issue(s): {data.folder.problems.map((p) => p.message).join("; ")}</Callout>
+                  <Callout tone="warn">{data.folder.problems.length}{uiText(" folder issue(s): ")}{data.folder.problems.map((p) => p.message).join("; ")}</Callout>
                 ) : null}
               </div>
             </SetupSection>
-            <SetupSection title="Managed Agents" separated>
+            <SetupSection title={uiText("Managed Agents")} separated>
               <div style={{ display: "grid", gap: 14, maxWidth: isMobile ? "none" : 620, minWidth: 0 }}>
                 <ManagedResourceHealthChecklist
                   items={agentHealthItems}
                   ariaLabel="Wiki agents health checklist"
-                  heading="Agent health"
+                  heading={uiText("Agent health")}
                 />
                 {agentHealthWarnings.length > 0 ? (
                   <Callout tone="warn">
                     <div style={{ display: "grid", gap: 8 }}>
-                      <div>{agentHealthWarnings.length} agent issue(s) need attention.</div>
+                      <div>{agentHealthWarnings.length}{uiText(" agent issue(s) need attention.")}</div>
                       <ul style={{ margin: 0, paddingLeft: 18 }}>
                         {agentHealthWarnings.map((item) => <li key={item.label}>{item.detail}</li>)}
                       </ul>
@@ -6270,7 +6252,7 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
                   </Callout>
                 ) : null}
                 <div style={{ display: "grid", gap: 8 }}>
-                  <label style={{ fontSize: 12, color: tokens.muted }}>Maintainer</label>
+                  <label style={{ fontSize: 12, color: tokens.muted }}>{uiText("Maintainer")}</label>
                   <fieldset
                     disabled={agentBusy}
                     style={{ border: 0, margin: 0, minWidth: 0, padding: 0 }}
@@ -6279,32 +6261,25 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
                       companyId={context.companyId}
                       value={effectiveSelectedAgentId ? `agent:${effectiveSelectedAgentId}` : ""}
                       includeUsers={false}
-                      placeholder="Select maintainer"
+                      placeholder={uiText("Select maintainer")}
                       noneLabel="No maintainer"
-                      searchPlaceholder="Search agents..."
-                      emptyMessage="No agents found."
+                      searchPlaceholder={uiText("Search agents...")}
+                      emptyMessage={uiText("No agents found.")}
                       onChange={(_value, selection) => {
                         setSelectedAgentId(selection.assigneeAgentId ?? "");
                       }}
                     />
                   </fieldset>
-                  <Tiny>
-                    Adapter: {adapterTypeLabel(currentMaintainerAgent?.adapterType ?? data.managedAgent.details?.adapterType ?? null)}
+                  <Tiny>{uiText("Adapter: ")}{adapterTypeLabel(currentMaintainerAgent?.adapterType ?? data.managedAgent.details?.adapterType ?? null)}
                   </Tiny>
                   {maintainerPendingApproval ? (
-                    <Callout tone="warn">
-                      The Wiki Maintainer is pending approval. Approve the agent before relying on wiki ingest, query, lint, or scheduled maintenance tasks.
-                    </Callout>
+                    <Callout tone="warn">{uiText("The Wiki Maintainer is pending approval. Approve the agent before relying on wiki ingest, query, lint, or scheduled maintenance tasks.")}</Callout>
                   ) : null}
                   {showMaintainerWarning ? (
-                    <Callout tone="warn">
-                      This is not the Paperclip-provided Wiki Maintainer. Plugin operations and routines may miss the recommended wiki role, tools, and default instructions.
-                    </Callout>
+                    <Callout tone="warn">{uiText("This is not the Paperclip-provided Wiki Maintainer. Plugin operations and routines may miss the recommended wiki role, tools, and default instructions.")}</Callout>
                   ) : null}
                   {agentDefaultDrift?.changedFiles.length ? (
-                    <Callout tone="warn">
-                      Wiki Maintainer instruction defaults changed: {agentDefaultDrift.changedFiles.join(", ")}. Reset only if you want to replace current custom instructions with the plugin template.
-                    </Callout>
+                    <Callout tone="warn">{uiText("Wiki Maintainer instruction defaults changed: ")}{agentDefaultDrift.changedFiles.join(", ")}{uiText(". Reset only if you want to replace current custom instructions with the plugin template.")}</Callout>
                   ) : null}
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <Button
@@ -6313,64 +6288,62 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
                       onClick={chooseAgent}
                       loading={agentBusy}
                       disabled={!effectiveSelectedAgentId || effectiveSelectedAgentId === data.managedAgent.agentId}
-                    >
-                      Save maintainer
-                    </Button>
-                    {agentLink ? <Button size="sm" onClick={() => hostNavigation.navigate(agentLink)}>Open agent ↗</Button> : null}
+                    >{uiText("Save maintainer")}</Button>
+                    {agentLink ? <Button size="sm" onClick={() => hostNavigation.navigate(agentLink)}>{uiText("Open agent ↗")}</Button> : null}
                     <Button size="sm" variant="ghost" onClick={async () => {
                       if (!context.companyId) return;
                       setAgentBusy(true);
                       try {
                         await reconcileAgent({ companyId: context.companyId });
-                        toast({ tone: "success", title: "Agent reconciled" });
+                        toast({ tone: "success", title: uiText("Agent reconciled") });
                         settings.refresh();
                       } catch (err) {
-                        toast({ tone: "error", title: "Reconcile failed", body: err instanceof Error ? err.message : String(err) });
+                        toast({ tone: "error", title: uiText("Reconcile failed"), body: err instanceof Error ? err.message : String(err) });
                       } finally {
                         setAgentBusy(false);
                       }
-                    }} loading={agentBusy}>Repair</Button>
-                    <Button size="sm" variant="ghost" onClick={resetManagedAgentToDefaults} loading={agentBusy}>Reset to defaults</Button>
+                    }} loading={agentBusy}>{uiText("Repair")}</Button>
+                    <Button size="sm" variant="ghost" onClick={resetManagedAgentToDefaults} loading={agentBusy}>{uiText("Reset to defaults")}</Button>
                   </div>
                 </div>
               </div>
             </SetupSection>
-            <SetupSection title="Managed Skills" separated>
+            <SetupSection title={uiText("Managed Skills")} separated>
               <div style={{ display: "grid", gap: 12, maxWidth: isMobile ? "none" : 620, minWidth: 0 }}>
                 <SkillHealthChecklist items={skillHealthItems} />
                 {skillHealthWarnings.length > 0 ? (
                   <Callout tone="warn">
                     <div style={{ display: "grid", gap: 8 }}>
-                      <div>{skillHealthWarnings.length} skill issue(s) need attention.</div>
+                      <div>{skillHealthWarnings.length}{uiText(" skill issue(s) need attention.")}</div>
                       <ul style={{ margin: 0, paddingLeft: 18 }}>
                         {skillHealthWarnings.map((item) => <li key={item.label}>{item.detail}</li>)}
                       </ul>
                       <div>
-                        <Button size="sm" variant="primary" onClick={resyncManagedSkills} loading={skillBusy}>Re-sync skills</Button>
+                        <Button size="sm" variant="primary" onClick={resyncManagedSkills} loading={skillBusy}>{uiText("Re-sync skills")}</Button>
                       </div>
                     </div>
                   </Callout>
                 ) : (
                   <Callout>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                      <span>LLM Wiki skills are installed in the company skill library.</span>
-                      <Button size="sm" variant="ghost" onClick={resyncManagedSkills} loading={skillBusy}>Re-sync skills</Button>
+                      <span>{uiText("LLM Wiki skills are installed in the company skill library.")}</span>
+                      <Button size="sm" variant="ghost" onClick={resyncManagedSkills} loading={skillBusy}>{uiText("Re-sync skills")}</Button>
                     </div>
                   </Callout>
                 )}
               </div>
             </SetupSection>
-            <SetupSection title="Managed Projects" separated>
+            <SetupSection title={uiText("Managed Projects")} separated>
               <div style={{ display: "grid", gap: 10, maxWidth: isMobile ? "none" : 620, minWidth: 0 }}>
                 <ManagedResourceHealthChecklist
                   items={projectHealthItems}
                   ariaLabel="Wiki projects health checklist"
-                  heading="Project health"
+                  heading={uiText("Project health")}
                 />
                 {projectHealthWarnings.length > 0 ? (
                   <Callout tone="warn">
                     <div style={{ display: "grid", gap: 8 }}>
-                      <div>{projectHealthWarnings.length} project issue(s) need attention.</div>
+                      <div>{projectHealthWarnings.length}{uiText(" project issue(s) need attention.")}</div>
                       <ul style={{ margin: 0, paddingLeft: 18 }}>
                         {projectHealthWarnings.map((item) => <li key={item.label}>{item.detail}</li>)}
                       </ul>
@@ -6378,7 +6351,7 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
                   </Callout>
                 ) : null}
                 <div style={{ display: "grid", gap: 8 }}>
-                  <label style={{ fontSize: 12, color: tokens.muted }}>Use existing project</label>
+                  <label style={{ fontSize: 12, color: tokens.muted }}>{uiText("Use existing project")}</label>
                   <fieldset
                     disabled={projectBusy}
                     style={{ border: 0, margin: 0, minWidth: 0, padding: 0 }}
@@ -6387,98 +6360,95 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
                       companyId={context.companyId}
                       value={effectiveSelectedProjectId}
                       includeArchived
-                      placeholder="Project"
+                      placeholder={uiText("Project")}
                       noneLabel="No project"
-                      searchPlaceholder="Search projects..."
-                      emptyMessage="No projects found."
+                      searchPlaceholder={uiText("Search projects...")}
+                      emptyMessage={uiText("No projects found.")}
                       onChange={setSelectedProjectId}
                     />
                   </fieldset>
-                  <Tiny>
-                    Status: {projectStatusLabel(currentProjectOption?.status ?? data.managedProject.details?.status ?? data.managedProject.status)}
+                  <Tiny>{uiText("Status: ")}{projectStatusLabel(currentProjectOption?.status ?? data.managedProject.details?.status ?? data.managedProject.status)}
                   </Tiny>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <Button size="sm" variant="primary" onClick={chooseProject} loading={projectBusy} disabled={!effectiveSelectedProjectId}>Save project</Button>
-                    {projectLink ? <Button size="sm" onClick={() => hostNavigation.navigate(projectLink)}>Open project ↗</Button> : null}
+                    <Button size="sm" variant="primary" onClick={chooseProject} loading={projectBusy} disabled={!effectiveSelectedProjectId}>{uiText("Save project")}</Button>
+                    {projectLink ? <Button size="sm" onClick={() => hostNavigation.navigate(projectLink)}>{uiText("Open project ↗")}</Button> : null}
                     <Button size="sm" variant="ghost" onClick={async () => {
                       if (!context.companyId) return;
                       setProjectBusy(true);
                       try {
                         await reconcileProject({ companyId: context.companyId });
-                        toast({ tone: "success", title: "Project reconciled" });
+                        toast({ tone: "success", title: uiText("Project reconciled") });
                         settings.refresh();
                       } catch (err) {
-                        toast({ tone: "error", title: "Reconcile failed", body: err instanceof Error ? err.message : String(err) });
+                        toast({ tone: "error", title: uiText("Reconcile failed"), body: err instanceof Error ? err.message : String(err) });
                       } finally {
                         setProjectBusy(false);
                       }
-                    }} loading={projectBusy}>Repair / reconcile</Button>
+                    }} loading={projectBusy}>{uiText("Repair / reconcile")}</Button>
                     <Button size="sm" variant="ghost" onClick={async () => {
                       if (!context.companyId) return;
                       setProjectBusy(true);
                       try {
                         await resetProject({ companyId: context.companyId });
-                        toast({ tone: "success", title: "Project reset to plugin defaults" });
+                        toast({ tone: "success", title: uiText("Project reset to plugin defaults") });
                         settings.refresh();
                       } catch (err) {
-                        toast({ tone: "error", title: "Reset failed", body: err instanceof Error ? err.message : String(err) });
+                        toast({ tone: "error", title: uiText("Reset failed"), body: err instanceof Error ? err.message : String(err) });
                       } finally {
                         setProjectBusy(false);
                       }
-                    }} loading={projectBusy}>↺ Reset to plugin defaults</Button>
+                    }} loading={projectBusy}>{uiText("↺ Reset to plugin defaults")}</Button>
                   </div>
                 </div>
               </div>
             </SetupSection>
-            <SetupSection title="Managed Routines" separated>
+            <SetupSection title={uiText("Managed Routines")} separated>
               <div style={{ display: "grid", gap: 12, maxWidth: isMobile ? "none" : 620, minWidth: 0 }}>
                 <RoutineHealthChecklist items={routineHealthItems} />
                 {routineHealthWarnings.length > 0 ? (
                   <Callout tone="warn">
                     <div style={{ display: "grid", gap: 8 }}>
-                      <div>{routineHealthWarnings.length} routine issue(s) need attention.</div>
+                      <div>{routineHealthWarnings.length}{uiText(" routine issue(s) need attention.")}</div>
                       <ul style={{ margin: 0, paddingLeft: 18 }}>
                         {routineHealthWarnings.map((item) => <li key={item.label}>{item.detail}</li>)}
                       </ul>
                       <div>
-                        <Button size="sm" variant="primary" onClick={repairManagedRoutines} loading={routineRepairBusy}>Fix routines</Button>
+                        <Button size="sm" variant="primary" onClick={repairManagedRoutines} loading={routineRepairBusy}>{uiText("Fix routines")}</Button>
                       </div>
                     </div>
                   </Callout>
                 ) : routineDefaultDriftItems.length > 0 ? (
                   <Callout tone="warn">
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                      <span>{routineDefaultDriftItems.length} routine default update{routineDefaultDriftItems.length === 1 ? "" : "s"} available.</span>
+                      <span>{routineDefaultDriftItems.length}{uiText(" routine default update")}{routineDefaultDriftItems.length === 1 ? "" : uiText("s")}{uiText(" available.")}</span>
                       <Button size="sm" variant="primary" onClick={() => {
                         setActiveSettingsSection("routines");
                         hostNavigation.navigate(buildSettingsSectionHref("routines", activeSpaceSlug));
-                      }}>Review defaults</Button>
+                      }}>{uiText("Review defaults")}</Button>
                     </div>
                   </Callout>
                 ) : (
-                  <Tiny>Managed routines are installed with the Wiki Maintainer and LLM Wiki project.</Tiny>
+                  <Tiny>{uiText("Managed routines are installed with the Wiki Maintainer and LLM Wiki project.")}</Tiny>
                 )}
               </div>
             </SetupSection>
           </section>
         ) : activeSettingsSection === "distillation" ? (
           <SettingsPanel
-            title="Distillation"
-            badge={<Badge tone="default">Default space only</Badge>}
-            description="Read Paperclip issues, comments, and documents for this company and write project pages into the default wiki space. Assets/attachments and work products stay metadata-only in Phase 5 and are excluded from source-text extraction. Other spaces cannot be selected as a destination yet - that lands with per-space Paperclip ingestion profiles."
+            title={uiText("Distillation")}
+            badge={<Badge tone="default">{uiText("Default space only")}</Badge>}
+            description={uiText("Read Paperclip issues, comments, and documents for this company and write project pages into the default wiki space. Assets/attachments and work products stay metadata-only in Phase 5 and are excluded from source-text extraction. Other spaces cannot be selected as a destination yet - that lands with per-space Paperclip ingestion profiles.")}
           >
             <DistillationSettingsPanel context={context} settings={data} />
           </SettingsPanel>
         ) : activeSettingsSection === "routines" ? (
-          <SettingsPanel title="Managed Routines" description={activeSettingsConfig.description}>
+          <SettingsPanel title={uiText("Managed Routines")} description={activeSettingsConfig.description}>
           <div style={{ display: "grid", gap: 12 }}>
             {routineDefaultDriftItems.length > 0 ? (
               <Callout tone="warn">
                 <div style={{ display: "grid", gap: 6 }}>
-                  <strong>Routine defaults changed.</strong>
-                  <span>
-                    Review rows marked with changed defaults. Reset a row to update it to the current LLM Wiki instructions, or leave it unchanged to keep custom routine text.
-                  </span>
+                  <strong>{uiText("Routine defaults changed.")}</strong>
+                  <span>{uiText("Review rows marked with changed defaults. Reset a row to update it to the current LLM Wiki instructions, or leave it unchanged to keep custom routine text.")}</span>
                 </div>
               </Callout>
             ) : null}
@@ -6486,19 +6456,19 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
               <Callout tone="warn">
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                   <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
-                    <strong>Routine setup needs repair.</strong>
+                    <strong>{uiText("Routine setup needs repair.")}</strong>
                     <ul style={{ margin: 0, paddingLeft: 18 }}>
                       {routineHealthWarnings.map((item) => <li key={item.label}>{item.detail}</li>)}
                     </ul>
                   </div>
-                  <Button size="sm" variant="primary" onClick={repairManagedRoutines} loading={routineRepairBusy}>Fix routines</Button>
+                  <Button size="sm" variant="primary" onClick={repairManagedRoutines} loading={routineRepairBusy}>{uiText("Fix routines")}</Button>
                 </div>
               </Callout>
             ) : (
               <Callout>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                  <span>Managed routines are installed with the Wiki Maintainer and LLM Wiki project.</span>
-                  <Button size="sm" disabled>Routines valid</Button>
+                  <span>{uiText("Managed routines are installed with the Wiki Maintainer and LLM Wiki project.")}</span>
+                  <Button size="sm" disabled>{uiText("Routines valid")}</Button>
                 </div>
               </Callout>
             )}
@@ -6522,22 +6492,18 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
           <SpacesSettingsPanel context={context} description={activeSettingsConfig.description} />
         ) : activeSettingsSection === "events" ? (
           <SettingsPanel
-            title="Paperclip event ingestion"
-            badge={<Badge tone={currentEventPolicy.enabled ? "running" : "default"}>{currentEventPolicy.enabled ? "enabled" : "off by default"}</Badge>}
+            title={uiText("Paperclip event ingestion")}
+            badge={<Badge tone={currentEventPolicy.enabled ? "running" : "default"}>{currentEventPolicy.enabled ? uiText("enabled") : uiText("off by default")}</Badge>}
             description={activeSettingsConfig.description}
           >
-          <Tiny style={{ marginBottom: 10 }}>
-            Company-scoped Paperclip events can advance default-space cursors. Enable only the first-party text sources this wiki should observe for default-space distillation.
-          </Tiny>
+          <Tiny style={{ marginBottom: 10 }}>{uiText("Company-scoped Paperclip events can advance default-space cursors. Enable only the first-party text sources this wiki should observe for default-space distillation.")}</Tiny>
           <div style={{ display: "grid", gap: 10 }}>
             <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
               <input
                 type="checkbox"
                 checked={currentEventPolicy.enabled}
                 onChange={(event) => setEventPolicy({ ...currentEventPolicy, enabled: event.currentTarget.checked })}
-              />
-              Enable event ingestion for this company
-            </label>
+              />{uiText("Enable event ingestion for this company")}</label>
             <div style={{ display: "grid", gap: 8, paddingLeft: isMobile ? 0 : 22 }}>
               {([
                 ["issues", "Issues", "Capture issue title and description when issue events fire."],
@@ -6561,7 +6527,7 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
               ))}
             </div>
             <div style={{ display: "grid", gap: 6, maxWidth: isMobile ? "none" : 220 }}>
-              <label style={{ fontSize: 12, color: tokens.muted }}>Max characters per captured event</label>
+              <label style={{ fontSize: 12, color: tokens.muted }}>{uiText("Max characters per captured event")}</label>
               <TextInput
                 value={String(currentEventPolicy.maxCharacters)}
                 onChange={(event) => {
@@ -6570,12 +6536,10 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
                 }}
               />
             </div>
-            <Callout tone="warn">
-              Event ingestion records selected Paperclip issue, comment, and document activity for the default wiki space. Assets/attachments and work products are excluded here: Phase 5 allows metadata-only references later, not blob reads or linked-content fetches. It never reads across companies or creates non-default space cursors.
-            </Callout>
+            <Callout tone="warn">{uiText("Event ingestion records selected Paperclip issue, comment, and document activity for the default wiki space. Assets/attachments and work products are excluded here: Phase 5 allows metadata-only references later, not blob reads or linked-content fetches. It never reads across companies or creates non-default space cursors.")}</Callout>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <Button size="sm" variant="primary" onClick={saveEventPolicy} loading={eventPolicyBusy}>Save controls</Button>
-              <Button size="sm" variant="ghost" onClick={() => setEventPolicy(data.eventIngestion)}>Revert</Button>
+              <Button size="sm" variant="primary" onClick={saveEventPolicy} loading={eventPolicyBusy}>{uiText("Save controls")}</Button>
+              <Button size="sm" variant="ghost" onClick={() => setEventPolicy(data.eventIngestion)}>{uiText("Revert")}</Button>
             </div>
           </div>
           </SettingsPanel>
@@ -6591,6 +6555,7 @@ function SettingsBody({ context, initialSection = "root" }: { context: { company
 // ---------------------------------------------------------------------------
 
 function SpacesSettingsPanel({ context, description }: { context: { companyId: string | null; companyPrefix?: string | null }; description: string }) {
+  useUiLocale();
   const { pathname } = useHostLocation();
   const hostNavigation = useHostNavigation();
   const activeSpaceSlug = useMemo(() => readActiveSpaceSlugFromLocation(pathname), [pathname]);
@@ -6609,7 +6574,7 @@ function SpacesSettingsPanel({ context, description }: { context: { companyId: s
   }, [editingSlug, spaces, activeSpaceSlug]);
 
   return (
-    <SettingsPanel title="Shared spaces" description={description}>
+    <SettingsPanel title={uiText("Shared spaces")} description={description}>
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "220px 1fr", gap: 18, alignItems: "flex-start" }}>
         <aside style={{ display: "grid", gap: 4, minWidth: 0 }}>
           {spaces.map((space) => {
@@ -6657,13 +6622,11 @@ function SpacesSettingsPanel({ context, description }: { context: { companyId: s
               marginTop: 6,
             }}
           >
-            <PlusIcon size={14} />
-            Add space…
-          </button>
+            <PlusIcon size={14} />{uiText("Add space…")}</button>
         </aside>
         <div style={{ minWidth: 0, display: "grid", gap: 14 }}>
-          {spacesQuery.loading && spaces.length === 0 ? <Tiny>Loading spaces…</Tiny> : null}
-          {spacesQuery.error ? <Callout tone="danger">Failed to load spaces: {spacesQuery.error.message}</Callout> : null}
+          {spacesQuery.loading && spaces.length === 0 ? <Tiny>{uiText("Loading spaces…")}</Tiny> : null}
+          {spacesQuery.error ? <Callout tone="danger">{uiText("Failed to load spaces: ")}{spacesQuery.error.message}</Callout> : null}
           {focusedSpace ? (
             <SpaceEditCard
               space={focusedSpace}
@@ -6675,7 +6638,7 @@ function SpacesSettingsPanel({ context, description }: { context: { companyId: s
               }}
             />
           ) : (
-            <Callout>Pick a space from the list, or create one with the “Add space…” button.</Callout>
+            <Callout>{uiText("Pick a space from the list, or create one with the “Add space…” button.")}</Callout>
           )}
         </div>
       </div>
@@ -6708,6 +6671,7 @@ function SpaceEditCard({
   refresh: () => void;
   onArchived: () => void;
 }) {
+  useUiLocale();
   const updateSpace = usePluginAction("update-space");
   const archiveSpace = usePluginAction("archive-space");
   const bootstrapSpace = usePluginAction("bootstrap-space");
@@ -6737,10 +6701,10 @@ function SpaceEditCard({
     setBusy(true);
     try {
       await updateSpace({ companyId, spaceSlug: space.slug, displayName: displayName.trim() });
-      toast({ tone: "success", title: "Display name updated" });
+      toast({ tone: "success", title: uiText("Display name updated") });
       refresh();
     } catch (err) {
-      toast({ tone: "error", title: "Update failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Update failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setBusy(false);
     }
@@ -6751,10 +6715,10 @@ function SpaceEditCard({
     setFolderBusy(true);
     try {
       await bootstrapSpace({ companyId, spaceSlug: space.slug });
-      toast({ tone: "success", title: "Baseline restored", body: `Re-created the standard skeleton for ${space.displayName}.` });
+      toast({ tone: "success", title: uiText("Baseline restored"), body: `Re-created the standard skeleton for ${space.displayName}.` });
       folderStatusQuery.refresh();
     } catch (err) {
-      toast({ tone: "error", title: "Bootstrap failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Bootstrap failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setFolderBusy(false);
     }
@@ -6768,11 +6732,11 @@ function SpaceEditCard({
     setArchiveBusy(true);
     try {
       await archiveSpace({ companyId, spaceSlug: space.slug });
-      toast({ tone: "success", title: "Space archived", body: `${space.displayName} hidden from the sidebar.` });
+      toast({ tone: "success", title: uiText("Space archived"), body: `${space.displayName} hidden from the sidebar.` });
       refresh();
       onArchived();
     } catch (err) {
-      toast({ tone: "error", title: "Archive failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Archive failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setArchiveBusy(false);
     }
@@ -6797,47 +6761,45 @@ function SpaceEditCard({
           }
         />
         <CardBody>
-          <Tiny>
-            Stored under <Mono>{relativeRoot || (isDefault ? "(wiki root)" : `spaces/${space.slug}/`)}</Mono> within the configured wiki root.
-          </Tiny>
+          <Tiny>{uiText("Stored under ")}<Mono>{relativeRoot || (isDefault ? uiText("(wiki root)") : uiText("spaces/{{value0}}/", { value0: String(space.slug) }))}</Mono>{uiText(" within the configured wiki root.")}</Tiny>
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader title="Identity" />
+        <CardHeader title={uiText("Identity")} />
         <CardBody>
           <div style={{ display: "grid", gap: 12 }}>
-            <FormField label="Display name">
+            <FormField label={uiText("Display name")}>
               <TextInput value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={120} />
             </FormField>
-            <FormField label="Slug" help="Slug is locked once a space has indexed pages. Contact platform team to migrate.">
+            <FormField label={uiText("Slug")} help={uiText("Slug is locked once a space has indexed pages. Contact platform team to migrate.")}>
               <TextInput value={space.slug} disabled style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", opacity: 0.7 }} />
             </FormField>
-            <FormField label="Type" help="(Cloud connectors coming soon)">
+            <FormField label={uiText("Type")} help={uiText("(Cloud connectors coming soon)")}>
               <TextInput value={space.spaceType === "managed" ? "Folder" : space.spaceType} disabled style={{ opacity: 0.7 }} />
             </FormField>
             <div>
-              <Button variant="primary" size="sm" onClick={saveName} disabled={busy || displayName.trim() === space.displayName} loading={busy}>Save name</Button>
+              <Button variant="primary" size="sm" onClick={saveName} disabled={busy || displayName.trim() === space.displayName} loading={busy}>{uiText("Save name")}</Button>
             </div>
           </div>
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader title="Folder source & health" />
+        <CardHeader title={uiText("Folder source & health")} />
         <CardBody>
           <div style={{ display: "grid", gap: 12 }}>
-            <FormField label="Mode">
+            <FormField label={uiText("Mode")}>
               <TextInput value={folderModeLabel} disabled style={{ opacity: 0.7 }} />
             </FormField>
-            <FormField label="Path">
+            <FormField label={uiText("Path")}>
               <TextInput value={folder?.path ?? folder?.realPath ?? relativeRoot ?? "(unconfigured)"} disabled style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", opacity: 0.7 }} />
             </FormField>
-            {folderStatusQuery.loading ? <Tiny>Loading folder status…</Tiny> : null}
+            {folderStatusQuery.loading ? <Tiny>{uiText("Loading folder status…")}</Tiny> : null}
             {folderStatusQuery.error ? <Callout tone="danger">{folderStatusQuery.error.message}</Callout> : null}
             {folder ? <SpaceFolderHealthChecklist folder={folder} /> : null}
             <div>
-              <Button size="sm" onClick={recreateBaseline} loading={folderBusy}>Recreate baseline</Button>
+              <Button size="sm" onClick={recreateBaseline} loading={folderBusy}>{uiText("Recreate baseline")}</Button>
             </div>
           </div>
         </CardBody>
@@ -6846,22 +6808,19 @@ function SpaceEditCard({
       <PaperclipIngestionSpaceCard companyId={companyId} space={space} refresh={refresh} />
 
       <Card style={{ opacity: 0.56 }}>
-        <CardHeader title="Access" />
+        <CardHeader title={uiText("Access")} />
         <CardBody>
           <div aria-disabled="true" style={{ display: "grid", gap: 10 }}>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               <Badge tone="default" style={{ fontSize: 10 }}>{space.accessScope}</Badge>
-              <Badge tone="default" style={{ fontSize: 10 }}>Coming soon</Badge>
+              <Badge tone="default" style={{ fontSize: 10 }}>{uiText("Coming soon")}</Badge>
             </div>
-            <Tiny>
-              Access scope is stored as metadata only. <Mono>shared</Mono>, <Mono>team</Mono>, and{" "}
-              <Mono>personal</Mono> are saved on the space record but do not currently enforce
-              read/write permissions, and they do not change which Paperclip sources reach this space.
-            </Tiny>
-            <FormField label="Owner user id">
+            <Tiny>{uiText("Access scope is stored as metadata only. ")}<Mono>{uiText("shared")}</Mono>, <Mono>{uiText("team")}</Mono>{uiText(", and")}{" "}
+              <Mono>{uiText("personal")}</Mono>{uiText(" are saved on the space record but do not currently enforce read/write permissions, and they do not change which Paperclip sources reach this space.")}</Tiny>
+            <FormField label={uiText("Owner user id")}>
               <TextInput value={(settingsRecord.ownerUserHint as string | undefined) ?? space.ownerUserId ?? ""} disabled style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }} />
             </FormField>
-            <FormField label="Owner team key">
+            <FormField label={uiText("Owner team key")}>
               <TextInput value={space.teamKey ?? ""} disabled style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }} />
             </FormField>
           </div>
@@ -6870,16 +6829,16 @@ function SpaceEditCard({
 
       <Card style={{ borderColor: "oklch(0.5 0.18 25)" }}>
         <CardHeader
-          title={<span style={{ color: "oklch(0.78 0.18 25)" }}>Danger zone</span>}
+          title={<span style={{ color: "oklch(0.78 0.18 25)" }}>{uiText("Danger zone")}</span>}
         />
         <CardBody>
           <div style={{ display: "grid", gap: 8 }}>
             <Tiny>
               {isDefault
-                ? "The default space cannot be archived because new operations and tools fall back to it."
+                ? uiText("The default space cannot be archived because new operations and tools fall back to it.")
                 : isOnlySpace
-                  ? "This is the only space in the company. Create another before archiving this one."
-                  : "Archiving hides the space from the sidebar and pauses scheduled lint/index. Pages remain on disk."}
+                  ? uiText("This is the only space in the company. Create another before archiving this one.")
+                  : uiText("Archiving hides the space from the sidebar and pauses scheduled lint/index. Pages remain on disk.")}
             </Tiny>
             <div>
               <Button
@@ -6888,10 +6847,8 @@ function SpaceEditCard({
                 onClick={archive}
                 disabled={isDefault || isOnlySpace || archiveBusy}
                 loading={archiveBusy}
-                title={isDefault ? "Default space cannot be archived" : isOnlySpace ? "At least one space must remain" : undefined}
-              >
-                Archive this space
-              </Button>
+                title={isDefault ? uiText("Default space cannot be archived") : isOnlySpace ? uiText("At least one space must remain") : undefined}
+              >{uiText("Archive this space")}</Button>
             </div>
           </div>
         </CardBody>
@@ -6901,15 +6858,16 @@ function SpaceEditCard({
 }
 
 function paperclipIngestionStateBadge(data: PaperclipIngestionProfileData | null): { tone: Tone; label: string } {
-  if (!data) return { tone: "default", label: "Loading" };
-  if (data.effectiveState === "policy_blocked") return { tone: "blocked", label: "Locked" };
-  if (data.effectiveState === "pending_approval") return { tone: "queued", label: "Pending approval" };
-  if (data.effectiveState === "enabled_no_scopes") return { tone: "failed", label: "Misconfigured" };
+  if (!data) return { tone: "default", label: uiText("Loading") };
+  if (data.effectiveState === "policy_blocked") return { tone: "blocked", label: uiText("Locked") };
+  if (data.effectiveState === "pending_approval") return { tone: "queued", label: uiText("Pending approval") };
+  if (data.effectiveState === "enabled_no_scopes") return { tone: "failed", label: uiText("Misconfigured") };
   if (data.effectiveState === "enabled") return { tone: "running", label: `On · ${data.profile.sourceScopes.length} source${data.profile.sourceScopes.length === 1 ? "" : "s"}` };
   return { tone: "default", label: data.historicalPageCount > 0 ? `Off · ${data.historicalPageCount} historical pages` : "Off" };
 }
 
 function PaperclipIngestionSpaceCard({ companyId, space, refresh }: { companyId: string | null; space: WikiSpace; refresh: () => void }) {
+  useUiLocale();
   const profileQuery = usePaperclipIngestionProfile(companyId, space.slug);
   const updateProfile = usePluginAction("update-paperclip-ingestion-profile");
   const toast = usePluginToast();
@@ -6952,11 +6910,11 @@ function PaperclipIngestionSpaceCard({ companyId, space, refresh }: { companyId:
     setBusy(true);
     try {
       await updateProfile({ companyId, spaceSlug: space.slug, profile: draft });
-      toast({ tone: "success", title: "Paperclip ingestion profile saved", body: `${space.displayName} will use the selected Paperclip sources.` });
+      toast({ tone: "success", title: uiText("Paperclip ingestion profile saved"), body: `${space.displayName} will use the selected Paperclip sources.` });
       profileQuery.refresh();
       refresh();
     } catch (err) {
-      toast({ tone: "error", title: "Profile save failed", body: err instanceof Error ? err.message : String(err) });
+      toast({ tone: "error", title: uiText("Profile save failed"), body: err instanceof Error ? err.message : String(err) });
     } finally {
       setBusy(false);
     }
@@ -6965,29 +6923,24 @@ function PaperclipIngestionSpaceCard({ companyId, space, refresh }: { companyId:
   return (
     <Card>
       <CardHeader
-        title={<span>Paperclip → {space.displayName}</span>}
+        title={<span>{uiText("Paperclip → ")}{space.displayName}</span>}
         right={<Badge tone={badge.tone} style={{ fontSize: 10 }}>{badge.label}</Badge>}
       />
       <CardBody>
         <div style={{ display: "grid", gap: 12 }}>
-          {profileQuery.loading && !data ? <Tiny>Loading Paperclip ingestion profile…</Tiny> : null}
+          {profileQuery.loading && !data ? <Tiny>{uiText("Loading Paperclip ingestion profile…")}</Tiny> : null}
           {profileQuery.error ? <Callout tone="danger">{profileQuery.error.message}</Callout> : null}
           {locked ? (
-            <Callout tone="warn">
-              Locked — host permissions pending. Paperclip ingestion stays disabled on team and personal spaces until LLM Wiki enforces read/write permissions for non-shared spaces.
-            </Callout>
+            <Callout tone="warn">{uiText("Locked — host permissions pending. Paperclip ingestion stays disabled on team and personal spaces until LLM Wiki enforces read/write permissions for non-shared spaces.")}</Callout>
           ) : null}
           {data && data.historicalPageCount > 0 && data.effectiveState === "disabled" ? (
-            <Callout>
-              Off · {data.historicalPageCount} historical Paperclip page{data.historicalPageCount === 1 ? "" : "s"} still in this space. Disabling stops new observations but does not delete prior wiki pages.
-            </Callout>
+            <Callout>{uiText("Off · ")}{data.historicalPageCount}{uiText(" historical Paperclip page")}{data.historicalPageCount === 1 ? "" : uiText("s")}{uiText(" still in this space. Disabling stops new observations but does not delete prior wiki pages.")}</Callout>
           ) : null}
           {data && data.overlapCount > 0 ? (
             <Callout>
-              {data.overlapCount} source overlap{data.overlapCount === 1 ? "" : "s"} with another enabled space. Duplicate destinations are allowed, but they are explicit.
-            </Callout>
+              {data.overlapCount}{uiText(" source overlap")}{data.overlapCount === 1 ? "" : uiText("s")}{uiText(" with another enabled space. Duplicate destinations are allowed, but they are explicit.")}</Callout>
           ) : null}
-          {emptyScopes ? <Callout tone="warn">Pick at least one source scope before saving.</Callout> : null}
+          {emptyScopes ? <Callout tone="warn">{uiText("Pick at least one source scope before saving.")}</Callout> : null}
           {draft ? (
             <>
               <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13 }}>
@@ -7002,25 +6955,23 @@ function PaperclipIngestionSpaceCard({ companyId, space, refresh }: { companyId:
                       : draft.sourceScopes,
                   })}
                 />
-                <span>
-                  Enable Paperclip ingestion for this destination space
-                  <Tiny style={{ display: "block" }}>Future Paperclip issue, comment, and document events can advance cursors in {space.displayName}. Existing pages are preserved when this is turned off.</Tiny>
+                <span>{uiText("Enable Paperclip ingestion for this destination space")}<Tiny style={{ display: "block" }}>{uiText("Future Paperclip issue, comment, and document events can advance cursors in ")}{space.displayName}{uiText(". Existing pages are preserved when this is turned off.")}</Tiny>
                 </span>
               </label>
               <div style={{ display: "grid", gap: 8 }}>
-                <strong style={{ fontSize: 13 }}>Source scope</strong>
+                <strong style={{ fontSize: 13 }}>{uiText("Source scope")}</strong>
                 <label style={{ display: "grid", gap: 6, maxWidth: 260 }}>
-                  <Tiny>Recently active projects (auto)</Tiny>
+                  <Tiny>{uiText("Recently active projects (auto)")}</Tiny>
                   <TextInput
                     value={String(activeProjectLimit)}
                     disabled={locked || busy}
                     onChange={(event) => setActiveProjectsLimit(Number(event.currentTarget.value))}
                   />
                 </label>
-                <Tiny>Specific projects, issue trees, and company-wide ingestion use the same profile API; this first editor keeps the default auto-scope path visible and capped.</Tiny>
+                <Tiny>{uiText("Specific projects, issue trees, and company-wide ingestion use the same profile API; this first editor keeps the default auto-scope path visible and capped.")}</Tiny>
               </div>
               <div style={{ display: "grid", gap: 8 }}>
-                <strong style={{ fontSize: 13 }}>Source kinds</strong>
+                <strong style={{ fontSize: 13 }}>{uiText("Source kinds")}</strong>
                 {([
                   ["issues", "Issues"],
                   ["comments", "Comments"],
@@ -7036,18 +6987,16 @@ function PaperclipIngestionSpaceCard({ companyId, space, refresh }: { companyId:
                     {label}
                   </label>
                 ))}
-                <Tiny>Attachments — locked, metadata only; no file contents. Future extraction needs separate review.</Tiny>
-                <Tiny>Work products — locked, metadata only; no artifact contents.</Tiny>
+                <Tiny>{uiText("Attachments — locked, metadata only; no file contents. Future extraction needs separate review.")}</Tiny>
+                <Tiny>{uiText("Work products — locked, metadata only; no artifact contents.")}</Tiny>
               </div>
               <div style={{ display: "grid", gap: 8 }}>
-                <strong style={{ fontSize: 13 }}>Caps</strong>
-                <Tiny>
-                  Defaults: {draft.cursor.maxWindowCharacters.toLocaleString()} chars/window · {draft.cursor.maxCharactersPerSource.toLocaleString()} chars/source.
-                </Tiny>
+                <strong style={{ fontSize: 13 }}>{uiText("Caps")}</strong>
+                <Tiny>{uiText("Defaults: ")}{draft.cursor.maxWindowCharacters.toLocaleString()}{uiText(" chars/window · ")}{draft.cursor.maxCharactersPerSource.toLocaleString()}{uiText(" chars/source.")}</Tiny>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <Button size="sm" variant="primary" onClick={save} loading={busy} disabled={!canSave || emptyScopes}>Save Paperclip profile</Button>
-                <Button size="sm" variant="ghost" onClick={() => setDraft(data?.profile ?? null)} disabled={busy}>Revert</Button>
+                <Button size="sm" variant="primary" onClick={save} loading={busy} disabled={!canSave || emptyScopes}>{uiText("Save Paperclip profile")}</Button>
+                <Button size="sm" variant="ghost" onClick={() => setDraft(data?.profile ?? null)} disabled={busy}>{uiText("Revert")}</Button>
               </div>
             </>
           ) : null}
@@ -7058,9 +7007,10 @@ function PaperclipIngestionSpaceCard({ companyId, space, refresh }: { companyId:
 }
 
 function SpaceFolderHealthChecklist({ folder }: { folder: FolderStatus }) {
+  useUiLocale();
   const items = [
-    { key: "readable", label: "Folder readable", ok: folder.readable },
-    { key: "writable", label: "Folder writable", ok: folder.writable },
+    { key: "readable", get label() { return uiText("Folder readable"); }, ok: folder.readable },
+    { key: "writable", get label() { return uiText("Folder writable"); }, ok: folder.writable },
     ...folder.requiredDirectories.map((dir) => ({
       key: `dir-${dir}`,
       label: `${dir}/ present`,
@@ -7074,7 +7024,7 @@ function SpaceFolderHealthChecklist({ folder }: { folder: FolderStatus }) {
   ];
 
   return (
-    <div role="list" aria-label="Space folder health checklist" style={{ position: "relative", display: "grid", gap: 0, padding: "2px 0" }}>
+    <div role="list" aria-label={uiText("Space folder health checklist")} style={{ position: "relative", display: "grid", gap: 0, padding: "2px 0" }}>
       {items.length > 1 ? (
         <span
           aria-hidden

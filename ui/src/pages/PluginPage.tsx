@@ -1,3 +1,4 @@
+import { uiText, useUiLocale, getUiLocale } from "@/i18n/ui";
 import { useEffect, useMemo } from "react";
 import { Link, Navigate, useParams } from "@/lib/router";
 import { useQuery } from "@tanstack/react-query";
@@ -23,6 +24,7 @@ import { NotFoundPage } from "./NotFound";
  * @see doc/plugins/PLUGIN_SPEC.md §24.4 — Company-Context Plugin Page
  */
 export function PluginPage() {
+  useUiLocale();
   const params = useParams<{
     companyPrefix?: string;
     pluginId?: string;
@@ -119,10 +121,10 @@ export function PluginPage() {
       return;
     }
     setBreadcrumbs([
-      { label: "Plugins", href: "/company/settings/instance/plugins" },
-      { label: pageSlot.pluginDisplayName },
+      { label: uiText("Plugins"), href: "/company/settings/instance/plugins" },
+      { label: pageSlot.pluginKey === "agent-pixels.compat" ? uiText("Office") : pageSlot.pluginKey === "paperclipai.plugin-llm-wiki" ? uiText("Wiki") : pageSlot.pluginDisplayName },
     ]);
-  }, [pageSlot, pluginRouteSplat, setBreadcrumbs, routeSidebarActive]);
+  }, [pageSlot, pluginRouteSplat, setBreadcrumbs, routeSidebarActive, getUiLocale()]);
 
   if (!resolvedCompanyId) {
     if (hasInvalidCompanyPrefix) {
@@ -130,13 +132,13 @@ export function PluginPage() {
     }
     return (
       <div className="space-y-4">
-        <p className="text-sm text-muted-foreground">Select an organization to view this page.</p>
+        <p className="text-sm text-muted-foreground">{uiText("Select an organization to view this page.")}</p>
       </div>
     );
   }
 
   if (!contributions) {
-    return <div className="text-sm text-muted-foreground">Loading…</div>;
+    return <div className="text-sm text-muted-foreground">{uiText("Loading…")}</div>;
   }
 
   if (!pluginId && pluginRoutePath) {
@@ -145,9 +147,7 @@ export function PluginPage() {
     );
     if (duplicateMatches.length > 1) {
       return (
-        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-          Multiple plugins declare the route <code>{pluginRoutePath}</code>. Use the plugin-id route until the conflict is resolved.
-        </div>
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">{uiText("Multiple plugins declare the route ")}<code>{pluginRoutePath}</code>{uiText(". Use the plugin-id route until the conflict is resolved.")}</div>
       );
     }
   }
@@ -169,9 +169,7 @@ export function PluginPage() {
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" asChild>
             <Link to={companyPrefix ? `/${companyPrefix}/dashboard` : "/dashboard"}>
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back
-            </Link>
+              <ArrowLeft className="h-4 w-4 mr-1" />{uiText("Back")}</Link>
           </Button>
         </div>
       )}
@@ -187,6 +185,10 @@ export function PluginPage() {
 
 function resolveRouteSidebarPageTitle(pageSlot: ResolvedPluginSlot, routeSplat: string | undefined): string {
   const title = titleFromRouteSplat(routeSplat);
+  if (pageSlot.pluginKey === "paperclipai.plugin-llm-wiki") {
+    if (!routeSplat) return uiText("Wiki");
+    if (["settings", "history", "browse", "query", "ingest", "lint"].includes(routeSplat)) return uiText(title ?? "Wiki");
+  }
   return title ?? pageSlot.displayName ?? pageSlot.pluginDisplayName;
 }
 

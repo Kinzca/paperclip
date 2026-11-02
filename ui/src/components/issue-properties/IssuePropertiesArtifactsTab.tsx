@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { TextAttachmentContext } from "@/context/TextAttachmentContext";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -95,6 +96,7 @@ function MarkdownWorkProductRow({
   author: string;
   openRequestId?: number;
 }) {
+  useUiLocale();
   const openTextAttachment = useContext(TextAttachmentContext);
   const [expanded, setExpanded] = useState(false);
   const [annotationPanelOpen, setAnnotationPanelOpen] = useState(false);
@@ -150,9 +152,7 @@ function MarkdownWorkProductRow({
   let expandedBody: React.ReactNode;
   if (tooLarge) {
     expandedBody = (
-      <p className="text-sm text-muted-foreground">
-        This Markdown file is too large to preview. Use Raw or Download instead.
-      </p>
+      <p className="text-sm text-muted-foreground">{uiText("This Markdown file is too large to preview. Use Raw or Download instead.")}</p>
     );
   } else if (reviewDoc) {
     expandedBody =
@@ -172,15 +172,15 @@ function MarkdownWorkProductRow({
           <MarkdownBody>{reviewDoc.body}</MarkdownBody>
         </IssueDocumentAnnotations>
       ) : (
-        <p className="text-sm text-muted-foreground">Document is empty.</p>
+        <p className="text-sm text-muted-foreground">{uiText("Document is empty.")}</p>
       );
   } else if (ensure.isError) {
     expandedBody = (
       <div className="flex flex-col items-start gap-1.5">
         <p className="text-sm text-muted-foreground">
           {unsupportedError
-            ? "This file can't be previewed as Markdown. Use Raw or Download instead."
-            : "Preview failed to load."}
+            ? uiText("This file can't be previewed as Markdown. Use Raw or Download instead.")
+            : uiText("Preview failed to load.")}
         </p>
         {!unsupportedError ? (
           <button
@@ -190,15 +190,13 @@ function MarkdownWorkProductRow({
               ensure.reset();
               ensure.mutate();
             }}
-          >
-            Retry
-          </button>
+          >{uiText("Retry")}</button>
         ) : null}
       </div>
     );
   } else {
     expandedBody = (
-      <p className="text-sm text-muted-foreground">Preparing preview…</p>
+      <p className="text-sm text-muted-foreground">{uiText("Preparing preview…")}</p>
     );
   }
 
@@ -239,8 +237,8 @@ function MarkdownWorkProductRow({
                 <button
                   type="button"
                   onClick={() => openTextAttachment(metadata.attachmentId, metadata.originalFilename ?? workProduct.title)}
-                  aria-label={`Open in tab: ${workProduct.title}`}
-                  title="Open in tab"
+                  aria-label={uiText("Open in tab: {{value0}}", { value0: String(workProduct.title) })}
+                  title={uiText("Open in tab")}
                   className="shrink-0 px-1.5 py-1.5 text-muted-foreground hover:text-foreground"
                 >
                   <FileText className="h-3 w-3" />
@@ -250,16 +248,16 @@ function MarkdownWorkProductRow({
                 href={metadata.openPath}
                 target="_blank"
                 rel="noreferrer"
-                aria-label={`Open raw ${workProduct.title}`}
-                title="Open raw"
+                aria-label={uiText("Open raw {{value0}}", { value0: String(workProduct.title) })}
+                title={uiText("Open raw")}
                 className="shrink-0 px-1.5 py-1.5 text-muted-foreground hover:text-foreground"
               >
                 <ExternalLink className="h-3 w-3" />
               </a>
               <a
                 href={metadata.downloadPath}
-                aria-label={`Download ${workProduct.title}`}
-                title="Download"
+                aria-label={uiText("Download {{value0}}", { value0: String(workProduct.title) })}
+                title={uiText("Download")}
                 className="shrink-0 py-1.5 pr-2 pl-0.5 text-muted-foreground hover:text-foreground"
               >
                 <Download className="h-3 w-3" />
@@ -288,6 +286,7 @@ function DocumentRow({
   openRequestId?: number;
   onOpen?: () => void;
 }) {
+  useUiLocale();
   const [expanded, setExpanded] = useState(false);
   const [annotationPanelOpen, setAnnotationPanelOpen] = useState(false);
   const headerRef = useRef<HTMLDivElement | null>(null);
@@ -344,7 +343,7 @@ function DocumentRow({
               <MarkdownBody>{doc.body}</MarkdownBody>
             </IssueDocumentAnnotations>
           ) : (
-            <p className="text-sm text-muted-foreground">Document is empty.</p>
+            <p className="text-sm text-muted-foreground">{uiText("Document is empty.")}</p>
           )}
         </div>
       ) : null}
@@ -367,6 +366,7 @@ export function IssuePropertiesArtifactsTab({
   documentDeepLink,
   onOpenDocument,
 }: IssuePropertiesArtifactsTabProps) {
+  useUiLocale();
   const {
     data: attachments,
     isPending: attachmentsPending,
@@ -494,23 +494,17 @@ export function IssuePropertiesArtifactsTab({
   const loadError = attachmentsError || productsError || documentsError;
   const loading = attachmentsPending || productsPending || documentsPending;
   const feedback = loadError ? (
-    <div role="alert" className="px-1 py-3 text-sm text-muted-foreground">
-      Some artifacts could not be loaded.
-      <button
+    <div role="alert" className="px-1 py-3 text-sm text-muted-foreground">{uiText("Some artifacts could not be loaded.")}<button
         className="ml-2 underline"
         onClick={() => {
           void refetchAttachments();
           void refetchProducts();
           void refetchDocuments();
         }}
-      >
-        Retry
-      </button>
+      >{uiText("Retry")}</button>
     </div>
   ) : loading ? (
-    <p role="status" className="px-1 py-3 text-sm text-muted-foreground">
-      Loading artifacts…
-    </p>
+    <p role="status" className="px-1 py-3 text-sm text-muted-foreground">{uiText("Loading artifacts…")}</p>
   ) : null;
 
   if (
@@ -520,10 +514,7 @@ export function IssuePropertiesArtifactsTab({
   ) {
     if (feedback) return feedback;
     return (
-      <div className="px-1 py-6 text-sm text-muted-foreground">
-        No artifacts yet. Work products, documents, and agent-produced files
-        will appear here.
-      </div>
+      <div className="px-1 py-6 text-sm text-muted-foreground">{uiText("No artifacts yet. Work products, documents, and agent-produced files will appear here.")}</div>
     );
   }
 
@@ -538,7 +529,7 @@ export function IssuePropertiesArtifactsTab({
             {group.runId !== "other" ? (
               <header className="flex items-baseline justify-between gap-2 px-1">
                 <h3 className="truncate text-xs font-medium text-foreground">
-                  {agent?.name ?? `Run ${group.runId.slice(0, 8)}`}
+                  {agent?.name ?? uiText("Run {{value0}}", { value0: String(group.runId.slice(0, 8)) })}
                 </h3>
                 <time
                   className="shrink-0 text-(length:--text-micro) text-muted-foreground"

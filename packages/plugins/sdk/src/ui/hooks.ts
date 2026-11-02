@@ -225,3 +225,13 @@ export function usePluginToast(): PluginToastFn {
   const impl = getSdkUiRuntimeValue<() => PluginToastFn>("usePluginToast");
   return impl();
 }
+
+/** 跟随宿主的个人界面语言。只用于界面，不改变工作数据。 */
+export function useHostLocale(): "en" | "zh-CN" {
+  return getSdkUiRuntimeValue<() => "en" | "zh-CN">("useHostLocale")();
+}
+
+/** 翻译显式声明的固定界面文案，不用于用户内容。 */
+export function translateUi(source: string, values: Record<string, unknown> = {}): string {
+  return getSdkUiRuntimeValue<(source: string, values?: Record<string, unknown>) => string>("translateUi")(source, values);
+}

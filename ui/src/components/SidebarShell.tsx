@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import {
   useCallback,
   useEffect,
@@ -101,6 +102,7 @@ export function SidebarShell({
   onPanelFocusCapture,
   onPanelBlurCapture,
 }: SidebarShellProps) {
+  useUiLocale();
   const [width, setWidth] = useState(() => readStoredSidebarWidth(storageKey));
   const [isResizing, setIsResizing] = useState(false);
   const widthRef = useRef(width);
@@ -219,7 +221,7 @@ export function SidebarShell({
       {canResize ? (
         <div
           role="separator"
-          aria-label="Resize sidebar"
+          aria-label={uiText("Resize sidebar")}
           aria-orientation="vertical"
           aria-valuemin={MIN_SIDEBAR_WIDTH}
           aria-valuemax={MAX_SIDEBAR_WIDTH}

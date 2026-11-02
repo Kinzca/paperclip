@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useState, type MouseEvent } from "react";
 import type { Issue, IssueLockedStub } from "@paperclipai/shared";
 import { Link } from "@/lib/router";
@@ -31,6 +32,7 @@ export function RemovableIssueReferencePill({
   onRemove: (issueId: string) => void;
   isMobile?: boolean;
 }) {
+  useUiLocale();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const locked = isLockedIssueStub(issue);
   const issueLabel = locked
@@ -79,8 +81,8 @@ export function RemovableIssueReferencePill({
                 type="button"
                 data-mention-kind="issue"
                 className={chipClassName}
-                title={locked ? "Private task" : issue.title}
-                aria-label={`Actions for blocker ${issueLabel}`}
+                title={locked ? uiText("Private task") : issue.title}
+                aria-label={uiText("Actions for blocker {{value0}}", { value0: String(issueLabel) })}
               >
                 {content}
               </button>
@@ -89,15 +91,11 @@ export function RemovableIssueReferencePill({
               {!locked && issue.identifier ? (
                 <DropdownMenuItem asChild>
                   <Link to={`/issues/${issue.identifier}`}>
-                    <ArrowUpRight className="h-4 w-4" />
-                    Visit task
-                  </Link>
+                    <ArrowUpRight className="h-4 w-4" />{uiText("Visit task")}</Link>
                 </DropdownMenuItem>
               ) : null}
               <DropdownMenuItem variant="destructive" onSelect={openRemoveConfirmation}>
-                <X className="h-4 w-4" />
-                Remove blocker
-              </DropdownMenuItem>
+                <X className="h-4 w-4" />{uiText("Remove blocker")}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
@@ -119,7 +117,7 @@ export function RemovableIssueReferencePill({
                 data-mention-kind="issue"
                 className={chipClassName}
                 title={issue.title}
-                aria-label={`Task ${issueLabel}: ${issue.title}`}
+                aria-label={uiText("Task {{value0}}: {{value1}}", { value0: String(issueLabel), value1: String(issue.title) })}
               >
                 {content}
               </Link>
@@ -128,7 +126,7 @@ export function RemovableIssueReferencePill({
                 data-mention-kind="issue"
                 className={chipClassName}
                 title={issue.title}
-                aria-label={`Task: ${issue.title}`}
+                aria-label={uiText("Task: {{value0}}", { value0: String(issue.title) })}
               >
                 {content}
               </span>
@@ -139,18 +137,14 @@ export function RemovableIssueReferencePill({
       <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Remove blocker?</DialogTitle>
-            <DialogDescription>
-              Remove {confirmLabel} as a blocker for this task.
-            </DialogDescription>
+            <DialogTitle>{uiText("Remove blocker?")}</DialogTitle>
+            <DialogDescription>{uiText("Remove ")}{confirmLabel}{uiText(" as a blocker for this task.")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="outline">Cancel</Button>
+              <Button type="button" variant="outline">{uiText("Cancel")}</Button>
             </DialogClose>
-            <Button type="button" variant="destructive" onClick={confirmRemove}>
-              Remove blocker
-            </Button>
+            <Button type="button" variant="destructive" onClick={confirmRemove}>{uiText("Remove blocker")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -167,15 +161,16 @@ export function ExpandRelationListButton({
   expanded: boolean;
   onClick: () => void;
 }) {
+  useUiLocale();
   if (!expanded && hiddenCount <= 0) return null;
   return (
     <button
       type="button"
       className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
       onClick={onClick}
-      aria-label={expanded ? "Show fewer items" : `Show ${hiddenCount} more items`}
+      aria-label={expanded ? uiText("Show fewer items") : uiText("Show {{value0}} more items", { value0: String(hiddenCount) })}
     >
-      {expanded ? "Show less" : `Show ${hiddenCount} more`}
+      {expanded ? uiText("Show less") : uiText("Show {{value0}} more", { value0: String(hiddenCount) })}
     </button>
   );
 }

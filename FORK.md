@@ -5,7 +5,7 @@
 ## 本次改动
 
 - 侧栏新增可折叠的 Plugins 分组，复用原生分组、字体和间距。插件 sidebar 插槽和 sidebar launcher 从 Work 移入该组；没有插件入口时隐藏分组。主界面顺序为 Work → Org → Plugins → Agents。原有 sidebarPanel 扩展保留原位置。
-- Office 来自 [Kinzca/Agent-Pixels](https://github.com/Kinzca/Agent-Pixels)，固定在 `5b0a435a288cd7164b2d79aeb5aa84006ed2ce6e`（0.3.4）。去掉页面内重复标题、徽标、说明，将刷新状态移到任务工具栏旁。保留自动刷新、防闪烁画布、任务摘要和真实流程状态。
+- Office 来自 [Kinzca/Agent-Pixels](https://github.com/Kinzca/Agent-Pixels)，固定在 `a3fff4a71eeca595572decfdca7adffeadd26a85`（0.4.0）。去掉页面内重复标题、徽标、说明，将刷新状态移到任务工具栏旁。保留自动刷新、防闪烁画布、任务摘要和真实流程状态。
 - 将此前本地的阶段交接修复纳入版本管理：环境暂未释放时保存交接回执，释放后重新进入原队列，按公司、任务、负责人和完整阶段快照复核，过期回执取消。没有增加新的权限或数据库结构。
 
 按用户要求，此次只实现、构建、部署并交付，**未执行测试、类型检查、代码审查、设计检测或浏览器验收**。源码移植、跨电脑安装、不同平台和完整双 Agent 闭环均等待用户检查；构建完成不表示验收通过。
@@ -70,3 +70,13 @@ node scripts/local/setup.mjs
 新增 sidebar 的可选 `navigation: { routePath, icon }` 元数据，普通入口由宿主 SidebarNavItem 绘制。Office / Wiki 已分别声明 building-2 / book-open；兼容旧单入口插件的自动页面推导，并保留复杂自绘入口的兼容挂载。详细契约、图标名、退出自动推导的方法和部署顺序见 [侧栏入口规范](doc/plugins/SIDEBAR-NAVIGATION.md)。
 
 本地发布服务通过 `scripts/local/overlays/sidebar-schema/` 获得同样的可选字段校验；不新增数据库迁移或业务权限。宿主和插件需要配套更新。本轮构建不等于验收，仍由用户检查。
+
+## 简体中文／English（待用户检查）
+
+公司菜单底部和个人资料设置新增语言选择；默认按浏览器语言选择中文或英文，使用 `paperclip.ui.locale` 保存到当前浏览器的 localStorage。切换通过 i18next 和组件订阅更新，不重载页面或重建任务。其他同源标签页接收 storage 事件同步；不同电脑或浏览器不会自动同步该偏好。
+
+优先接入侧栏、任务列表及详情、Agent 列表及详情与配置、组织图、公司／个人／实例／插件设置，以及 Office 0.4.0、LLM Wiki 0.1.2 的主要固定界面文案。底层状态码、路由、任务标题与正文、评论、代码、Agent 名称、用户填写的职位和知识库内容均保留原值。后台原始诊断、第三方连接器提供的内容及未接入的次级界面仍可能保留原文，不使用页面文字扫描或机器翻译覆盖用户内容。
+
+固定 UI 资源位于 `ui/src/i18n/messages/{en,zh-CN}-ui.json`，与原有 app 命名空间分开。SDK 前端桥新增 `useHostLocale` / `translateUi`，为插件提供同一语言选择和译文。Office / Wiki 与宿主配套升级，不单独升级到缺少接口的旧宿主。详细维护说明见 [双语界面说明](doc/plugins/UI-LANGUAGE.md)。
+
+本轮只实现、构建、提交和部署，没有运行开发测试、单独类型检查、代码审查、机械设计检测、浏览器或 Agent 任务验收。构建包含生成必需 SDK 产物的 TypeScript 编译。

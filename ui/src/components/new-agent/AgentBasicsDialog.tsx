@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useCompany } from "@/context/CompanyContext";
 import { useAgentAppearanceDraft } from "@/hooks/useAgentAppearanceDraft";
 import { AdapterMark } from "../AdapterMark";
@@ -47,6 +48,7 @@ export function AgentBasicsDialog({
   initialAdapter?: string;
   onInvite?: () => void;
 }) {
+  useUiLocale();
   const id = useId();
   const cloud = Boolean(useCloudInstance());
   const experimental = useQuery({
@@ -95,19 +97,15 @@ export function AgentBasicsDialog({
       >
         <div
           className="flex items-center gap-2 px-6 py-5 text-xs text-muted-foreground"
-          aria-label="New agent progress"
+          aria-label={uiText("New agent progress")}
         >
           <span
             className={cn(step === "name" && "font-medium text-foreground")}
-          >
-            1. Name
-          </span>
+          >{uiText("1. Name")}</span>
           <ChevronRight className="size-3" />
           <span
             className={cn(step === "adapter" && "font-medium text-foreground")}
-          >
-            2. Adapter
-          </span>
+          >{uiText("2. Adapter")}</span>
         </div>
         <form
           className="flex min-h-0 flex-col"
@@ -127,26 +125,24 @@ export function AgentBasicsDialog({
               <div className="space-y-2">
                 <DialogTitle className="text-3xl font-semibold tracking-tight">
                   {step === "name"
-                    ? "Meet your next agent"
-                    : "Choose an adapter"}
+                    ? uiText("Meet your next agent")
+                    : uiText("Choose an adapter")}
                 </DialogTitle>
                 <DialogDescription className="text-base">
                   {step === "name"
-                    ? "Start with a name. Make them your own."
-                    : `How should ${name.trim()} work?`}
+                    ? uiText("Start with a name. Make them your own.")
+                    : uiText("How should {{value0}} work?", { value0: String(name.trim()) })}
                 </DialogDescription>
               </div>
             </div>
             {step === "name" ? (
               <div className="space-y-2">
-                <label htmlFor={id} className="text-sm font-medium">
-                  Agent name
-                </label>
+                <label htmlFor={id} className="text-sm font-medium">{uiText("Agent name")}</label>
                 <Input
                   id={id}
                   autoFocus
                   maxLength={100}
-                  placeholder="e.g. Darnold"
+                  placeholder={uiText("e.g. Darnold")}
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   className="h-12 text-base"
@@ -157,18 +153,14 @@ export function AgentBasicsDialog({
                     variant="link"
                     className="px-0 text-muted-foreground"
                     onClick={onInvite}
-                  >
-                    Invite an external agent
-                  </Button>
+                  >{uiText("Invite an external agent")}</Button>
                 )}
               </div>
             ) : (
               <fieldset className="space-y-4">
-                <legend className="sr-only">Adapter</legend>
+                <legend className="sr-only">{uiText("Adapter")}</legend>
                 {isPending && (
-                  <p role="status" className="text-sm text-muted-foreground">
-                    Loading adapters…
-                  </p>
+                  <p role="status" className="text-sm text-muted-foreground">{uiText("Loading adapters…")}</p>
                 )}
                 {error && (
                   <p role="alert" className="text-sm text-destructive">
@@ -212,19 +204,17 @@ export function AgentBasicsDialog({
                   })}
                 </div>
                 {validAdapter && adapterType === "paperclip_runner" && (
-                  <label className="flex flex-col gap-2 text-sm font-medium">
-                    Runner
-                    <select
+                  <label className="flex flex-col gap-2 text-sm font-medium">{uiText("Runner")}<select
                       className="rounded-md border border-border bg-background px-3 py-2"
                       value={runnerProvider}
                       onChange={(event) =>
                         setRunnerProvider(event.target.value)
                       }
                     >
-                      <option value="codex">Codex (app server)</option>
-                      <option value="claude">Claude (ACPX)</option>
-                      <option value="grok">Grok Build (ACPX)</option>
-                      <option value="opencode">OpenCode</option>
+                      <option value="codex">{uiText("Codex (app server)")}</option>
+                      <option value="claude">{uiText("Claude (ACPX)")}</option>
+                      <option value="grok">{uiText("Grok Build (ACPX)")}</option>
+                      <option value="opencode">{uiText("OpenCode")}</option>
                     </select>
                   </label>
                 )}
@@ -238,19 +228,17 @@ export function AgentBasicsDialog({
               onClick={() => (step === "name" ? onClose() : setStep("name"))}
             >
               {step === "name" ? (
-                "Cancel"
+                uiText("Cancel")
               ) : (
                 <>
-                  <ArrowLeft className="size-4" />
-                  Back
-                </>
+                  <ArrowLeft className="size-4" />{uiText("Back")}</>
               )}
             </Button>
             <Button
               type="submit"
               disabled={!name.trim() || (step === "adapter" && !validAdapter)}
             >
-              {step === "name" ? "Choose adapter" : "Configure agent"}
+              {step === "name" ? uiText("Choose adapter") : uiText("Configure agent")}
               <ArrowRight className="size-4" />
             </Button>
           </div>

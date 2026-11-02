@@ -53,6 +53,8 @@ export {
   useHostContext,
   useHostNavigation,
   useHostLocation,
+  useHostLocale,
+  translateUi,
   usePluginStream,
   usePluginToast,
 } from "./hooks.js";

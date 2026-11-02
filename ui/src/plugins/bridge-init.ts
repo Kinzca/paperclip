@@ -1,3 +1,4 @@
+import { useUiLocale, uiText } from "@/i18n/ui";
 /**
  * Plugin bridge initialization.
  *
@@ -685,6 +686,8 @@ export function initPluginBridge(
     reactJsxRuntime: ReactJsxRuntimeModule,
     reactDom,
     sdkUi: {
+      useHostLocale: useUiLocale,
+      translateUi: uiText,
       usePluginData,
       usePluginAction,
       useHostContext,

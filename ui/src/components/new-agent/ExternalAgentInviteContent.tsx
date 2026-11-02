@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { Link } from "@/lib/router";
 import { ArrowLeft, Check, Circle, CircleAlert, Loader2 } from "lucide-react";
 import { AdapterMark } from "../AdapterMark";
@@ -43,6 +44,7 @@ const checks = [
 
 /** Controlled by server evidence in the invite controller, never by copying a prompt. */
 export function DotConnectionChecks({ state }: { state: DotConnectionState }) {
+  useUiLocale();
   const completed = { waiting: 0, connected: 1, subscribed: 2, testing: 2, finishing: 3, ready: 3 }[state.phase];
   const message = state.problem === "agent_unavailable" ? "Connection checks passed, but this agent cannot receive tasks. Resolve the agent’s setup blocker in Paperclip."
     : state.problem === "offline" ? "Connection updates paused. Reconnect to check the latest status."
@@ -53,7 +55,7 @@ export function DotConnectionChecks({ state }: { state: DotConnectionState }) {
     : state.phase === "waiting" ? "Watching for your Dot. Updates will appear here automatically."
     : state.phase === "connected" ? "Your Dot connected. Waiting for it to enable task updates."
     : "Waiting for your Dot to confirm a test event. No task will be created.";
-  return <section aria-label="Dot connection checks" className="space-y-4">
+  return <section aria-label={uiText("Dot connection checks")} className="space-y-4">
     <ol className="space-y-4">
       {checks.map((check, index) => {
         const done = index < completed;
@@ -66,7 +68,7 @@ export function DotConnectionChecks({ state }: { state: DotConnectionState }) {
           </span>
           <div className="min-w-0 pt-0.5">
             <p className={cn("text-sm", done || active || failed ? "font-medium" : "text-muted-foreground")}>
-              {check.title}<span className="sr-only">{done ? ": complete" : failed ? ": needs attention" : active ? ": in progress" : ": waiting"}</span>
+              {check.title}<span className="sr-only">{done ? uiText(": complete") : failed ? uiText(": needs attention") : active ? uiText(": in progress") : uiText(": waiting")}</span>
             </p>
             {done && <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{check.description}</p>}
           </div>
@@ -97,6 +99,7 @@ export function ExternalAgentInviteContent({
   onRetry: () => void;
   onNewPrompt: () => void;
 }) {
+  useUiLocale();
   const provider = presets.find(item => item.id === preset);
   const dot = preset === "dot";
   const ready = dot && connection.phase === "ready" && !connection.problem;
@@ -112,48 +115,48 @@ export function ExternalAgentInviteContent({
         {provider && <AdapterMark type={provider.adapter} className="size-10" />}
         <div className="space-y-2">
           <DialogTitle className="text-xl font-semibold tracking-tight">
-            {!provider ? "Invite an external agent" : dot ? ready ? "Your Dot is connected" : "Connect your Dot" : preset === "hermes" ? "Invite your Hermes agent" : "Invite your agent"}
+            {!provider ? uiText("Invite an external agent") : dot ? ready ? uiText("Your Dot is connected") : uiText("Connect your Dot") : preset === "hermes" ? uiText("Invite your Hermes agent") : uiText("Invite your agent")}
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
-            {!provider ? `Bring an agent you already use into ${companyName}.`
-              : ready ? `Your Dot can now receive assignments and work with ${companyName}.`
-              : connection.problem === "agent_unavailable" ? "Your Dot is connected. This agent must be available in Paperclip before it can receive assignments."
-              : connection.phase === "finishing" ? "Your Dot has connected and confirmed task updates. Paperclip is preparing it for assignments."
-              : connecting ? "Your Dot has connected. We’re checking that task updates can travel both ways."
-              : dot ? "Copy the setup prompt and send it to your Dot in ChatGPT. Your Dot will connect itself; we’ll watch for it here."
-              : `Copy the invitation prompt and send it to your ${preset === "hermes" ? "Hermes " : ""}agent. Approve its join request in Paperclip when it’s ready.`}
+            {!provider ? uiText("Bring an agent you already use into {{value0}}.", { value0: String(companyName) })
+              : ready ? uiText("Your Dot can now receive assignments and work with {{value0}}.", { value0: String(companyName) })
+              : connection.problem === "agent_unavailable" ? uiText("Your Dot is connected. This agent must be available in Paperclip before it can receive assignments.")
+              : connection.phase === "finishing" ? uiText("Your Dot has connected and confirmed task updates. Paperclip is preparing it for assignments.")
+              : connecting ? uiText("Your Dot has connected. We’re checking that task updates can travel both ways.")
+              : dot ? uiText("Copy the setup prompt and send it to your Dot in ChatGPT. Your Dot will connect itself; we’ll watch for it here.")
+              : uiText("Copy the invitation prompt and send it to your {{value0}}agent. Approve its join request in Paperclip when it’s ready.", { value0: String(preset === "hermes" ? "Hermes " : "") })}
           </DialogDescription>
         </div>
       </div>
-      {error && <div role="alert" className="space-y-3 text-sm text-destructive"><p>{error}</p><Button variant="outline" disabled={busy} onClick={onRetry}>Try again</Button></div>}
+      {error && <div role="alert" className="space-y-3 text-sm text-destructive"><p>{error}</p><Button variant="outline" disabled={busy} onClick={onRetry}>{uiText("Try again")}</Button></div>}
       {!provider ? <><ExternalAgentPresetPicker onSelect={onSelect} dotDisabledReason={dotDisabledReason} />
         {dotDisabledReason && <p className="text-sm text-muted-foreground">{dotDisabledReason}</p>}</>
-        : approvalHref ? <p className="text-sm text-muted-foreground">An organization admin needs to approve this agent before Dot can connect. This page will update after approval.</p>
-        : busy && !prompt && connection.phase === "waiting" ? <p role="status" className="text-sm text-muted-foreground">Preparing your invitation…</p> : dot ? <>
+        : approvalHref ? <p className="text-sm text-muted-foreground">{uiText("An organization admin needs to approve this agent before Dot can connect. This page will update after approval.")}</p>
+        : busy && !prompt && connection.phase === "waiting" ? <p role="status" className="text-sm text-muted-foreground">{uiText("Preparing your invitation…")}</p> : dot ? <>
         <div className="border-t pt-6"><DotConnectionChecks state={connection} />
-          {connection.phase === "waiting" && <p className="mt-4 text-xs text-muted-foreground">Dot uses your OpenAI account. Provider usage and cost aren’t reported to Paperclip.</p>}</div>
-        {connection.problem === "event_timeout" && <Button variant="outline" disabled={busy} onClick={onRetry}>Retry test event</Button>}
-        {connection.problem === "offline" && <Button variant="outline" disabled={busy} onClick={onRetry}>Reconnect updates</Button>}
-      </> : <p className="text-sm leading-relaxed text-muted-foreground">The invitation includes everything your agent needs to join {companyName}. You can review its request before granting access.</p>}
+          {connection.phase === "waiting" && <p className="mt-4 text-xs text-muted-foreground">{uiText("Dot uses your OpenAI account. Provider usage and cost aren’t reported to Paperclip.")}</p>}</div>
+        {connection.problem === "event_timeout" && <Button variant="outline" disabled={busy} onClick={onRetry}>{uiText("Retry test event")}</Button>}
+        {connection.problem === "offline" && <Button variant="outline" disabled={busy} onClick={onRetry}>{uiText("Reconnect updates")}</Button>}
+      </> : <p className="text-sm leading-relaxed text-muted-foreground">{uiText("The invitation includes everything your agent needs to join ")}{companyName}{uiText(". You can review its request before granting access.")}</p>}
     </div>
     <div className="flex items-center justify-between gap-3 border-t px-6 py-4 sm:px-8">
       <Button variant="ghost" onClick={provider ? onBack : onClose}>
-        {provider && <ArrowLeft className="size-4" />}{provider ? "Back" : "Cancel"}
+        {provider && <ArrowLeft className="size-4" />}{provider ? uiText("Back") : uiText("Cancel")}
       </Button>
-      {provider && (approvalHref ? <Button asChild><Link to={approvalHref} onClick={onClose}>Review approval</Link></Button>
-        : ready ? <Button onClick={onClose}>Done</Button>
+      {provider && (approvalHref ? <Button asChild><Link to={approvalHref} onClick={onClose}>{uiText("Review approval")}</Link></Button>
+        : ready ? <Button onClick={onClose}>{uiText("Done")}</Button>
         : connecting ? <Button disabled aria-live="polite">
           {!connection.problem && <Loader2 className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />}
           {progressLabel}
         </Button>
-        : dot && connection.problem === "prompt_unavailable" ? <Button disabled={busy} onClick={onNewPrompt}>Create a new prompt</Button>
-        : !prompt || busy ? <Button disabled>{busy ? "Preparing…" : "Waiting for Dot…"}</Button>
+        : dot && connection.problem === "prompt_unavailable" ? <Button disabled={busy} onClick={onNewPrompt}>{uiText("Create a new prompt")}</Button>
+        : !prompt || busy ? <Button disabled>{busy ? uiText("Preparing…") : uiText("Waiting for Dot…")}</Button>
         : <AgentSetupPrompt
           key={preset}
           prompt={prompt}
-          label={dot ? "Copy setup prompt" : "Copy invitation prompt"}
-          title={dot ? "Connect your Dot" : "Invite your agent"}
-          description={dot ? "Send this whole prompt to your Dot in ChatGPT." : "Send this whole prompt to your agent."}
+          label={dot ? uiText("Copy setup prompt") : uiText("Copy invitation prompt")}
+          title={dot ? uiText("Connect your Dot") : uiText("Invite your agent")}
+          description={dot ? uiText("Send this whole prompt to your Dot in ChatGPT.") : uiText("Send this whole prompt to your agent.")}
           agent={dot ? { name: "Dot", src: "/brands/adapters/openai-dot.svg" } : undefined}
           align="end"
           className="min-w-0 shrink"

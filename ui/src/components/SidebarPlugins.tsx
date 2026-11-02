@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useState } from "react";
 import { SidebarSection } from "./SidebarSection";
 import { SidebarNavItem } from "./SidebarNavItem";
@@ -13,6 +14,7 @@ function LegacyPluginSidebarSlot({ slot, context }: { slot: ResolvedPluginSlot; 
 
 /** 插件导航由宿主绘制，插件只提供名称、路径和图标等元数据。 */
 export function SidebarPlugins({ context }: { context: PluginSlotContext }) {
+  useUiLocale();
   const [open, setOpen] = useState(true);
   const { slots } = usePluginSlots({
     slotTypes: ["sidebar", "page"], companyId: context.companyId,
@@ -26,12 +28,12 @@ export function SidebarPlugins({ context }: { context: PluginSlotContext }) {
   if (sidebars.length === 0 && launchers.length === 0) return null;
 
   return (
-    <SidebarSection label="Plugins" collapsible={{ open, onOpenChange: setOpen }}>
+    <SidebarSection label={uiText("Plugins")} collapsible={{ open, onOpenChange: setOpen }}>
       <div className="flex flex-col gap-0.5">
         {sidebars.map(slot => {
           const navigation = resolvePluginSidebarNavigation(slot, slots);
           return navigation ? (
-            <SidebarNavItem key={`${slot.pluginKey}:${slot.id}`} label={slot.displayName}
+            <SidebarNavItem key={`${slot.pluginKey}:${slot.id}`} label={slot.pluginKey === "agent-pixels.compat" ? uiText("Office") : slot.pluginKey === "paperclipai.plugin-llm-wiki" ? uiText("Wiki") : slot.displayName}
               to={`/${navigation.routePath}`} icon={pluginSidebarIcon(navigation.icon)} />
           ) : (
             <LegacyPluginSidebarSlot key={`${slot.pluginKey}:${slot.id}`} slot={slot} context={context} />

@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,7 @@ interface FilterBarProps {
 }
 
 export function FilterBar({ filters, onRemove, onClear }: FilterBarProps) {
+  useUiLocale();
   if (filters.length === 0) return null;
 
   return (
@@ -31,9 +33,7 @@ export function FilterBar({ filters, onRemove, onClear }: FilterBarProps) {
           </button>
         </Badge>
       ))}
-      <Button variant="ghost" size="sm" className="text-xs h-6" onClick={onClear}>
-        Clear all
-      </Button>
+      <Button variant="ghost" size="sm" className="text-xs h-6" onClick={onClear}>{uiText("Clear all")}</Button>
     </div>
   );
 }
