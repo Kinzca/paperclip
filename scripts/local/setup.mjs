@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { root, localDir, runtime, office, pnpm, env, run, runNode } from './common.mjs';
+import { root, localDir, runtime, office, wiki, pnpm, env, run, runNode } from './common.mjs';
 
 const [major, minor] = process.versions.node.split('.').map(Number);
 if (major < 24 || (major === 24 && minor < 11)) throw new Error('请先安装 Node.js >= 24.11。');
@@ -10,9 +10,10 @@ cpSync(path.join(root, 'scripts/local/runtime'), runtime, { recursive: true });
 run('npm', ['ci', '--prefix', runtime, '--no-audit', '--no-fund']);
 runNode([path.join(root, 'scripts/local/apply-runtime.mjs')]);
 run('npm', ['install', '--prefix', path.join(localDir, 'build-tools'), '--no-audit', '--no-fund', '--ignore-scripts', 'pnpm@9.15.4']);
-runNode([pnpm, '--filter', '@paperclipai/ui...', 'install', '--frozen-lockfile', '--ignore-scripts']);
+runNode([pnpm, '--filter', '@paperclipai/ui...', '--filter', '@paperclipai/plugin-llm-wiki...', 'install', '--frozen-lockfile', '--ignore-scripts']);
 runNode([pnpm, '--filter', '@paperclipai/plugin-sdk', 'ensure-build-deps']);
 runNode([pnpm, '--filter', '@paperclipai/ui', 'build']);
+runNode([pnpm, '--filter', '@paperclipai/plugin-llm-wiki', 'build']);
 cpSync(path.join(root, 'ui/dist'), path.join(runtime, 'node_modules/@paperclipai/server/ui-dist'), { recursive: true });
 
 const officeCommit = 'a3fff4a71eeca595572decfdca7adffeadd26a85';
@@ -41,5 +42,7 @@ if (!existsSync(office)) {
 }
 runNode([pnpm, 'install', '--frozen-lockfile', '--ignore-scripts'], { cwd: office });
 run('npm', ['run', 'build'], { cwd: office, env: { ...env, PAPERCLIP_SDK_DIST: path.join(root, 'packages/plugins/sdk/dist') } });
-writeFileSync(path.join(localDir, 'installation.json'), JSON.stringify({ release: '2026.1023.0', officeCommit }, null, 2) + '\n');
-console.log('安装和构建完成。下一步按 FORK.md 登录 Codex、启动服务并安装 Office；尚未执行功能验收。');
+const { readFileSync } = await import('node:fs');
+const wikiVersion = JSON.parse(readFileSync(path.join(wiki, 'package.json'), 'utf8')).version;
+writeFileSync(path.join(localDir, 'installation.json'), JSON.stringify({ release: '2026.1023.0', officeCommit, wikiVersion }, null, 2) + '\n');
+console.log('宿主、Office 和 Wiki 构建完成。下一步按 FORK.md 登录 Codex、启动服务，再执行 install-office.mjs 和 install-wiki.mjs；尚未登记插件或执行功能验收。');

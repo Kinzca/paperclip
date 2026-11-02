@@ -6,6 +6,7 @@ export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 export const localDir = path.resolve(process.env.PAPERCLIP_LOCAL_DIR || path.join(root, '.paperclip-local'));
 export const runtime = path.join(localDir, 'runtime');
 export const office = path.join(localDir, 'Agent-Pixels');
+export const wiki = path.join(root, 'packages/plugins/plugin-llm-wiki');
 export const pnpm = path.join(localDir, 'build-tools/node_modules/pnpm/bin/pnpm.cjs');
 export const codexCli = path.join(runtime, 'node_modules/@paperclipai/server/node_modules/@openai/codex/bin/codex.js');
 export const codexHome = process.env.CODEX_HOME || path.join(localDir, 'codex');
@@ -21,7 +22,7 @@ export const env = {
   PAPERCLIP_TELEMETRY_DISABLED: '1', PAPERCLIP_NO_BROWSER: 'true', PAPERCLIP_OPEN_ON_LISTEN: 'false',
   PORT: port,
   npm_config_cache: path.join(localDir, 'npm-cache'),
-  PATH: [path.dirname(process.execPath), path.join(runtime, 'node_modules/.bin'),
+  PATH: [path.dirname(process.execPath), path.join(localDir, 'build-tools/node_modules/.bin'), path.join(runtime, 'node_modules/.bin'),
     path.join(runtime, 'node_modules/@paperclipai/server/node_modules/.bin'), process.env.PATH].join(path.delimiter),
 };
 // 本安装入口只使用 Codex 订阅登录，避免环境中的 Key 覆盖订阅身份。

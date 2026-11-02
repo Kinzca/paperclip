@@ -1,4 +1,32 @@
-> **本地定制版：** 请先阅读 [中文安装与定制说明](FORK.md)，使用 `codex-local` 分支。
+## 本地定制版：中文安装入口
+
+本仓库的定制分支为 **`codex-local`**，包含简体中文 / English 切换、统一 Plugins 入口、Office，以及保留 Paperclip 主侧栏的 Wiki。
+
+新电脑需要 Git、npm、Node.js **>= 24.11**，然后：
+
+```sh
+git clone --branch codex-local https://github.com/Kinzca/paperclip.git
+cd paperclip
+node scripts/local/setup.mjs
+node scripts/local/codex.mjs login
+node scripts/local/start.mjs
+```
+
+保持服务终端运行，在第二个终端进入同一仓库，登记两个插件：
+
+```sh
+node scripts/local/install-office.mjs
+node scripts/local/install-wiki.mjs
+```
+
+- [完整安装、Codex 订阅登录、Wiki 初始化与更新说明](FORK.md)
+- [迁移现有公司、Agent、任务、附件及 Wiki 资料](doc/LOCAL-MIGRATION.zh-CN.md)
+
+`setup` 负责构建宿主、Office 和 Wiki，插件登记单独执行；安装不自动创建员工或启动任务。桌面应用的登录不会自动写入此独立 CLI 登录目录，新电脑需用自己的账号授权。Git 拉取只带代码，不带公司数据、知识库资料或登录信息。
+
+按用户要求，本次补齐了脚本和文档，没有运行全新安装、跨电脑迁移或界面验收。下方保留上游原始介绍；使用本定制版请优先遵循上述中文文档。
+
+---
 
 <p align="center">
   <img src="doc/assets/banner.jpg" alt="Paperclip is the app people use to manage AI agents for work." width="720" />
