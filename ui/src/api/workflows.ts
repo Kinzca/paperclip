@@ -5,8 +5,16 @@ import type {
   WorkflowRevision,
   WorkflowRunDetail,
   WorkflowTemplate,
+  WorkflowBaselinePage,
 } from "@paperclipai/shared";
-import { api } from "./client";
+import { api, detachInflightGet, type RequestOptions } from "./client";
+
+// React Query deduplicates within an account. URL-only coalescing must not
+// answer a new account's query with a request admitted under the old session.
+function accountScopedGet<T>(path: string, options?: RequestOptions) {
+  detachInflightGet(path);
+  return api.get<T>(path, options);
+}
 
 export interface WorkflowConfiguration {
   platform: { version: number; policy: WorkflowPolicy };
@@ -15,8 +23,22 @@ export interface WorkflowConfiguration {
   policies: WorkflowPolicyRecord[];
 }
 export const workflowsApi = {
-  configuration: (companyId: string) =>
-    api.get<WorkflowConfiguration>(`/companies/${companyId}/workflows`),
+  configuration: (companyId: string, options?: RequestOptions) =>
+    accountScopedGet<WorkflowConfiguration>(
+      `/companies/${companyId}/workflows`,
+      options,
+    ),
+  baselines: (
+    companyId: string,
+    revisionId: string,
+    q: string,
+    offset = 0,
+    options?: RequestOptions,
+  ) =>
+    accountScopedGet<WorkflowBaselinePage>(
+      `/companies/${companyId}/workflows/revisions/${revisionId}/baselines?${new URLSearchParams({ q, offset: String(offset) })}`,
+      options,
+    ),
   policy: (
     companyId: string,
     input: {
@@ -38,9 +60,14 @@ export const workflowsApi = {
       `/companies/${companyId}/workflows/revisions`,
       input,
     ),
-  evaluations: (companyId: string, revisionId: string) =>
-    api.get<WorkflowEvaluation[]>(
+  evaluations: (
+    companyId: string,
+    revisionId: string,
+    options?: RequestOptions,
+  ) =>
+    accountScopedGet<WorkflowEvaluation[]>(
       `/companies/${companyId}/workflows/revisions/${revisionId}/evaluations`,
+      options,
     ),
   evaluate: (
     companyId: string,

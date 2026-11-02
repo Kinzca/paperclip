@@ -1,6 +1,19 @@
+import { createHash } from "node:crypto";
 import { Router, type Request } from "express";
 import { z } from "zod";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  getTableColumns,
+  ilike,
+  inArray,
+  isNull,
+  or,
+  sql,
+} from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import {
   instanceSettings,
   companies,
@@ -9,6 +22,7 @@ import {
   workflowRuns,
   workflowNodeAttempts,
   workflowEvaluations,
+  workflowTemplateRevisions,
   type Db,
 } from "@paperclipai/db";
 import {
@@ -19,6 +33,8 @@ import {
   workflowEvaluationSchema,
   workflowPolicySchema,
   workflowTrialsSchema,
+  BUILT_IN_WORKFLOW_TEMPLATES,
+  type WorkflowSnapshot,
 } from "@paperclipai/shared";
 import { validate } from "../middleware/validate.js";
 import {
@@ -205,16 +221,102 @@ export function workflowRoutes(
     async (req, res) => {
       const companyId = req.params.companyId as string;
       assertCompanyAccess(req, companyId);
-      res
-        .status(201)
-        .json(
-          await store.propose(companyId, req.body, {
-            userId:
-              req.actor.userId ??
-              (req.actor.type === "board" ? "local-board" : null),
-            agentId: req.actor.agentId ?? null,
-          }),
+      res.status(201).json(
+        await store.propose(companyId, req.body, {
+          userId:
+            req.actor.userId ??
+            (req.actor.type === "board" ? "local-board" : null),
+          agentId: req.actor.agentId ?? null,
+        }),
+      );
+    },
+  );
+  router.get(
+    "/companies/:companyId/workflows/revisions/:revisionId/baselines",
+    async (req, res) => {
+      assertBoard(req);
+      const { companyId, revisionId } = z
+        .object({
+          companyId: z.string().guid(),
+          revisionId: z.string().guid(),
+        })
+        .parse(req.params);
+      assertCompanyAccess(req, companyId);
+      const query = z
+        .object({
+          q: z.string().trim().max(200).default(""),
+          limit: z.coerce.number().int().min(1).max(50).default(20),
+          offset: z.coerce.number().int().min(0).max(10000).default(0),
+        })
+        .parse(req.query);
+      const [revision] = await db
+        .select()
+        .from(workflowTemplateRevisions)
+        .where(
+          and(
+            eq(workflowTemplateRevisions.companyId, companyId),
+            eq(workflowTemplateRevisions.id, revisionId),
+            eq(workflowTemplateRevisions.status, "draft"),
+          ),
         );
+      if (!revision) throw notFound("Draft revision not found");
+      const baseKey = BUILT_IN_WORKFLOW_TEMPLATES.some(
+        (item) => item.key === revision.templateKey,
+      )
+        ? revision.templateKey
+        : "standard";
+      const search = `%${query.q.replace(/[\\%_]/g, "\\$&")}%`;
+      const rows = await db
+        .select({
+          id: workflowRuns.id,
+          issueId: issues.id,
+          issueIdentifier: issues.identifier,
+          issueTitle: issues.title,
+          objective: sql<
+            WorkflowSnapshot["objective"]
+          >`${workflowRuns.snapshot}->'objective'`,
+          createdAt: workflowRuns.createdAt,
+          finishedAt: workflowRuns.finishedAt,
+        })
+        .from(workflowRuns)
+        .innerJoin(issues, eq(issues.id, workflowRuns.issueId))
+        .where(
+          and(
+            eq(workflowRuns.companyId, companyId),
+            eq(issues.companyId, companyId),
+            eq(workflowRuns.status, "succeeded"),
+            revision.basedOnRevisionId
+              ? sql`${workflowRuns.snapshot}->>'revisionId' = ${revision.basedOnRevisionId}`
+              : and(
+                  isNull(sql`${workflowRuns.snapshot}->>'revisionId'`),
+                  sql`${workflowRuns.snapshot}->>'templateKey' = ${baseKey}`,
+                ),
+            query.q
+              ? or(
+                  ilike(issues.title, search),
+                  ilike(issues.identifier, search),
+                  ilike(
+                    sql`${workflowRuns.snapshot}->'objective'->>'title'`,
+                    search,
+                  ),
+                )
+              : undefined,
+            await issueReadSqlCondition(db, req.actor),
+          ),
+        )
+        .orderBy(desc(workflowRuns.createdAt), desc(workflowRuns.id))
+        .limit(query.limit + 1)
+        .offset(query.offset);
+      res.json({
+        items: rows.slice(0, query.limit).map(({ objective, ...row }) => ({
+          ...row,
+          objectiveTitle: objective.title,
+          objectiveFingerprint: createHash("sha256")
+            .update(JSON.stringify(objective))
+            .digest("hex"),
+        })),
+        hasMore: rows.length > query.limit,
+      });
     },
   );
   router.get(
@@ -233,10 +335,31 @@ export function workflowRoutes(
             await issueReadSqlCondition(db, req.actor),
           ),
         );
+      const baseline = alias(workflowRuns, "baseline_workflow");
+      const candidate = alias(workflowRuns, "candidate_workflow");
       res.json(
         await db
-          .select()
+          .select({
+            ...getTableColumns(workflowEvaluations),
+            objectiveTitle: sql<string>`${baseline.snapshot}->'objective'->>'title'`,
+            baselineIssueId: baseline.issueId,
+            candidateIssueId: candidate.issueId,
+          })
           .from(workflowEvaluations)
+          .innerJoin(
+            baseline,
+            and(
+              eq(baseline.id, workflowEvaluations.baselineRunId),
+              eq(baseline.companyId, companyId),
+            ),
+          )
+          .innerJoin(
+            candidate,
+            and(
+              eq(candidate.id, workflowEvaluations.candidateRunId),
+              eq(candidate.companyId, companyId),
+            ),
+          )
           .where(
             and(
               eq(workflowEvaluations.companyId, companyId),

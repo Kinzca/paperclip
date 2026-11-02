@@ -310,6 +310,23 @@ export interface WorkflowEvaluation {
   scenarioKey: string;
   passed: boolean;
   findings: string[];
+  objectiveTitle?: string;
+  baselineIssueId?: string;
+  candidateIssueId?: string;
+}
+export interface WorkflowBaseline {
+  id: string;
+  issueId: string;
+  issueIdentifier: string | null;
+  issueTitle: string;
+  objectiveTitle: string;
+  objectiveFingerprint: string;
+  createdAt: string;
+  finishedAt: string | null;
+}
+export interface WorkflowBaselinePage {
+  items: WorkflowBaseline[];
+  hasMore: boolean;
 }
 export interface WorkflowRevision {
   id: string;

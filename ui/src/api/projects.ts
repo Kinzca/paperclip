@@ -6,7 +6,7 @@ import type {
   WorkspaceOperation,
   WorkspaceRuntimeControlTarget,
 } from "@paperclipai/shared";
-import { api } from "./client";
+import { api, type RequestOptions } from "./client";
 import { sanitizeWorkspaceRuntimeControlTarget } from "./workspace-runtime-control";
 
 function withCompanyScope(path: string, companyId?: string) {
@@ -22,11 +22,11 @@ function projectPath(id: string, companyId?: string, suffix = "") {
 export const projectsApi = {
   repositoryOptions: (companyId: string) => api.get<ProjectRepositoryOptions>(`/companies/${companyId}/project-repositories`),
   setRepositories: (id: string, repositoryIds: string[]) => api.put<Project>(projectPath(id, undefined, "/repositories"), { repositoryIds }),
-  list: (companyId: string, opts: { includeArchived?: boolean } = {}) => {
+  list: (companyId: string, opts: { includeArchived?: boolean } = {}, options?: RequestOptions) => {
     const params = new URLSearchParams();
     if (opts.includeArchived) params.set("includeArchived", "true");
     const query = params.toString();
-    return api.get<Project[]>("/companies/" + encodeURIComponent(companyId) + "/projects" + (query ? "?" + query : ""));
+    return api.get<Project[]>("/companies/" + encodeURIComponent(companyId) + "/projects" + (query ? "?" + query : ""), options);
   },
   get: (id: string, companyId?: string) => api.get<Project>(projectPath(id, companyId)),
   create: (companyId: string, data: Record<string, unknown>) =>

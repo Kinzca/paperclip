@@ -18,6 +18,20 @@ The bare `/workflows` URL redirects to the selected company. Keep this root in
 `ui/src/lib/company-routes.ts` and the unprefixed redirect table in `ui/src/App.tsx`
 so sidebar navigation retains the company prefix.
 
+The overview shows the saved workflow, parallel stages, effective execution limits
+and their sources. **Edit rules** previews changes before saving; clearing a field
+restores inheritance. Cost input uses USD and is stored as integer cents. Unsaved
+edits stay in the current application's memory, scoped to account and company,
+when navigating away; they are not an on-disk draft or a database write.
+
+**Workflow revisions** separates execution-instruction editing, baseline selection
+and evidence review. Verification gates remain fixed. Select 3–10 successful tasks
+with distinct frozen objectives; the picker respects root-task visibility and the
+candidate's exact baseline version. Starting regressions explicitly creates real
+agent tasks. Saving a draft or browsing candidates does not start execution.
+Unsaved candidate edits block regression and publication until saved as a new
+revision. Publication retains the existing evidence and human-approval gates.
+
 For AIGameStudio, choose **Game development** once at company scope. It requires a
 run receipt, attachment and work product, parallel code review/playtesting, then
 human acceptance. Normal agent roles supply bindings. Personnel reporting remains
@@ -116,6 +130,7 @@ cancellation data. Mutations are audited; policies/controls use optimistic versi
 | --- | --- | --- |
 | GET/PUT | `/instance/workflows/defaults` | Instance administrator defaults |
 | GET | `/companies/:companyId/workflows` | Templates, revisions and visible policies |
+| GET | `/companies/:companyId/workflows/revisions/:revisionId/baselines` | Board-only, searchable eligible task metadata; bounded `limit`/`offset`, no execution |
 | PUT | `/companies/:companyId/workflows/policy` | Board scope overrides |
 | POST | `/companies/:companyId/workflows/revisions` | Propose draft |
 | GET/POST | `/companies/:companyId/workflows/revisions/:revisionId/evaluations` | Inspect/evaluate paired runs |
