@@ -13,6 +13,11 @@ enable `standard`: execute → retain a successful run receipt → independently
 review, with three attempts per node, 60 active minutes and two concurrent stages.
 Native company budgets remain enforced; an additional workflow cost cap is optional.
 
+The board page is `/:companyPrefix/workflows` (for example, `/AIG/workflows`).
+The bare `/workflows` URL redirects to the selected company. Keep this root in
+`ui/src/lib/company-routes.ts` and the unprefixed redirect table in `ui/src/App.tsx`
+so sidebar navigation retains the company prefix.
+
 For AIGameStudio, choose **Game development** once at company scope. It requires a
 run receipt, attachment and work product, parallel code review/playtesting, then
 human acceptance. Normal agent roles supply bindings. Personnel reporting remains
@@ -135,6 +140,7 @@ running studio database.
 ```sh
 pnpm --filter @paperclipai/shared exec vitest run src/workflows.test.ts
 pnpm --filter @paperclipai/server exec vitest run src/services/workflows/engine.integration.test.ts
+pnpm --filter @paperclipai/ui exec vitest run src/lib/company-routes.test.ts src/App.workflows-routing.test.tsx
 pnpm check:token-gates
 ```
 

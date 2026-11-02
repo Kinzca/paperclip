@@ -18,6 +18,15 @@ describe("company routes", () => {
     expect(applyCompanyPrefix("/tasks", "PAP")).toBe("/PAP/tasks");
   });
 
+  it.each(["AIG", "CMP"])("scopes workflow navigation to %s", (prefix) => {
+    const path = "/workflows?tab=templates#defaults";
+    expect(isBoardPathWithoutPrefix("/workflows")).toBe(true);
+    expect(extractCompanyPrefixFromPath("/workflows")).toBeNull();
+    expect(applyCompanyPrefix(path, prefix)).toBe(`/${prefix}${path}`);
+    expect(applyCompanyPrefix(`/${prefix}${path}`, prefix)).toBe(`/${prefix}${path}`);
+    expect(toCompanyRelativePath(`/${prefix}${path}`)).toBe(path);
+  });
+
   it("treats execution workspace paths as board routes that need a company prefix", () => {
     expect(isBoardPathWithoutPrefix("/execution-workspaces/workspace-123")).toBe(true);
     expect(isBoardPathWithoutPrefix("/execution-workspaces/workspace-123/routines")).toBe(true);
