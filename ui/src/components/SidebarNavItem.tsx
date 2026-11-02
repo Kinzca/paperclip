@@ -30,6 +30,15 @@ export function useSidebarNavExpanded() {
   return useContext(SidebarNavExpandedContext);
 }
 
+/** 原生链接和插件动作按钮共用同一行规格。 */
+export function sidebarNavRowClassName(active = false) {
+  return cn(
+    "flex items-center gap-2.5 mx-2 rounded-lg px-2 py-1.5 pointer-coarse:py-1 text-(length:--text-compact) font-medium transition-colors",
+    active ? "bg-sidebar-accent text-sidebar-accent-foreground"
+      : "text-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+  );
+}
+
 interface SidebarNavItemProps {
   to: string;
   label: string;
@@ -126,10 +135,7 @@ export function SidebarNavItem({
           // the sidebar edges, rounded-lg matches the card anchor, px-2 gives
           // the icon breathing room inside the pill. Rows with hover menus
           // (agents/projects) reserve extra right padding via className.
-          "flex items-center gap-2.5 mx-2 rounded-lg px-2 py-1.5 pointer-coarse:py-1 text-(length:--text-compact) font-medium transition-colors",
-          (active ?? isActive)
-            ? "bg-sidebar-accent text-sidebar-accent-foreground"
-            : "text-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          sidebarNavRowClassName(active ?? isActive),
           className,
         )
       }

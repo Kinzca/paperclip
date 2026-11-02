@@ -14,7 +14,8 @@ runNode([pnpm, '--filter', '@paperclipai/ui...', 'install', '--frozen-lockfile',
 runNode([pnpm, '--filter', '@paperclipai/ui', 'build']);
 cpSync(path.join(root, 'ui/dist'), path.join(runtime, 'node_modules/@paperclipai/server/ui-dist'), { recursive: true });
 
-const officeCommit = 'dec2d72498e5b7bd46a6575c1d58beed43a18b81';
+const officeCommit = '5b0a435a288cd7164b2d79aeb5aa84006ed2ce6e';
+const previousOfficeCommit = 'dec2d72498e5b7bd46a6575c1d58beed43a18b81';
 if (!existsSync(office)) {
   run('git', ['clone', 'https://github.com/Kinzca/Agent-Pixels.git', office]);
   run('git', ['checkout', '--detach', officeCommit], { cwd: office });
@@ -23,7 +24,17 @@ if (!existsSync(office)) {
   const { spawnSync } = await import('node:child_process');
   const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: office, encoding: 'utf8' });
   const status = spawnSync('git', ['status', '--porcelain', '--untracked-files=no'], { cwd: office, encoding: 'utf8' });
-  if (head.status !== 0 || status.status !== 0 || head.stdout.trim() !== officeCommit || status.stdout.trim()) {
+  if (head.status !== 0 || status.status !== 0 || status.stdout.trim()) {
+    throw new Error(`已有 Office 工作区有改动或无法读取，请保留后另行处理：${office}`);
+  }
+  if (head.stdout.trim() === previousOfficeCommit) {
+    const { readFileSync } = await import('node:fs');
+    if (readFileSync(path.join(office, '.git/HEAD'), 'utf8').startsWith('ref:')) {
+      throw new Error(`Office 位于用户分支，保留现场，请显式更新到 ${officeCommit}`);
+    }
+    run('git', ['fetch', 'origin', officeCommit], { cwd: office });
+    run('git', ['checkout', '--detach', officeCommit], { cwd: office });
+  } else if (head.stdout.trim() !== officeCommit) {
     throw new Error(`已有 Office 工作区与固定版本不同，请保留后另行处理：${office}`);
   }
 }

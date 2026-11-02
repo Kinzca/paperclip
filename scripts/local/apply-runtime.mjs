@@ -8,6 +8,7 @@ const tasks = [];
 for (const [overlay, target] of [
   ['stage-handoff', 'node_modules/@paperclipai/server'],
   ['postgres', 'node_modules/postgres'],
+  ['sidebar-schema', 'node_modules/@paperclipai/shared'],
 ]) {
   const source = path.join(root, 'scripts/local/overlays', overlay);
   const manifest = JSON.parse(readFileSync(path.join(source, 'manifest.json'), 'utf8'));

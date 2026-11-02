@@ -384,12 +384,19 @@ export const pluginUiSlotDeclarationSchema = z.object({
   id: z.string().min(1),
   displayName: z.string().min(1),
   exportName: z.string().min(1),
+  navigation: z.union([z.literal(false), z.object({
+    routePath: z.string().regex(/^[a-z0-9][a-z0-9-]*$/),
+    icon: z.string().regex(/^[a-z0-9][a-z0-9-]*$/).max(64).optional(),
+  })]).optional(),
   entityTypes: z.array(z.enum(PLUGIN_UI_SLOT_ENTITY_TYPES)).optional(),
   routePath: z.string().regex(/^[a-z0-9][a-z0-9-]*$/, {
     message: "routePath must be a lowercase single-segment slug (letters, numbers, hyphens)",
   }).optional(),
   order: z.number().int().optional(),
 }).superRefine((value, ctx) => {
+  if (value.navigation !== undefined && value.type !== "sidebar") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "navigation is only supported for sidebar slots", path: ["navigation"] });
+  }
   // context-sensitive slots require explicit entity targeting.
   const entityScopedTypes = ["detailTab", "taskDetailView", "contextMenuItem", "commentAnnotation", "commentContextMenuItem", "projectSidebarItem"];
   if (

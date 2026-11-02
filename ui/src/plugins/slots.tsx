@@ -111,6 +111,10 @@ type SlotFilters = {
   entityType?: PluginUiSlotEntityType | null;
   companyId?: string | null;
   enabled?: boolean;
+  /** 仅发现导航元数据时无需加载插件 UI 模块。 */
+  loadModules?: boolean;
+  /** 兼容挂载单个插件时只加载该插件。 */
+  pluginId?: string;
 };
 
 type UsePluginSlotsResult = {
@@ -660,6 +664,7 @@ export function usePluginSlots(filters: SlotFilters): UsePluginSlotsResult {
     const allowedTypes = new Set(slotTypesKey.split("|").filter(Boolean) as PluginUiSlotType[]);
     const rows: ResolvedPluginSlot[] = [];
     for (const contribution of data ?? []) {
+      if (filters.pluginId && contribution.pluginId !== filters.pluginId) continue;
       for (const slot of contribution.slots) {
         if (!allowedTypes.has(slot.type)) continue;
         if (requiresEntityType(slot.type)) {
@@ -684,13 +689,14 @@ export function usePluginSlots(filters: SlotFilters): UsePluginSlotsResult {
       return a.displayName.localeCompare(b.displayName);
     });
     return rows;
-  }, [data, filters.entityType, slotTypesKey]);
+  }, [data, filters.entityType, filters.pluginId, slotTypesKey]);
 
   // A replacement surface must not disappear while an unrelated plugin loads.
   const contributions = useMemo(() => {
+    if (filters.loadModules === false) return undefined;
     const pluginIds = new Set(slots.map(slot => slot.pluginId));
     return data?.filter(contribution => pluginIds.has(contribution.pluginId));
-  }, [data, slots]);
+  }, [data, slots, filters.loadModules]);
   usePluginModuleLoader(contributions);
   const modulesLoaded = contributions ? aggregateLoadState(contributions) === "loaded" : true;
   const isLoading = queryEnabled && (isQueryLoading || !modulesLoaded);

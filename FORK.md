@@ -5,7 +5,7 @@
 ## 本次改动
 
 - 侧栏新增可折叠的 Plugins 分组，复用原生分组、字体和间距。插件 sidebar 插槽和 sidebar launcher 从 Work 移入该组；没有插件入口时隐藏分组。主界面顺序为 Work → Org → Plugins → Agents。原有 sidebarPanel 扩展保留原位置。
-- Office 来自 [Kinzca/Agent-Pixels](https://github.com/Kinzca/Agent-Pixels)，固定在 `dec2d72498e5b7bd46a6575c1d58beed43a18b81`（0.3.3）。去掉页面内重复标题、徽标、说明，将刷新状态移到任务工具栏旁。保留自动刷新、防闪烁画布、任务摘要和真实流程状态。
+- Office 来自 [Kinzca/Agent-Pixels](https://github.com/Kinzca/Agent-Pixels)，固定在 `5b0a435a288cd7164b2d79aeb5aa84006ed2ce6e`（0.3.4）。去掉页面内重复标题、徽标、说明，将刷新状态移到任务工具栏旁。保留自动刷新、防闪烁画布、任务摘要和真实流程状态。
 - 将此前本地的阶段交接修复纳入版本管理：环境暂未释放时保存交接回执，释放后重新进入原队列，按公司、任务、负责人和完整阶段快照复核，过期回执取消。没有增加新的权限或数据库结构。
 
 按用户要求，此次只实现、构建、部署并交付，**未执行测试、类型检查、代码审查、设计检测或浏览器验收**。源码移植、跨电脑安装、不同平台和完整双 Agent 闭环均等待用户检查；构建完成不表示验收通过。
@@ -64,3 +64,9 @@ node scripts/local/setup.mjs
 更新前停止此安装入口启动的服务，并备份本地数据库与文件。不要在生产运行期间直接重建 node_modules。自定义 UI、运行时覆盖、Office 固定提交及 release lock 共同构成本地版本，不能只替换其中某一部分升级上游。
 
 保留上游：`git remote add upstream https://github.com/paperclipai/paperclip.git`，后续按需要选择性同步。官方文档和原始 README 保留；本文件只描述定制范围及安装方式。
+
+## 插件侧栏规格统一（待用户检查）
+
+新增 sidebar 的可选 `navigation: { routePath, icon }` 元数据，普通入口由宿主 SidebarNavItem 绘制。Office / Wiki 已分别声明 building-2 / book-open；兼容旧单入口插件的自动页面推导，并保留复杂自绘入口的兼容挂载。详细契约、图标名、退出自动推导的方法和部署顺序见 [侧栏入口规范](doc/plugins/SIDEBAR-NAVIGATION.md)。
+
+本地发布服务通过 `scripts/local/overlays/sidebar-schema/` 获得同样的可选字段校验；不新增数据库迁移或业务权限。宿主和插件需要配套更新。本轮构建不等于验收，仍由用户检查。

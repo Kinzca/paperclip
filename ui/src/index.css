@@ -3420,3 +3420,33 @@ span.paperclip-mention-chip[data-mention-kind="external-object"] {
 @media (max-height: 420px) {
   .agent-setup-popover { overflow-y: auto; }
 }
+
+/* 无法安全推导目标页的旧插件保留自绘入口，仅收敛常见链接的布局规格。 */
+@layer components {
+  .plugin-sidebar-legacy a[href] {
+    @apply flex! items-center! gap-2.5! mx-2! rounded-lg! px-2! py-1.5! font-medium! no-underline!;
+    font-family: inherit !important;
+    font-size: var(--text-compact) !important;
+    line-height: inherit !important;
+    color: color-mix(in oklab, var(--foreground) 80%, transparent) !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  .plugin-sidebar-legacy a[href]:hover,
+  .plugin-sidebar-legacy a[href][aria-current="page"] {
+    color: var(--sidebar-accent-foreground) !important;
+    background: var(--sidebar-accent) !important;
+  }
+  .plugin-sidebar-legacy a[href]:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  .plugin-sidebar-legacy a[href] svg {
+    @apply size-4! shrink-0!;
+    stroke-width: 2;
+  }
+  @media (pointer: coarse) {
+    .plugin-sidebar-legacy a[href] { @apply py-1!; }
+  }
+}

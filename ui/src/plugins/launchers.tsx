@@ -174,7 +174,7 @@ function launcherRoutePath(launcher: ResolvedPluginLauncher): string | null {
   return segment ? segment.toLowerCase() : null;
 }
 
-function launcherDisplayName(launcher: ResolvedPluginLauncher, contribution: PluginUiContribution | undefined): string {
+export function launcherDisplayName(launcher: ResolvedPluginLauncher, contribution: PluginUiContribution | undefined): string {
   if (launcher.placementZone !== "sidebar" || !contribution) return launcher.displayName;
   const routePath = launcherRoutePath(launcher);
   if (!routePath) return launcher.displayName;

@@ -499,6 +499,12 @@ export interface PluginUiSlotDeclaration {
    */
   routePath?: string;
   /**
+   * sidebar 专用：声明交由宿主绘制的原生导航行。
+   * routePath 须匹配本插件的 page；icon 使用宿主支持的图标名，未知名称回退为 puzzle。
+   * 不声明时，旧插件仍可使用 exportName 提供自定义入口。
+   */
+  navigation?: false | { routePath: string; icon?: string };
+  /**
    * Optional ordering hint within a slot surface. Lower numbers appear first.
    * Defaults to host-defined ordering if omitted.
    */

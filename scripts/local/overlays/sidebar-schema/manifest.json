@@ -1,0 +1,10 @@
+{
+  "package": "@paperclipai/shared",
+  "version": "2026.1023.0",
+  "files": {
+    "dist/validators/plugin.js": {
+      "original": "657469857171fa418ae4ac28d4f4535d0b0bd9bad482db29a6f24ee149488d3f",
+      "patched": "627d743aabf8c0871c08fca940699bdd50da4193e0419d3ff0036d4b03b1462c"
+    }
+  }
+}
