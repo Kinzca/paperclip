@@ -165,7 +165,8 @@ export function PluginPage() {
 
   return (
     <div className="space-y-4">
-      {!routeSidebarActive && (
+      {/* Office 已有侧栏入口，不在内容区重复提供返回导航。 */}
+      {!routeSidebarActive && pageSlot.pluginKey !== "agent-pixels.compat" && (
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" asChild>
             <Link to={companyPrefix ? `/${companyPrefix}/dashboard` : "/dashboard"}>
