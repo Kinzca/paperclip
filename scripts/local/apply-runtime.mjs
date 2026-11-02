@@ -23,7 +23,7 @@ for (const [overlay, target] of [
     if (hash !== hashes.patched && !(hash && hash === hashes.original) && !(hash === null && !hashes.original)) {
       throw new Error(`文件包含其他改动，停止并保留现场：${file}`);
     }
-    if (hash !== hashes.patched) tasks.push({ source: path.join(source, name), file });
+    if (hash !== hashes.patched) tasks.push({ source: path.join(source, hashes.source ?? name), file });
   }
 }
 // 先完成全部覆盖前置条件判断，再写入；每个覆盖文件保留一份原件。
