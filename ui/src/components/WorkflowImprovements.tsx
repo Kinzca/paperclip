@@ -765,13 +765,22 @@ export function WorkflowImprovements({
                                 (!checked && selected.length >= 10)
                               }
                               onCheckedChange={(checked) =>
-                                setSelected(
-                                  checked === true
-                                    ? [...selected, item]
-                                    : selected.filter(
-                                        (row) => row.id !== item.id,
-                                      ),
-                                )
+                                setSelected((current) => {
+                                  if (checked !== true)
+                                    return current.filter(
+                                      (row) => row.id !== item.id,
+                                    );
+                                  if (
+                                    current.length >= 10 ||
+                                    current.some(
+                                      (row) =>
+                                        row.objectiveFingerprint ===
+                                        item.objectiveFingerprint,
+                                    )
+                                  )
+                                    return current;
+                                  return [...current, item];
+                                })
                               }
                             />
                             <span className="flex min-w-0 flex-1 flex-col gap-1">
