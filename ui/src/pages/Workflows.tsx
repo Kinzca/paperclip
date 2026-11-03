@@ -289,47 +289,99 @@ function CompanyWorkflows({
   }
   const changedElsewhere = editing && editorVersion !== (policy?.version ?? 0);
 
-  return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 p-4 md:p-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-2">
-          <h1 className="text-2xl font-semibold">{uiText("Task workflows")}</h1>
-          <p className="max-w-3xl text-sm text-muted-foreground">
-            {uiText(
-              "Rules for future tasks. Existing runs keep their original rules.",
-            )}
-          </p>
+  function renderTemplate(choice: WorkflowChoice) {
+    const selected =
+      savedChoice?.definition.key === choice.definition.key &&
+      savedChoice.revision === choice.revision;
+    return (
+      <article
+        key={choice.definition.key}
+        className="flex min-w-0 flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between"
+      >
+        <div className="flex min-w-0 items-start gap-3">
+          <GitBranch
+            aria-hidden="true"
+            className="size-4 shrink-0 text-muted-foreground"
+          />
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="break-words text-sm font-medium">
+                {name(choice)}
+              </h3>
+              {selected && (
+                <Badge variant="outline">{uiText("Current selection")}</Badge>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {workflowTemplateText(choice, "description")}
+            </p>
+          </div>
         </div>
-        <div className="min-w-0 sm:w-64 sm:shrink-0">
-          <Select
-            value={projectId || "company"}
-            disabled={save.isPending}
-            onValueChange={(value) => {
-              const nextProjectId = value === "company" ? "" : value;
-              if (nextProjectId === projectId) return;
-              if (dirty) setPendingScope(nextProjectId);
-              else changeScope(nextProjectId);
-            }}
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={editing}
+            onClick={() => editRules(choice.definition.key)}
           >
-            <SelectTrigger
-              className="w-full text-sm"
-              aria-label={uiText("Scope")}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent position="popper" align="end">
-              <SelectItem value="company">
-                {uiText("Company defaults")}
-              </SelectItem>
-              {projects.data?.map((project) => (
-                <SelectItem key={project.id} value={project.id}>
-                  {project.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            {uiText("Use this workflow")}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => prepare(choice)}>
+            {uiText("Improve this workflow")}
+          </Button>
         </div>
-      </header>
+      </article>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-6 p-4 md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+          <label
+            htmlFor="workflow-scope"
+            className="shrink-0 text-sm text-muted-foreground"
+          >
+            {uiText("Rule scope")}
+          </label>
+          <div className="w-full min-w-0 sm:w-64">
+            <Select
+              value={projectId || "company"}
+              disabled={save.isPending}
+              onValueChange={(value) => {
+                const nextProjectId = value === "company" ? "" : value;
+                if (nextProjectId === projectId) return;
+                if (dirty) setPendingScope(nextProjectId);
+                else changeScope(nextProjectId);
+              }}
+            >
+              <SelectTrigger
+                id="workflow-scope"
+                className="w-full text-sm"
+                aria-label={uiText("Scope")}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper" align="end">
+                <SelectItem value="company">
+                  {uiText("Company defaults")}
+                </SelectItem>
+                {projects.data?.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        {!editing && (
+          <Button variant="outline" onClick={() => editRules()}>
+            <Pencil aria-hidden="true" />
+            {uiText("Edit rules")}
+          </Button>
+        )}
+      </div>
       {projects.error && (
         <p role="alert" className="text-sm text-destructive">
           {projects.error.message}
@@ -356,14 +408,14 @@ function CompanyWorkflows({
 
       <section
         aria-labelledby="workflow-overview"
-        className="flex flex-col gap-6"
+        className="flex min-w-0 flex-col gap-4"
       >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <h2
                 id="workflow-overview"
-                className="break-words text-lg font-semibold"
+                className="break-words text-base font-semibold"
               >
                 {name(activeChoice)}
               </h2>
@@ -399,12 +451,6 @@ function CompanyWorkflows({
               )}
             </div>
           </div>
-          {!editing && (
-            <Button variant="outline" onClick={() => editRules()}>
-              <Pencil aria-hidden="true" />
-              {uiText("Edit rules")}
-            </Button>
-          )}
         </div>
         {activeChoice && (
           <WorkflowDiagram
@@ -434,11 +480,6 @@ function CompanyWorkflows({
             </div>
           </details>
         )}
-        <p className="text-sm text-muted-foreground">
-          {uiText(
-            "Templates define the work. Scope context supplies project conventions. Tasks supply goals and acceptance criteria.",
-          )}
-        </p>
         <dl className="grid gap-4 border-y border-border py-4 sm:grid-cols-2 lg:grid-cols-4">
           {workflowLimitFields.map((field) => {
             const source =
@@ -471,11 +512,23 @@ function CompanyWorkflows({
             );
           })}
         </dl>
-        <p className="text-xs text-muted-foreground">
-          {uiText(
-            "Standard root tasks inherit these rules when first assigned. Conversations, routine tasks and existing assigned tasks are excluded.",
-          )}
-        </p>
+        <details className="text-xs text-muted-foreground">
+          <summary className="cursor-pointer">
+            {uiText("How these rules apply")}
+          </summary>
+          <div className="flex max-w-3xl flex-col gap-2 pt-2">
+            <p>
+              {uiText(
+                "Templates define the work. Scope context supplies project conventions. Tasks supply goals and acceptance criteria.",
+              )}
+            </p>
+            <p>
+              {uiText(
+                "Standard root tasks inherit these rules when first assigned. Conversations, routine tasks and existing assigned tasks are excluded.",
+              )}
+            </p>
+          </div>
+        </details>
         {save.isSuccess && (
           <p role="status" className="flex items-center gap-2 text-sm">
             <Check aria-hidden="true" className="size-4" />
@@ -487,7 +540,7 @@ function CompanyWorkflows({
       {editing && (
         <form
           noValidate
-          className="flex flex-col gap-5 rounded-lg border border-border p-4 md:p-5"
+          className="flex min-w-0 flex-col gap-4 rounded-lg border border-border p-4"
           onSubmit={(event) => {
             event.preventDefault();
             setShowValidation(true);
@@ -772,55 +825,12 @@ function CompanyWorkflows({
         <div className="divide-y divide-border">
           {choices
             .filter((choice) => workflowCategory(choice) !== "specialist")
-            .map((choice) => (
-              <article
-                key={choice.definition.key}
-                className="flex flex-col justify-between gap-3 py-4 sm:flex-row sm:items-center"
-              >
-                <div className="flex min-w-0 flex-col gap-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <GitBranch
-                      aria-hidden="true"
-                      className="size-4 text-muted-foreground"
-                    />
-                    <h3 className="break-words text-sm font-medium">
-                      {name(choice)}
-                    </h3>
-                    {savedChoice?.definition.key === choice.definition.key &&
-                      savedChoice.revision === choice.revision && (
-                        <Badge variant="outline">
-                          {uiText("Current selection")}
-                        </Badge>
-                      )}
-                  </div>
-                  <p className="max-w-3xl text-sm text-muted-foreground">
-                    {workflowTemplateText(choice, "description")}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-wrap gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={editing}
-                    onClick={() => editRules(choice.definition.key)}
-                  >
-                    {uiText("Use this workflow")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => prepare(choice)}
-                  >
-                    {uiText("Improve this workflow")}
-                  </Button>
-                </div>
-              </article>
-            ))}
+            .map(renderTemplate)}
         </div>
       </section>
 
-      <details className="border-t border-border pt-4">
-        <summary className="cursor-pointer text-sm font-medium">
+      <details className="border-t border-border pt-6">
+        <summary className="cursor-pointer text-base font-semibold">
           {uiText("Optional specialist workflows")}
         </summary>
         <p className="pt-3 text-sm text-muted-foreground">
@@ -831,31 +841,7 @@ function CompanyWorkflows({
         <div className="divide-y divide-border">
           {choices
             .filter((choice) => workflowCategory(choice) === "specialist")
-            .map((choice) => (
-              <article
-                key={choice.definition.key}
-                className="flex flex-wrap items-center justify-between gap-3 py-4"
-              >
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-sm font-medium">{name(choice)}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {workflowTemplateText(choice, "description")}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    disabled={editing}
-                    onClick={() => editRules(choice.definition.key)}
-                  >
-                    {uiText("Use this workflow")}
-                  </Button>
-                  <Button variant="outline" onClick={() => prepare(choice)}>
-                    {uiText("Improve this workflow")}
-                  </Button>
-                </div>
-              </article>
-            ))}
+            .map(renderTemplate)}
         </div>
       </details>
 

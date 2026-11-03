@@ -2,6 +2,9 @@ import { i18n } from "./index";
 
 // Keep this surface's copy together without changing the global UI catalog.
 const messages = {
+  "Rule scope": "规则范围",
+  "How these rules apply": "规则适用说明",
+  "System check": "系统自动核验",
   "Application development": "应用开发",
   "Problem solving": "问题修复",
   "Research and analysis": "研究分析",

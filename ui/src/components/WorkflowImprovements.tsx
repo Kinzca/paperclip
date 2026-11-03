@@ -318,7 +318,7 @@ export function WorkflowImprovements({
       className="flex flex-col gap-4 border-t border-border pt-6"
       aria-labelledby="workflow-revisions"
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col gap-1">
           <h2 id="workflow-revisions" className="text-base font-semibold">
             {uiText("Workflow revisions")}
@@ -329,9 +329,10 @@ export function WorkflowImprovements({
             )}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <Button
             variant="ghost"
+            size="sm"
             onClick={() => setOpen(!open)}
             aria-expanded={open}
             aria-controls="workflow-revision-workspace"
@@ -341,7 +342,12 @@ export function WorkflowImprovements({
               open ? "Close revision workspace" : "Open revision workspace",
             )}
           </Button>
-          <Button variant="outline" disabled={busy} onClick={onCreate}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={onCreate}
+          >
             <Plus aria-hidden="true" />
             {uiText("Create revision")}
           </Button>
