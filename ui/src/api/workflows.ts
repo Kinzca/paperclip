@@ -1,5 +1,6 @@
 import type {
   WorkflowEvaluation,
+  WorkflowReviewReport,
   WorkflowPolicy,
   WorkflowPolicyRecord,
   WorkflowRevision,
@@ -110,6 +111,7 @@ export const workflowsApi = {
       attempt: number;
       outcome: "passed" | "failed";
       comment: string;
+      report?: WorkflowReviewReport;
     },
   ) => api.post(`/issues/${issueId}/workflow/decisions`, input),
 };

@@ -14,6 +14,8 @@ export type WorkflowChoice = {
   revision: number | null;
 };
 export type WorkflowDraft = {
+  context?: string;
+  bindings?: WorkflowPolicy["bindings"];
   enabled: string;
   templateKey: string;
   revision?: number;
@@ -122,6 +124,8 @@ export function workflowDraftFromPolicy(
   policy: WorkflowPolicy = {},
 ): WorkflowDraft {
   return {
+    context: policy.context ?? "",
+    bindings: policy.bindings ?? {},
     enabled: policy.enabled === undefined ? "" : String(policy.enabled),
     templateKey: policy.templateKey ?? "",
     revision: policy.revision,
@@ -158,6 +162,10 @@ export function parseWorkflowDraft(draft: WorkflowDraft) {
   }
   if (Object.keys(errors).length) return { policy: null, errors };
   const result = workflowPolicySchema.safeParse({
+    ...(draft.context?.trim() ? { context: draft.context.trim() } : {}),
+    ...(draft.bindings && Object.keys(draft.bindings).length
+      ? { bindings: draft.bindings }
+      : {}),
     ...(draft.enabled ? { enabled: draft.enabled === "true" } : {}),
     ...(draft.templateKey ? { templateKey: draft.templateKey } : {}),
     ...(draft.revision === undefined ? {} : { revision: draft.revision }),
@@ -201,4 +209,14 @@ export function workflowStages(template: WorkflowTemplate) {
   const stages: WorkflowTemplate["nodes"][] = [];
   for (const node of template.nodes) (stages[depth(node.id)] ??= []).push(node);
   return stages;
+}
+
+export function workflowCategory(choice: WorkflowChoice) {
+  return (
+    choice.definition.category ??
+    BUILT_IN_WORKFLOW_TEMPLATES.find(
+      (item) => item.key === choice.definition.key,
+    )?.category ??
+    "general"
+  );
 }

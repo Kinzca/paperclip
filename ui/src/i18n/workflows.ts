@@ -2,6 +2,56 @@ import { i18n } from "./index";
 
 // Keep this surface's copy together without changing the global UI catalog.
 const messages = {
+  "Application development": "应用开发",
+  "Problem solving": "问题修复",
+  "Research and analysis": "研究分析",
+  "Document writing": "文档编写",
+  "Plan and execute": "规划与执行",
+  "Deliver an application change with functional evidence and independent review.":
+    "实现应用功能，保留实际运行证据并独立审查。",
+  "Reproduce a problem, repair its cause and check for regressions.":
+    "复现问题、修复原因，检查修复效果与关联回归。",
+  "Answer a research question with traceable sources and independent fact checking.":
+    "围绕研究问题收集可追溯来源，形成分析并独立核查。",
+  "Produce a document for its intended audience and verify coverage and consistency.":
+    "围绕目标读者编写文档，检查内容覆盖、事实和一致性。",
+  "Effective execution context": "生效的执行上下文",
+  "Templates define the work. Scope context supplies project conventions. Tasks supply goals and acceptance criteria.":
+    "模板定义工作方式，公司／项目上下文提供规范，具体任务提供目标与验收条件。",
+  "Execution context for this scope": "当前范围的执行上下文",
+  "Project conventions, deliverable requirements and relevant knowledge references. Do not store credentials here.":
+    "填写项目规范、交付要求和相关知识引用。请勿在此保存凭据。",
+  "Appended to inherited context and frozen for new tasks. Leave empty to remove only this scope's addition.":
+    "追加到继承的上下文，并在新任务创建时冻结。留空只移除当前范围的补充内容。",
+  "Optional specialist workflows": "可选专业模板",
+  "Specialist requirements apply only when explicitly selected. Existing selections are preserved.":
+    "专业要求仅在明确选择对应模板时生效；已有选择不会被自动替换。",
+  "Stage responsibilities": "阶段职责绑定",
+  "Roles resolve within this company. Reviewers must be independent; missing reviewers require human intervention.":
+    "角色仅匹配当前公司的成员。审查者必须独立；没有可用审查者时转交负责人处理。",
+  "Responsible human": "人工负责人",
+  "Task assignee": "任务执行者",
+  "On failure: return to {{stage}}": "未通过：返回{{stage}}",
+  "Evidence-based improvement proposal": "有证据的改进建议",
+  "Describe where this change applies. Saving a proposal does not update global instructions or the Wiki.":
+    "说明改进的适用范围。保存建议不会直接修改全局指令或 Wiki。",
+  "Applicable tasks and exclusions": "适用任务与不适用情况",
+  "Observed problem and source evidence": "发现的问题及来源证据",
+  "Proposed change and expected benefit": "拟议改进与预期收益",
+  "Validation plan and regression risks": "验证方法与回归风险",
+  "Complete all improvement fields before saving.":
+    "请补齐改进建议的各项信息后再保存。",
+  "Saved improvement proposal": "已保存的改进依据",
+  "Regression replay checks compatibility with known tasks. It does not prove improvement on unseen tasks; retain separate evaluation tasks before broad adoption.":
+    "回归重放检查已知任务的兼容性，不能证明未见任务上的提升。扩大使用范围前，应另留未参与优化的评估任务。",
+  "Frozen task and execution context": "已冻结的任务与执行上下文",
+  "Handoff protocol v1: versioned deliverables, criterion evidence and actionable repair findings.":
+    "交接协议 v1：产物版本、逐项验收证据、可执行的返修清单。",
+  "Raw evidence": "原始证据",
+  "Reviewer-reported evidence": "审查者提交的证据声明",
+  "Requested change": "返修要求",
+  unverified: "未验证",
+
   "Evaluation result": "验证结果",
   "Could not verify your account. Retry to load workflow settings.":
     "无法确认当前账号，请重试以加载工作流设置。",
@@ -47,7 +97,7 @@ const messages = {
   "Evidence check": "证据校验",
   "Independent review": "独立审查",
   "Human acceptance": "人工验收",
-  "Execute, verify, review": "执行、验证与审查",
+  "Execute, verify, review": "通用任务",
   "Bounded execution with a recorded run receipt and independent review.":
     "执行任务后核验证据，再由独立成员审查；失败时在既定限制内返工。",
   "Game development": "游戏开发",

@@ -20,8 +20,10 @@ import {
   readyWorkflowNodes,
   workflowRepairNodes,
   workflowAncestorIds,
+  workflowReviewError,
+  type WorkflowReviewReport,
 } from "@paperclipai/shared";
-import { conflict, forbidden, notFound } from "../../errors.js";
+import { conflict, forbidden, notFound, unprocessable } from "../../errors.js";
 import { assertAgentRunWriteAllowed } from "../../agent-run-cancellation.js";
 import {
   issueService,
@@ -40,6 +42,10 @@ import {
 import { redactSensitiveText } from "../../redaction.js";
 import { WORKFLOW_QUEUE } from "./admission.js";
 import { workflowStore } from "./store.js";
+import {
+  workflowHandoffInstructions,
+  workflowReviewFeedback,
+} from "./handoff.js";
 
 type Run = typeof workflowRuns.$inferSelect;
 type Attempt = typeof workflowNodeAttempts.$inferSelect;
@@ -1073,7 +1079,7 @@ export function workflowEngine(db: Db, effects: Effects) {
             {
               id: childId,
               title: `${parent.title} — ${node.title}`,
-              description: `# Authorized objective\n${run.snapshot.objective.description ?? run.snapshot.objective.title}\n\n# Workflow node\n${node.instructions}${verdictGuidance}\n\n# Inputs\n${dependencyTasks.map((id) => `- /api/issues/${id}`).join("\n")}\n\n# Previous feedback\n${current.result ?? "None"}\n\nStay inside the approved scope. Do not change acceptance criteria or workflow configuration. Escalate unavailable tools or access.`,
+              description: `# Authorized objective\n${run.snapshot.objective.description ?? run.snapshot.objective.title}\n\n# Workflow node\n${node.instructions}${verdictGuidance}\n\n${workflowHandoffInstructions(run.snapshot, node)}\n\n# Inputs\n${dependencyTasks.map((id) => `- /api/issues/${id}`).join("\n")}\n\n# Previous feedback\n${current.result ?? "None"}\n\nStay inside the approved scope. Do not change acceptance criteria or workflow configuration. Escalate unavailable tools or access.`,
               initialPlan: run.snapshot.objective.plan,
               parentId: parent.id,
               projectId: parent.projectId,
@@ -1438,6 +1444,7 @@ export function workflowEngine(db: Db, effects: Effects) {
         expectedVersion: number;
         outcome: "passed" | "failed";
         comment: string;
+        report?: WorkflowReviewReport;
       },
       actor: {
         agentId: string | null;
@@ -1523,11 +1530,23 @@ export function workflowEngine(db: Db, effects: Effects) {
             runId: actor.runId,
           });
         }
+        if (
+          actor.agentId &&
+          node.kind === "review" &&
+          run.snapshot.definition.handoffVersion === 1 &&
+          !input.report
+        )
+          throw unprocessable(
+            "This workflow requires a structured review report with artifact revision, criteria and evidence",
+          );
+        const reportError = workflowReviewError(input.outcome, input.report);
+        if (reportError) throw unprocessable(reportError);
+        const feedback = workflowReviewFeedback(input.comment, input.report);
         state.status =
           input.outcome === "passed" && actor.agentId
             ? "running"
             : input.outcome;
-        state.result = input.comment;
+        state.result = feedback;
         state.finishedAt =
           state.status === "running" ? null : new Date().toISOString();
         await context.updateIssue(state.issueId, {
@@ -1538,7 +1557,11 @@ export function workflowEngine(db: Db, effects: Effects) {
           .update(workflowNodeAttempts)
           .set({
             status: input.outcome,
-            evidence: { comment: input.comment },
+            evidence: {
+              comment: input.comment,
+              ...(input.report ? { report: input.report } : {}),
+              source: actor.agentId ? "agent_review" : "human_decision",
+            },
             decisionAgentId: actor.agentId,
             decisionUserId: actor.userId,
             finishedAt: new Date(),
@@ -1551,7 +1574,7 @@ export function workflowEngine(db: Db, effects: Effects) {
             ),
           );
         if (input.outcome === "failed")
-          await repair(context, run, node.id, input.comment);
+          await repair(context, run, node.id, feedback);
         await save(tx, run);
         await signalDatabaseWork(tx, WORKFLOW_QUEUE);
         await tx

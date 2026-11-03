@@ -14,6 +14,8 @@ import { useCompany } from "@/context/CompanyContext";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { WorkflowBindingsEditor } from "@/components/WorkflowBindingsEditor";
+import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -31,6 +33,7 @@ import {
   parseWorkflowDraft,
   savedWorkflowChoice,
   workflowChoices,
+  workflowCategory,
   workflowDraftFromPolicy,
   workflowLimitFields,
   workflowTemplateText,
@@ -194,6 +197,7 @@ function CompanyWorkflows({
     if (templateKey) {
       next.templateKey = templateKey;
       next.revision = undefined;
+      next.bindings = {};
     }
     setOriginalDraft(workflowDraftFromPolicy(policy?.policy));
     setDraft(next);
@@ -307,11 +311,16 @@ function CompanyWorkflows({
               else changeScope(nextProjectId);
             }}
           >
-            <SelectTrigger className="w-full text-sm" aria-label={uiText("Scope")}>
+            <SelectTrigger
+              className="w-full text-sm"
+              aria-label={uiText("Scope")}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent position="popper" align="end">
-              <SelectItem value="company">{uiText("Company defaults")}</SelectItem>
+              <SelectItem value="company">
+                {uiText("Company defaults")}
+              </SelectItem>
               {projects.data?.map((project) => (
                 <SelectItem key={project.id} value={project.id}>
                   {project.name}
@@ -397,7 +406,39 @@ function CompanyWorkflows({
             </Button>
           )}
         </div>
-        {activeChoice && <WorkflowDiagram choice={activeChoice} />}
+        {activeChoice && (
+          <WorkflowDiagram
+            choice={{
+              ...activeChoice,
+              definition: {
+                ...activeChoice.definition,
+                nodes: activeChoice.definition.nodes.map((node) => ({
+                  ...node,
+                  binding: preview.bindings[node.id] ?? node.binding,
+                })),
+              },
+            }}
+          />
+        )}
+        {preview.context.length > 0 && (
+          <details className="text-sm">
+            <summary className="cursor-pointer text-muted-foreground">
+              {uiText("Effective execution context")}
+            </summary>
+            <div className="flex flex-col gap-3 pt-3">
+              {preview.context.map((text, index) => (
+                <p key={index} className="whitespace-pre-wrap">
+                  {text}
+                </p>
+              ))}
+            </div>
+          </details>
+        )}
+        <p className="text-sm text-muted-foreground">
+          {uiText(
+            "Templates define the work. Scope context supplies project conventions. Tasks supply goals and acceptance criteria.",
+          )}
+        </p>
         <dl className="grid gap-4 border-y border-border py-4 sm:grid-cols-2 lg:grid-cols-4">
           {workflowLimitFields.map((field) => {
             const source =
@@ -483,16 +524,27 @@ function CompanyWorkflows({
               <span>{uiText("Template")}</span>
               <Select
                 disabled={save.isPending}
-                value={draft.templateKey ? `template:${draft.templateKey}` : "inherit"}
+                value={
+                  draft.templateKey
+                    ? `template:${draft.templateKey}`
+                    : "inherit"
+                }
                 onValueChange={(value) =>
                   setDraft({
                     ...draft,
-                    templateKey: value === "inherit" ? "" : value.slice("template:".length),
+                    templateKey:
+                      value === "inherit"
+                        ? ""
+                        : value.slice("template:".length),
                     revision: undefined,
+                    bindings: {},
                   })
                 }
               >
-                <SelectTrigger className="w-full text-sm" aria-label={uiText("Template")}>
+                <SelectTrigger
+                  className="w-full text-sm"
+                  aria-label={uiText("Template")}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent position="popper" align="start">
@@ -517,10 +569,16 @@ function CompanyWorkflows({
                 disabled={save.isPending}
                 value={draft.enabled || "inherit"}
                 onValueChange={(value) =>
-                  setDraft({ ...draft, enabled: value === "inherit" ? "" : value })
+                  setDraft({
+                    ...draft,
+                    enabled: value === "inherit" ? "" : value,
+                  })
                 }
               >
-                <SelectTrigger className="w-full text-sm" aria-label={uiText("Workflow activation")}>
+                <SelectTrigger
+                  className="w-full text-sm"
+                  aria-label={uiText("Workflow activation")}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent position="popper" align="start">
@@ -536,6 +594,37 @@ function CompanyWorkflows({
               </Select>
             </div>
           </fieldset>
+          <label className="flex flex-col gap-2 text-sm">
+            {uiText("Execution context for this scope")}
+            <Textarea
+              rows={4}
+              maxLength={8000}
+              value={draft.context ?? ""}
+              disabled={save.isPending}
+              placeholder={uiText(
+                "Project conventions, deliverable requirements and relevant knowledge references. Do not store credentials here.",
+              )}
+              onChange={(event) =>
+                setDraft({ ...draft, context: event.target.value })
+              }
+            />
+            <span className="text-xs text-muted-foreground">
+              {uiText(
+                "Appended to inherited context and frozen for new tasks. Leave empty to remove only this scope's addition.",
+              )}
+            </span>
+          </label>
+          {activeChoice && (
+            <WorkflowBindingsEditor
+              companyId={companyId}
+              accountId={accountId}
+              definition={activeChoice.definition}
+              bindings={draft.bindings ?? {}}
+              inherited={inherited.bindings}
+              disabled={save.isPending}
+              onChange={(bindings) => setDraft({ ...draft, bindings })}
+            />
+          )}
           <fieldset
             disabled={save.isPending}
             className="grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-4"
@@ -681,52 +770,94 @@ function CompanyWorkflows({
           {uiText("Available workflows")}
         </h2>
         <div className="divide-y divide-border">
-          {choices.map((choice) => (
-            <article
-              key={choice.definition.key}
-              className="flex flex-col justify-between gap-3 py-4 sm:flex-row sm:items-center"
-            >
-              <div className="flex min-w-0 flex-col gap-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <GitBranch
-                    aria-hidden="true"
-                    className="size-4 text-muted-foreground"
-                  />
-                  <h3 className="break-words text-sm font-medium">
-                    {name(choice)}
-                  </h3>
-                  {savedChoice?.definition.key === choice.definition.key &&
-                    savedChoice.revision === choice.revision && (
-                      <Badge variant="outline">
-                        {uiText("Current selection")}
-                      </Badge>
-                    )}
+          {choices
+            .filter((choice) => workflowCategory(choice) !== "specialist")
+            .map((choice) => (
+              <article
+                key={choice.definition.key}
+                className="flex flex-col justify-between gap-3 py-4 sm:flex-row sm:items-center"
+              >
+                <div className="flex min-w-0 flex-col gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <GitBranch
+                      aria-hidden="true"
+                      className="size-4 text-muted-foreground"
+                    />
+                    <h3 className="break-words text-sm font-medium">
+                      {name(choice)}
+                    </h3>
+                    {savedChoice?.definition.key === choice.definition.key &&
+                      savedChoice.revision === choice.revision && (
+                        <Badge variant="outline">
+                          {uiText("Current selection")}
+                        </Badge>
+                      )}
+                  </div>
+                  <p className="max-w-3xl text-sm text-muted-foreground">
+                    {workflowTemplateText(choice, "description")}
+                  </p>
                 </div>
-                <p className="max-w-3xl text-sm text-muted-foreground">
-                  {workflowTemplateText(choice, "description")}
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-wrap gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={editing}
-                  onClick={() => editRules(choice.definition.key)}
-                >
-                  {uiText("Use this workflow")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => prepare(choice)}
-                >
-                  {uiText("Improve this workflow")}
-                </Button>
-              </div>
-            </article>
-          ))}
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={editing}
+                    onClick={() => editRules(choice.definition.key)}
+                  >
+                    {uiText("Use this workflow")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => prepare(choice)}
+                  >
+                    {uiText("Improve this workflow")}
+                  </Button>
+                </div>
+              </article>
+            ))}
         </div>
       </section>
+
+      <details className="border-t border-border pt-4">
+        <summary className="cursor-pointer text-sm font-medium">
+          {uiText("Optional specialist workflows")}
+        </summary>
+        <p className="pt-3 text-sm text-muted-foreground">
+          {uiText(
+            "Specialist requirements apply only when explicitly selected. Existing selections are preserved.",
+          )}
+        </p>
+        <div className="divide-y divide-border">
+          {choices
+            .filter((choice) => workflowCategory(choice) === "specialist")
+            .map((choice) => (
+              <article
+                key={choice.definition.key}
+                className="flex flex-wrap items-center justify-between gap-3 py-4"
+              >
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-sm font-medium">{name(choice)}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {workflowTemplateText(choice, "description")}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    disabled={editing}
+                    onClick={() => editRules(choice.definition.key)}
+                  >
+                    {uiText("Use this workflow")}
+                  </Button>
+                  <Button variant="outline" onClick={() => prepare(choice)}>
+                    {uiText("Improve this workflow")}
+                  </Button>
+                </div>
+              </article>
+            ))}
+        </div>
+      </details>
 
       <WorkflowImprovements
         companyId={companyId}

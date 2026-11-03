@@ -11,7 +11,9 @@ import type { WorkflowConfiguration } from "@/api/workflows";
 
 describe("workflow presentation", () => {
   it("expresses parallel reviews and the acceptance join without relying on node order", () => {
-    const game = BUILT_IN_WORKFLOW_TEMPLATES[1];
+    const game = BUILT_IN_WORKFLOW_TEMPLATES.find(
+      (item) => item.key === "game-development",
+    )!;
     const stages = workflowStages({
       ...game,
       nodes: [...game.nodes].reverse(),

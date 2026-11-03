@@ -192,6 +192,19 @@ suite("native workflow execution", () => {
         attempt: 1,
         expectedVersion: run.version,
         outcome: "passed",
+        report: {
+          artifact: "test-deliverable",
+          revision: "r1",
+          criteria: [
+            {
+              id: "ac-1",
+              requirement: "原始任务要求",
+              outcome: "passed",
+              evidence: "隔离测试中的审查证据",
+            },
+          ],
+          findings: [],
+        },
         comment:
           "I independently exercised the change and checked its evidence.",
       },
@@ -224,6 +237,26 @@ suite("native workflow execution", () => {
       attempt: 1,
       expectedVersion: run.version,
       outcome: "failed" as const,
+      report: {
+        artifact: "test-deliverable",
+        revision: "r1",
+        criteria: [
+          {
+            id: "ac-1",
+            requirement: "原始任务要求",
+            outcome: "failed" as const,
+            evidence: "隔离测试中的失败证据",
+          },
+        ],
+        findings: [
+          {
+            id: "finding-1",
+            criterionId: "ac-1",
+            problem: "验收未通过",
+            requestedChange: "修正产物",
+          },
+        ],
+      },
       comment: "The delivered change fails the agreed acceptance check.",
     };
     await expect(
@@ -854,6 +887,19 @@ suite("native workflow execution", () => {
         nodeId: "peer",
         attempt: 1,
         outcome: "passed",
+        report: {
+          artifact: "test-deliverable",
+          revision: "r1",
+          criteria: [
+            {
+              id: "ac-1",
+              requirement: "原始任务要求",
+              outcome: "passed",
+              evidence: "隔离测试中的审查证据",
+            },
+          ],
+          findings: [],
+        },
         comment: "Peer behavior verified",
       },
       { userId: context.userId, agentId: null, runId: null },
@@ -876,6 +922,19 @@ suite("native workflow execution", () => {
         nodeId: "review",
         attempt: 1,
         outcome: "passed",
+        report: {
+          artifact: "test-deliverable",
+          revision: "r1",
+          criteria: [
+            {
+              id: "ac-1",
+              requirement: "原始任务要求",
+              outcome: "passed",
+              evidence: "隔离测试中的审查证据",
+            },
+          ],
+          findings: [],
+        },
         comment: "Independent branch verified",
       },
       { userId: null, agentId: context.reviewer, runId: reviewerRunId },
@@ -966,6 +1025,19 @@ suite("native workflow execution", () => {
           nodeId: "review",
           attempt: 1,
           outcome: "passed",
+          report: {
+            artifact: "test-deliverable",
+            revision: "r1",
+            criteria: [
+              {
+                id: "ac-1",
+                requirement: "原始任务要求",
+                outcome: "passed",
+                evidence: "隔离测试中的审查证据",
+              },
+            ],
+            findings: [],
+          },
           comment: `Verified scenario ${index}`,
         },
         { userId: null, agentId: context.reviewer, runId: reviewerRunId },
@@ -1036,6 +1108,19 @@ suite("native workflow execution", () => {
           nodeId: "review",
           attempt: 1,
           outcome: "passed",
+          report: {
+            artifact: "test-deliverable",
+            revision: "r1",
+            criteria: [
+              {
+                id: "ac-1",
+                requirement: "原始任务要求",
+                outcome: "passed",
+                evidence: "隔离测试中的审查证据",
+              },
+            ],
+            findings: [],
+          },
           comment: "Same fixed acceptance checks passed",
         },
         { userId: null, agentId: context.reviewer, runId: reviewerRunId },

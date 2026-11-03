@@ -194,7 +194,21 @@ export function WorkflowImprovements({
   ]);
   function prepare(next: DraftRequest) {
     setBase(next.choice);
-    setDefinition(JSON.stringify(next.choice.definition, null, 2));
+    setDefinition(
+      JSON.stringify(
+        {
+          ...next.choice.definition,
+          improvement: {
+            applicability: "",
+            evidence: "",
+            hypothesis: "",
+            validation: "",
+          },
+        },
+        null,
+        2,
+      ),
+    );
     setOriginalDefinition("");
     setRationale("");
     setValidation(false);
@@ -454,7 +468,15 @@ export function WorkflowImprovements({
                   onSubmit={(event) => {
                     event.preventDefault();
                     setValidation(true);
-                    if (!parsed.value || !rationale.trim()) return;
+                    if (
+                      !parsed.value ||
+                      !rationale.trim() ||
+                      (parsed.value.improvement &&
+                        Object.values(parsed.value.improvement).some(
+                          (value) => !value.trim(),
+                        ))
+                    )
+                      return;
                     const basedOn = config.revisions.find(
                       (item) =>
                         item.status === "published" &&
@@ -521,6 +543,76 @@ export function WorkflowImprovements({
                           />
                         </label>
                       ))}
+                    <div className="flex flex-col gap-3 border-t border-border pt-4">
+                      <h4 className="text-sm font-medium">
+                        {uiText("Evidence-based improvement proposal")}
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        {uiText(
+                          "Describe where this change applies. Saving a proposal does not update global instructions or the Wiki.",
+                        )}
+                      </p>
+                      {(
+                        [
+                          ["applicability", "Applicable tasks and exclusions"],
+                          ["evidence", "Observed problem and source evidence"],
+                          [
+                            "hypothesis",
+                            "Proposed change and expected benefit",
+                          ],
+                          [
+                            "validation",
+                            "Validation plan and regression risks",
+                          ],
+                        ] as const
+                      ).map(([key, label]) => (
+                        <label
+                          key={key}
+                          className="flex flex-col gap-1.5 text-sm"
+                        >
+                          {uiText(label)}
+                          <Textarea
+                            rows={2}
+                            maxLength={key === "evidence" ? 4000 : 2000}
+                            value={parsed.value?.improvement?.[key] ?? ""}
+                            aria-invalid={
+                              validation &&
+                              !parsed.value?.improvement?.[key]?.trim()
+                            }
+                            onChange={(event) =>
+                              setDefinition(
+                                JSON.stringify(
+                                  {
+                                    ...parsed.value,
+                                    improvement: {
+                                      applicability: "",
+                                      evidence: "",
+                                      hypothesis: "",
+                                      validation: "",
+                                      ...parsed.value?.improvement,
+                                      [key]: event.target.value,
+                                    },
+                                  },
+                                  null,
+                                  2,
+                                ),
+                              )
+                            }
+                          />
+                        </label>
+                      ))}
+                      {validation &&
+                        parsed.value?.improvement &&
+                        Object.values(parsed.value.improvement).some(
+                          (value) => !value.trim(),
+                        ) && (
+                          <p role="alert" className="text-sm text-destructive">
+                            {uiText(
+                              "Complete all improvement fields before saving.",
+                            )}
+                          </p>
+                        )}
+                    </div>
                     <label className="flex flex-col gap-1.5 text-sm">
                       {uiText("Why is this revision needed?")}
                       <Textarea
@@ -867,6 +959,43 @@ export function WorkflowImprovements({
                   )}
                 </p>
               )}
+              {revision && (
+                <details className="text-sm">
+                  <summary className="cursor-pointer font-medium">
+                    {uiText("Saved improvement proposal")}
+                  </summary>
+                  <div className="flex flex-col gap-3 pt-3">
+                    <p className="whitespace-pre-wrap">{revision.rationale}</p>
+                    {revision.definition.improvement &&
+                      Object.entries(revision.definition.improvement).map(
+                        ([key, value]) => (
+                          <div key={key}>
+                            <p className="text-xs text-muted-foreground">
+                              {uiText(
+                                {
+                                  applicability:
+                                    "Applicable tasks and exclusions",
+                                  evidence:
+                                    "Observed problem and source evidence",
+                                  hypothesis:
+                                    "Proposed change and expected benefit",
+                                  validation:
+                                    "Validation plan and regression risks",
+                                }[key] ?? key,
+                              )}
+                            </p>
+                            <p className="whitespace-pre-wrap">{value}</p>
+                          </div>
+                        ),
+                      )}
+                  </div>
+                </details>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {uiText(
+                  "Regression replay checks compatibility with known tasks. It does not prove improvement on unseen tasks; retain separate evaluation tasks before broad adoption.",
+                )}
+              </p>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold">
                   {uiText("Regression results")}

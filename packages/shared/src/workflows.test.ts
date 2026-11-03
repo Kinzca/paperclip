@@ -7,6 +7,8 @@ import {
   workflowRepairNodes,
   workflowAncestorIds,
   workflowTemplateSchema,
+  workflowDecisionSchema,
+  createWorkflowRevisionSchema,
   type WorkflowNodeState,
 } from "./workflows.js";
 
@@ -139,6 +141,150 @@ describe("workflow contracts", () => {
     );
     expect(
       resolveWorkflowPolicy([{ enabled: false }, { enabled: true }]).enabled,
+    ).toBe(false);
+  });
+});
+
+describe("通用工作流交接契约", () => {
+  const report = {
+    artifact: "work-product:report",
+    revision: "revision-1",
+    criteria: [
+      {
+        id: "ac-1",
+        requirement: "回答原始问题",
+        outcome: "passed",
+        evidence: "已核对原始资料",
+      },
+    ],
+    findings: [],
+  };
+  const decision = {
+    nodeId: "review",
+    attempt: 1,
+    expectedVersion: 1,
+    outcome: "passed",
+    comment: "审查结论",
+    report,
+  };
+  it("拒绝把未验证项、失败项或未解决问题标为通过", () => {
+    expect(workflowDecisionSchema.safeParse(decision).success).toBe(true);
+    for (const outcome of ["failed", "unverified"]) {
+      expect(
+        workflowDecisionSchema.safeParse({
+          ...decision,
+          report: { ...report, criteria: [{ ...report.criteria[0], outcome }] },
+        }).success,
+      ).toBe(false);
+    }
+    expect(
+      workflowDecisionSchema.safeParse({
+        ...decision,
+        report: {
+          ...report,
+          findings: [
+            {
+              id: "finding-1",
+              criterionId: "ac-1",
+              problem: "遗漏",
+              requestedChange: "补充",
+            },
+          ],
+        },
+      }).success,
+    ).toBe(false);
+  });
+  it("拒绝重复验收编号、无对应验收项的问题和不可执行的退回", () => {
+    expect(
+      workflowDecisionSchema.safeParse({
+        ...decision,
+        report: {
+          ...report,
+          criteria: [report.criteria[0], report.criteria[0]],
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      workflowDecisionSchema.safeParse({ ...decision, outcome: "failed" })
+        .success,
+    ).toBe(false);
+    expect(
+      workflowDecisionSchema.safeParse({
+        ...decision,
+        outcome: "failed",
+        report: {
+          ...report,
+          findings: [
+            {
+              id: "finding-1",
+              criterionId: "missing",
+              problem: "遗漏",
+              requestedChange: "补充",
+            },
+          ],
+        },
+      }).success,
+    ).toBe(false);
+    // 历史任务和人工决策保留旧接口；新任务的 Agent 必填规则由引擎判断。
+    expect(
+      workflowDecisionSchema.safeParse({ ...decision, report: undefined })
+        .success,
+    ).toBe(true);
+  });
+  it("按层追加上下文，切换模板清理旧模板职责且保持预算上限", () => {
+    const policy = resolveWorkflowPolicy([
+      {
+        context: "公司要求",
+        bindings: { playtest: { kind: "role", role: "qa" } },
+        limits: { maxAttempts: 2 },
+      },
+      {
+        templateKey: "document-writing",
+        context: "项目要求",
+        bindings: { review: { kind: "human" } },
+        limits: { maxAttempts: 8 },
+      },
+    ]);
+    expect(policy.context).toEqual(["公司要求", "项目要求"]);
+    expect(policy.bindings).toEqual({ review: { kind: "human" } });
+    expect(policy.limits.maxAttempts).toBe(2);
+  });
+  it("默认流程不加载游戏专业规则；研究与文档有独立的证据要求", () => {
+    expect(resolveWorkflowPolicy([]).templateKey).toBe("standard");
+    expect(
+      BUILT_IN_WORKFLOW_TEMPLATES.filter((item) => item.category === "general"),
+    ).toHaveLength(5);
+    for (const key of ["standard", "research-analysis", "document-writing"]) {
+      const template = BUILT_IN_WORKFLOW_TEMPLATES.find(
+        (item) => item.key === key,
+      )!;
+      expect(template.handoffVersion).toBe(1);
+      expect(JSON.stringify(template)).not.toMatch(
+        /playtest|game change|Unity|Godot/,
+      );
+    }
+  });
+  it("候选改进有结构化信息时必须填写完整，旧草案仍可读取", () => {
+    const definition = BUILT_IN_WORKFLOW_TEMPLATES[0];
+    expect(
+      createWorkflowRevisionSchema.safeParse({
+        definition,
+        rationale: "保留旧接口",
+      }).success,
+    ).toBe(true);
+    expect(
+      createWorkflowRevisionSchema.safeParse({
+        definition: {
+          ...definition,
+          improvement: {
+            applicability: "文档",
+            evidence: "",
+            hypothesis: "拆分检查",
+            validation: "对照样本",
+          },
+        },
+        rationale: "改进",
+      }).success,
     ).toBe(false);
   });
 });

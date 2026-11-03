@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import {
+  agents,
   companies,
   projects,
   issues,
@@ -13,13 +14,15 @@ import {
 } from "@paperclipai/db";
 import {
   BUILT_IN_WORKFLOW_TEMPLATES,
+  resolveWorkflowPolicy,
+  workflowTemplateSchema,
   type WorkflowTemplate,
   type WorkflowPolicy,
 } from "@paperclipai/shared";
 import { conflict, forbidden, notFound, unprocessable } from "../../errors.js";
 import { workflowTransaction } from "./transaction.js";
 import { issueService } from "../issues.js";
-import { WORKFLOW_QUEUE } from "./admission.js";
+import { readWorkflowPlatform, WORKFLOW_QUEUE } from "./admission.js";
 
 export function workflowStore(db: Db) {
   return {
@@ -275,6 +278,80 @@ export function workflowStore(db: Db) {
               "Scope defaults must use an available published template",
             );
         }
+        // 保存时检查职责绑定，避免无效规则在后续创建任务时才暴露。
+        const platform = await readWorkflowPlatform(tx);
+        const parents =
+          input.scope === "project"
+            ? await tx
+                .select()
+                .from(workflowPolicies)
+                .where(
+                  and(
+                    eq(workflowPolicies.companyId, companyId),
+                    eq(workflowPolicies.scope, "company"),
+                  ),
+                )
+            : [];
+        const effective = resolveWorkflowPolicy(
+          [...parents.map((row) => row.policy), input.policy],
+          platform.policy,
+        );
+        const [revision] = await tx
+          .select()
+          .from(workflowTemplateRevisions)
+          .where(
+            and(
+              eq(workflowTemplateRevisions.companyId, companyId),
+              eq(workflowTemplateRevisions.templateKey, effective.templateKey),
+              eq(workflowTemplateRevisions.status, "published"),
+              effective.revision
+                ? eq(workflowTemplateRevisions.revision, effective.revision)
+                : undefined,
+            ),
+          )
+          .orderBy(desc(workflowTemplateRevisions.revision))
+          .limit(1);
+        const definition =
+          revision?.definition ??
+          BUILT_IN_WORKFLOW_TEMPLATES.find(
+            (item) => item.key === effective.templateKey,
+          );
+        if (!definition)
+          throw unprocessable("The inherited workflow template is unavailable");
+        for (const [id, binding] of Object.entries(effective.bindings)) {
+          const node = definition.nodes.find((item) => item.id === id);
+          if (
+            !node ||
+            node.kind === "check" ||
+            (node.kind === "review" && binding.kind === "executor")
+          )
+            throw unprocessable(`Invalid workflow binding: ${id}`);
+          if (binding.kind === "agent") {
+            const [agent] = await tx
+              .select({ id: agents.id })
+              .from(agents)
+              .where(
+                and(
+                  eq(agents.id, binding.agentId),
+                  eq(agents.companyId, companyId),
+                ),
+              );
+            if (!agent)
+              throw unprocessable(
+                "Workflow bindings must reference an agent in this company",
+              );
+          }
+        }
+        if (
+          !workflowTemplateSchema.safeParse({
+            ...definition,
+            nodes: definition.nodes.map((node) => ({
+              ...node,
+              binding: effective.bindings[node.id] ?? node.binding,
+            })),
+          }).success
+        )
+          throw unprocessable("Invalid workflow stage bindings");
         const values = {
           companyId,
           scope: input.scope,
@@ -365,6 +442,17 @@ export function workflowStore(db: Db) {
             (template) => template.key === input.definition.key,
           ) ??
           BUILT_IN_WORKFLOW_TEMPLATES[0];
+        if (
+          base.handoffVersion &&
+          input.definition.handoffVersion !== base.handoffVersion
+        )
+          throw unprocessable(
+            "The baseline handoff protocol must remain fixed",
+          );
+        if (base.category && input.definition.category !== base.category)
+          throw unprocessable(
+            "The baseline applicability category must remain fixed",
+          );
         for (const node of base.nodes.filter((node) =>
           ["check", "review", "approval"].includes(node.kind),
         )) {
@@ -526,6 +614,37 @@ export function workflowStore(db: Db) {
           );
         const scenarioKey = fingerprint(baseline);
         const findings: string[] = [];
+        if (
+          JSON.stringify(baseline.snapshot.context ?? []) !==
+          JSON.stringify(candidate.snapshot.context ?? [])
+        )
+          findings.push(
+            "Execution context changed between baseline and candidate",
+          );
+        if (
+          JSON.stringify(baseline.snapshot.limits) !==
+          JSON.stringify(candidate.snapshot.limits)
+        )
+          findings.push(
+            "Execution limits changed between baseline and candidate",
+          );
+        if (
+          baseline.snapshot.executorAgentId !==
+          candidate.snapshot.executorAgentId
+        )
+          findings.push("Executor changed between baseline and candidate");
+        for (const node of baseline.snapshot.definition.nodes.filter(
+          (item) => item.kind === "review" || item.kind === "approval",
+        )) {
+          if (
+            baseline.nodes[node.id]?.agentId !==
+              candidate.nodes[node.id]?.agentId ||
+            baseline.nodes[node.id]?.userId !== candidate.nodes[node.id]?.userId
+          )
+            findings.push(
+              `Reviewer changed between baseline and candidate: ${node.id}`,
+            );
+        }
         if (baseline.status !== "succeeded")
           findings.push("Baseline did not pass its acceptance gates");
         if (candidate.status !== "succeeded")

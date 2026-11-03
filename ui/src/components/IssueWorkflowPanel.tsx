@@ -1,3 +1,9 @@
+import { workflowReviewReportSchema } from "@paperclipai/shared";
+import {
+  workflowNodeTitle,
+  workflowTemplateText,
+} from "@/lib/workflow-presentation";
+import "@/i18n/workflows";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@/lib/router";
@@ -55,6 +61,11 @@ export function IssueWorkflowPanel({ issueId }: { issueId: string }) {
     );
   const run = query.data;
   if (!run) return null;
+  const choice = {
+    definition: run.snapshot.definition,
+    builtIn: false,
+    revision: run.snapshot.revision,
+  };
   const stopped = ["paused", "waiting_human"].includes(run.status);
   const finished = ["succeeded", "cancelled"].includes(run.status);
   return (
@@ -67,7 +78,7 @@ export function IssueWorkflowPanel({ issueId }: { issueId: string }) {
         <Badge variant="outline">{uiText(run.status)}</Badge>
       </div>
       <p className="text-sm text-muted-foreground">
-        {run.snapshot.definition.name} · {uiText("Revision")}{" "}
+        {workflowTemplateText(choice, "name")} · {uiText("Revision")}{" "}
         {run.snapshot.revision} · {uiText("Attempt ceiling")}{" "}
         {run.snapshot.limits.maxAttempts}
       </p>
@@ -77,6 +88,35 @@ export function IssueWorkflowPanel({ issueId }: { issueId: string }) {
           {run.stopReason}
         </p>
       )}
+      <details className="text-sm">
+        <summary className="cursor-pointer font-medium">
+          {uiText("Frozen task and execution context")}
+        </summary>
+        <div className="flex flex-col gap-3 pt-3">
+          <p className="font-medium">{run.snapshot.objective.title}</p>
+          <p className="whitespace-pre-wrap">
+            {run.snapshot.objective.description}
+          </p>
+          {run.snapshot.objective.plan && (
+            <p className="whitespace-pre-wrap">{run.snapshot.objective.plan}</p>
+          )}
+          {run.snapshot.context?.map((layer, index) => (
+            <div key={index}>
+              <p className="text-xs text-muted-foreground">
+                {uiText(layer.scope)}
+              </p>
+              <p className="whitespace-pre-wrap">{layer.instructions}</p>
+            </div>
+          ))}
+          {run.snapshot.definition.handoffVersion === 1 && (
+            <p className="text-xs text-muted-foreground">
+              {uiText(
+                "Handoff protocol v1: versioned deliverables, criterion evidence and actionable repair findings.",
+              )}
+            </p>
+          )}
+        </div>
+      </details>
       <ol className="flex flex-col gap-2">
         {run.snapshot.definition.nodes.map((node) => {
           const state = run.nodes[node.id];
@@ -91,10 +131,12 @@ export function IssueWorkflowPanel({ issueId }: { issueId: string }) {
                     className="text-sm font-medium underline"
                     to={`/issues/${state.issueId}`}
                   >
-                    {node.title}
+                    {workflowNodeTitle(choice, node)}
                   </Link>
                 ) : (
-                  <span className="text-sm font-medium">{node.title}</span>
+                  <span className="text-sm font-medium">
+                    {workflowNodeTitle(choice, node)}
+                  </span>
                 )}
                 <span className="text-xs text-muted-foreground">
                   {uiText(state.status)} · {state.attempt}/
@@ -202,13 +244,67 @@ export function IssueWorkflowPanel({ issueId }: { issueId: string }) {
               <p>
                 {attempt.nodeId} · {attempt.attempt} · {uiText(attempt.status)}
               </p>
-              <pre className="overflow-auto whitespace-pre-wrap rounded-md bg-muted p-3 text-xs font-mono">
-                {JSON.stringify(attempt.evidence, null, 2)}
-              </pre>
+              {attempt.issueId && (
+                <Link
+                  className="text-xs underline"
+                  to={`/issues/${attempt.issueId}`}
+                >
+                  {uiText("Open task")}
+                </Link>
+              )}
+              <ReviewReport evidence={attempt.evidence} />
+              <details>
+                <summary className="cursor-pointer text-xs text-muted-foreground">
+                  {uiText("Raw evidence")}
+                </summary>
+                <pre className="overflow-auto whitespace-pre-wrap rounded-md bg-muted p-3 text-xs font-mono">
+                  {JSON.stringify(attempt.evidence, null, 2)}
+                </pre>
+              </details>
             </div>
           ))}
         </div>
       </details>
     </section>
+  );
+}
+
+function ReviewReport({
+  evidence,
+}: {
+  evidence: Record<string, unknown> | null;
+}) {
+  const report = workflowReviewReportSchema.safeParse(evidence?.report);
+  if (!report.success) return null;
+  return (
+    <div className="flex flex-col gap-3 py-3">
+      <p className="text-xs text-muted-foreground">
+        {uiText("Reviewer-reported evidence")}
+      </p>
+      <p className="break-words text-sm">
+        {report.data.artifact} · {report.data.revision}
+      </p>
+      <ul className="flex flex-col gap-2">
+        {report.data.criteria.map((item) => (
+          <li key={item.id} className="rounded-md bg-muted p-3 text-sm">
+            <p className="font-medium">
+              {item.id} · {item.requirement} · {uiText(item.outcome)}
+            </p>
+            <p className="whitespace-pre-wrap">{item.evidence}</p>
+          </li>
+        ))}
+      </ul>
+      {report.data.findings.map((item) => (
+        <div key={item.id} className="text-sm">
+          <p className="font-medium">
+            {item.id} · {item.criterionId}
+          </p>
+          <p>{item.problem}</p>
+          <p>
+            {uiText("Requested change")}: {item.requestedChange}
+          </p>
+        </div>
+      ))}
+    </div>
   );
 }

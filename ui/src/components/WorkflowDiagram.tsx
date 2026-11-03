@@ -79,6 +79,27 @@ export function WorkflowDiagram({ choice }: { choice: WorkflowChoice }) {
                         {uiText(label)}
                       </span>
                     )}
+                    <span className="text-xs text-muted-foreground">
+                      {uiText(
+                        node.binding.kind === "executor"
+                          ? "Task assignee"
+                          : node.binding.kind === "human"
+                            ? "Responsible human"
+                            : node.binding.kind === "role"
+                              ? "Role"
+                              : "Agent",
+                      )}
+                      {node.binding.kind === "role"
+                        ? ` · ${uiText(node.binding.role)}`
+                        : ""}
+                    </span>
+                    {node.onFailure && (
+                      <span className="text-xs text-muted-foreground">
+                        {uiText("On failure: return to {{stage}}", {
+                          stage: names.get(node.onFailure) ?? node.onFailure,
+                        })}
+                      </span>
+                    )}
                     {node.dependsOn.length > 1 && (
                       <span className="break-words text-xs text-muted-foreground">
                         {uiText("Waits for: {{stages}}", {

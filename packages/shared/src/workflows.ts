@@ -92,6 +92,17 @@ export const workflowTemplateSchema = z
     key: keySchema,
     name: z.string().trim().min(1).max(160),
     description: z.string().max(4000).default(""),
+    category: z.enum(["general", "specialist"]).optional(),
+    handoffVersion: z.literal(1).optional(),
+    improvement: z
+      .object({
+        applicability: z.string().max(2000),
+        evidence: z.string().max(4000),
+        hypothesis: z.string().max(2000),
+        validation: z.string().max(2000),
+      })
+      .strict()
+      .optional(),
     nodes: z.array(workflowNodeSchema).min(1).max(32),
   })
   .strict()
@@ -167,6 +178,11 @@ export const workflowPolicySchema = z
     templateKey: keySchema.optional(),
     revision: z.number().int().positive().optional(),
     limits: workflowLimitsSchema.partial().optional(),
+    context: z.string().trim().max(8000).optional(),
+    bindings: z
+      .record(keySchema, workflowBindingSchema)
+      .refine((value) => Object.keys(value).length <= 32)
+      .optional(),
   })
   .strict();
 export type WorkflowPolicy = z.infer<typeof workflowPolicySchema>;
@@ -194,7 +210,19 @@ export const createWorkflowRevisionSchema = z
     basedOnRevisionId: z.string().guid().nullable().default(null),
     rationale: z.string().trim().min(1).max(4000),
   })
-  .strict();
+  .strict()
+  .superRefine((input, ctx) => {
+    if (input.definition.improvement)
+      for (const [key, value] of Object.entries(input.definition.improvement)) {
+        if (!value.trim())
+          ctx.addIssue({
+            code: "custom",
+            path: ["definition", "improvement", key],
+            message:
+              "Improvement proposals require applicability, evidence, a hypothesis and a validation plan",
+          });
+      }
+  });
 export const workflowControlSchema = z
   .object({
     action: z.enum(["pause", "resume", "cancel", "retry"]),
@@ -202,6 +230,72 @@ export const workflowControlSchema = z
     reason: z.string().trim().min(1).max(2000),
   })
   .strict();
+export const workflowReviewReportSchema = z
+  .object({
+    artifact: z.string().trim().min(1).max(2000),
+    revision: z.string().trim().min(1).max(500),
+    criteria: z
+      .array(
+        z
+          .object({
+            id: keySchema,
+            requirement: z.string().trim().min(1).max(2000),
+            outcome: z.enum(["passed", "failed", "unverified"]),
+            evidence: z.string().trim().min(1).max(4000),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(50),
+    findings: z
+      .array(
+        z
+          .object({
+            id: keySchema,
+            criterionId: keySchema,
+            problem: z.string().trim().min(1).max(2000),
+            requestedChange: z.string().trim().min(1).max(2000),
+          })
+          .strict(),
+      )
+      .max(50),
+  })
+  .strict()
+  .superRefine((report, ctx) => {
+    const ids = new Set(report.criteria.map((item) => item.id));
+    if (
+      ids.size !== report.criteria.length ||
+      new Set(report.findings.map((item) => item.id)).size !==
+        report.findings.length
+    )
+      ctx.addIssue({
+        code: "custom",
+        message: "Criterion and finding IDs must be unique",
+      });
+    if (report.findings.some((item) => !ids.has(item.criterionId)))
+      ctx.addIssue({
+        code: "custom",
+        message: "Findings must reference an assessed criterion",
+      });
+  });
+export type WorkflowReviewReport = z.infer<typeof workflowReviewReportSchema>;
+
+export function workflowReviewError(
+  outcome: "passed" | "failed",
+  report?: WorkflowReviewReport,
+): string | null {
+  if (!report) return null;
+  if (
+    outcome === "passed" &&
+    (report.findings.length ||
+      report.criteria.some((item) => item.outcome !== "passed"))
+  )
+    return "A passing review must verify every criterion and have no unresolved findings";
+  if (outcome === "failed" && !report.findings.length)
+    return "A failed review must include actionable findings";
+  return null;
+}
+
 export const workflowDecisionSchema = z
   .object({
     nodeId: keySchema,
@@ -209,8 +303,13 @@ export const workflowDecisionSchema = z
     expectedVersion: z.number().int().positive(),
     outcome: z.enum(["passed", "failed"]),
     comment: z.string().trim().min(1).max(16000),
+    report: workflowReviewReportSchema.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((input, ctx) => {
+    const message = workflowReviewError(input.outcome, input.report);
+    if (message) ctx.addIssue({ code: "custom", path: ["report"], message });
+  });
 export const workflowEvaluationSchema = z
   .object({
     baselineRunId: z.string().guid(),
@@ -256,6 +355,10 @@ export interface WorkflowSnapshot {
   revision: number;
   definition: WorkflowTemplate;
   limits: WorkflowLimits;
+  context?: {
+    scope: "platform" | "company" | "project" | "task";
+    instructions: string;
+  }[];
   executorAgentId: string;
   responsibleUserId: string;
   objective: { title: string; description: string | null; plan: string | null };
@@ -360,6 +463,8 @@ export const DEFAULT_WORKFLOW_LIMITS: Readonly<WorkflowLimits> = {
 export const BUILT_IN_WORKFLOW_TEMPLATES: readonly WorkflowTemplate[] = [
   workflowTemplateSchema.parse({
     key: "standard",
+    category: "general",
+    handoffVersion: 1,
     name: "Execute, verify, review",
     description:
       "Bounded execution with a recorded run receipt and independent review.",
@@ -391,8 +496,87 @@ export const BUILT_IN_WORKFLOW_TEMPLATES: readonly WorkflowTemplate[] = [
       },
     ],
   }),
+  ...[
+    {
+      key: "application-development",
+      name: "Application development",
+      description:
+        "Deliver an application change with functional evidence and independent review.",
+      instructions:
+        "先根据任务目标列出交付物、验收条件和实现计划。采用项目已有技术栈实现应用功能，保留具体版本、运行方式、相关测试和用户操作证据。返修逐条回应问题编号；不要扩大范围或降低验收要求。",
+      review:
+        "依据原始任务逐项核查交付版本，使用实际运行结果检查主要用户流程、接口、数据和回归风险。构建通过不能代替功能证据；未验证项不得标为通过。",
+    },
+    {
+      key: "problem-solving",
+      name: "Problem solving",
+      description:
+        "Reproduce a problem, repair its cause and check for regressions.",
+      instructions:
+        "记录问题、复现条件、期望结果和现有证据。定位原因后实施有边界的修复，保留修改前后的证据及产物版本。逐条回应审查问题，无法复现或受外部条件阻塞时说明原因。",
+      review:
+        "按原始问题和验收条件检查修复版本，核对复现步骤、修复效果及相关回归。检查是否仅掩盖症状、删掉检查或扩大范围。未验证的结论必须明确列出。",
+    },
+    {
+      key: "research-analysis",
+      name: "Research and analysis",
+      description:
+        "Answer a research question with traceable sources and independent fact checking.",
+      instructions:
+        "明确研究问题、范围、时效和交付形式，制定查证计划。优先收集原始来源，区分事实、推断与未知；交付带来源和版本标识的分析报告。返修时逐条补证或纠正，不编造引用。",
+      review:
+        "逐项检查研究问题是否被回答，核对原始来源、引用与结论是否对应，识别时效问题、遗漏、反例和不确定性。记录实际查阅的证据；不要将代码构建或软件测试作为研究报告的默认验收要求。",
+    },
+    {
+      key: "document-writing",
+      name: "Document writing",
+      description:
+        "Produce a document for its intended audience and verify coverage and consistency.",
+      instructions:
+        "明确读者、用途、结构、事实来源和验收条件，列出写作计划。交付可访问且带版本标识的文档，说明覆盖范围、引用及未完成项，按问题编号返修。保留用户提供的专有名称和内容。",
+      review:
+        "对照目标读者和验收要求，检查文档完整性、事实依据、术语一致性、可执行性及可读性。指出具体段落和修改要求；代码任务以外不默认要求构建或测试命令。",
+    },
+  ].map((task) =>
+    workflowTemplateSchema.parse({
+      key: task.key,
+      name: task.name,
+      description: task.description,
+      category: "general",
+      handoffVersion: 1,
+      nodes: [
+        {
+          id: "execute",
+          title: "Plan and execute",
+          kind: "task",
+          instructions: task.instructions,
+        },
+        {
+          id: "verify",
+          title: "Check retained deliverables",
+          kind: "check",
+          dependsOn: ["execute"],
+          onFailure: "execute",
+          check: {
+            kind: "evidence",
+            required: ["successful_run", "work_product"],
+          },
+        },
+        {
+          id: "review",
+          title: "Independent verification",
+          kind: "review",
+          dependsOn: ["verify"],
+          onFailure: "execute",
+          binding: { kind: "role", role: "qa" },
+          instructions: task.review,
+        },
+      ],
+    }),
+  ),
   workflowTemplateSchema.parse({
     key: "game-development",
+    category: "specialist",
     name: "Game development",
     description:
       "Implementation followed by parallel code and playable-result verification.",
@@ -455,12 +639,17 @@ export function resolveWorkflowPolicy(
   let templateKey = platform.templateKey ?? "standard";
   let revision = platform.revision;
   const limits = { ...DEFAULT_WORKFLOW_LIMITS, ...platform.limits };
+  let bindings = { ...platform.bindings };
+  const context = platform.context ? [platform.context] : [];
   for (const policy of overrides) {
     if (policy.enabled !== undefined) enabled = enabled && policy.enabled;
     if (policy.templateKey !== undefined) {
+      if (policy.templateKey !== templateKey) bindings = {};
       templateKey = policy.templateKey;
       revision = policy.revision;
     } else if (policy.revision !== undefined) revision = policy.revision;
+    Object.assign(bindings, policy.bindings);
+    if (policy.context) context.push(policy.context);
     if (!policy.limits) continue;
     for (const key of [
       "maxAttempts",
@@ -477,7 +666,7 @@ export function resolveWorkflowPolicy(
       );
     }
   }
-  return { enabled, templateKey, revision, limits };
+  return { enabled, templateKey, revision, limits, bindings, context };
 }
 
 export function readyWorkflowNodes(

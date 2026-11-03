@@ -8,7 +8,7 @@ import { AgentProviderConnection, type ProviderConnection } from "@/components/n
 import { useConnectionModels } from "@/components/ai-connections/useConnectionModels";
 import { ModelDropdown } from "@/components/AgentConfigForm";
 import { Field } from "@/components/agent-config-primitives";
-import { NativeSelect } from "@/components/ui/select";
+import { SelectField } from "@/components/ui/select-field";
 import { queryKeys } from "@/lib/queryKeys";
 import type {
   AiConnectionBinding,
@@ -118,9 +118,9 @@ function OpenRouterModelPicker() {
     <ModelDropdown presentation="native" models={connection?.models ?? []} value={value} onChange={setValue}
     open={open} onOpenChange={setOpen} allowDefault={false} required groupByProvider={false}
     preserveOrder creatable loadingModels={connection?.isLoading} />
-    <Field label="Thinking effort"><NativeSelect aria-label="Thinking effort" value={effort} onChange={event => setEffort(event.target.value)}>
+    <Field label="Thinking effort"><SelectField aria-label="Thinking effort" value={effort} onValueChange={setEffort}>
       <option value="">Auto</option><option value="high">high</option>
-    </NativeSelect></Field>
+    </SelectField></Field>
   </div>;
 }
 function OpenRouterModels() {

@@ -32,12 +32,10 @@ agent tasks. Saving a draft or browsing candidates does not start execution.
 Unsaved candidate edits block regression and publication until saved as a new
 revision. Publication retains the existing evidence and human-approval gates.
 
-For AIGameStudio, choose **Game development** once at company scope. It requires a
-run receipt, attachment and work product, parallel code review/playtesting, then
-human acceptance. Normal agent roles supply bindings. Personnel reporting remains
-unchanged: the dependency graph describes work rather than management. A missing
-independent reviewer becomes work for the responsible human. Paused agents require
-intervention; this feature does not activate agents or their periodic heartbeats.
+默认提供通用任务、应用开发、问题修复、研究分析、文档编写五套模板。
+游戏开发单独归入可选专业模板，仅在明确选择时加载。已有公司／项目的显式选择和历史任务快照保留，升级不会替用户改写它们。
+职责绑定属于公司／项目配置：可按阶段选择执行者、公司角色、具体成员或人工负责人；审批阶段保持人工，审查阶段仍执行独立性检查。
+完整通用化契约与操作步骤见 [通用工作流](GENERIC-WORKFLOWS.zh-CN.md)。
 
 Resolution follows platform → company → project → task. A child may tighten
 attempt/time/concurrency/cost ceilings but cannot lift an ancestor's limit or

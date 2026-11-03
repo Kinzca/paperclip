@@ -14,6 +14,7 @@ import {
   BUILT_IN_WORKFLOW_TEMPLATES,
   resolveWorkflowPolicy,
   workflowPolicySchema,
+  workflowTemplateSchema,
   type WorkflowNodeState,
   type WorkflowPolicy,
   type WorkflowSnapshot,
@@ -74,7 +75,9 @@ export async function prepareWorkflowAdmission(
     override &&
     (override.enabled !== undefined ||
       override.templateKey !== undefined ||
-      override.revision !== undefined)
+      override.revision !== undefined ||
+      override.context !== undefined ||
+      override.bindings !== undefined)
   ) {
     throw forbidden(
       "Agents may narrow workflow limits but may not change the inherited template or disable it",
@@ -127,18 +130,36 @@ export async function prepareWorkflowAdmission(
       "Only the board can create an evaluation task against a draft workflow revision",
     );
   }
-  const definition =
+  const selectedDefinition =
     revision?.definition ??
     BUILT_IN_WORKFLOW_TEMPLATES.find(
       (template) => template.key === effective.templateKey,
     );
   if (
-    !definition ||
+    !selectedDefinition ||
     (!revision && effective.revision && effective.revision !== 1)
   ) {
     throw unprocessable(
       "The selected workflow template revision does not exist",
     );
+  }
+  const resolved = workflowTemplateSchema.safeParse({
+    ...selectedDefinition,
+    nodes: selectedDefinition.nodes.map((node) => ({
+      ...node,
+      binding: effective.bindings[node.id] ?? node.binding,
+    })),
+  });
+  if (!resolved.success) throw unprocessable("Invalid workflow stage bindings");
+  const definition = resolved.data;
+  for (const [id, binding] of Object.entries(effective.bindings)) {
+    const node = definition.nodes.find((item) => item.id === id);
+    if (
+      !node ||
+      node.kind === "check" ||
+      (node.kind === "review" && binding.kind === "executor")
+    )
+      throw unprocessable(`Invalid workflow binding: ${id}`);
   }
   const roster = await tx
     .select()
@@ -221,6 +242,25 @@ export async function prepareWorkflowAdmission(
     revision: revision?.revision ?? 1,
     definition,
     limits: effective.limits,
+    context: [
+      ...(platform.policy.context
+        ? [
+            {
+              scope: "platform" as const,
+              instructions: platform.policy.context,
+            },
+          ]
+        : []),
+      ...policies
+        .filter((row) => row.policy.context)
+        .map((row) => ({
+          scope: row.scope as "company" | "project",
+          instructions: row.policy.context!,
+        })),
+      ...(override?.context
+        ? [{ scope: "task" as const, instructions: override.context }]
+        : []),
+    ],
     executorAgentId: executor.id,
     responsibleUserId: values.responsibleUserId,
     objective: {

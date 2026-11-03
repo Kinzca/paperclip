@@ -103,7 +103,11 @@ function draftRevision() {
     templateKey: "game-development",
     revision: 2,
     status: "draft" as const,
-    definition: structuredClone(BUILT_IN_WORKFLOW_TEMPLATES[1]),
+    definition: structuredClone(
+      BUILT_IN_WORKFLOW_TEMPLATES.find(
+        (item) => item.key === "game-development",
+      )!,
+    ),
     basedOnRevisionId: null,
     rationale: "Improve execution",
     createdByUserId: "user-1",
@@ -230,7 +234,12 @@ describe("workflow settings experience", () => {
       expect(container.textContent).toContain("Draft ready to edit."),
     );
     expect(document.activeElement?.tagName).toBe("H3");
-    expect(container.querySelectorAll("textarea")).toHaveLength(3); // execution, reason, advanced JSON
+    expect(container.textContent).toContain(
+      "Observed problem and source evidence",
+    );
+    expect(container.textContent).toContain(
+      "Validation plan and regression risks",
+    );
     click("Improve this workflow");
     await vi.waitFor(() =>
       expect(container.textContent).toContain(
@@ -314,7 +323,12 @@ describe("workflow settings experience", () => {
       {
         ...draftRevision(),
         status: "published",
-        definition: { ...BUILT_IN_WORKFLOW_TEMPLATES[1], name: "Studio v2" },
+        definition: {
+          ...BUILT_IN_WORKFLOW_TEMPLATES.find(
+            (item) => item.key === "game-development",
+          )!,
+          name: "Studio v2",
+        },
       },
     ];
     await render();
@@ -361,7 +375,11 @@ describe("workflow settings experience", () => {
     click("1 · Edit draft");
     expect(
       container.querySelector<HTMLTextAreaElement>("textarea")!.value,
-    ).toBe(BUILT_IN_WORKFLOW_TEMPLATES[1].nodes[0].instructions);
+    ).toBe(
+      BUILT_IN_WORKFLOW_TEMPLATES.find(
+        (item) => item.key === "game-development",
+      )!.nodes[0].instructions,
+    );
     input(
       container.querySelector<HTMLTextAreaElement>("textarea")!,
       "Retain extra reproducible evidence.",

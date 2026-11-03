@@ -63,7 +63,19 @@ const platformUpdateSchema = z
     policy: workflowPolicySchema,
     allowHostCommands: z.boolean(),
   })
-  .strict();
+  .strict()
+  .superRefine((input, ctx) => {
+    if (
+      Object.values(input.policy.bindings ?? {}).some(
+        (binding) => binding.kind === "agent",
+      )
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["policy", "bindings"],
+        message: "Instance defaults cannot pin company-specific agents",
+      });
+  });
 
 export function workflowRoutes(
   db: Db,
