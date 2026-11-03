@@ -33,12 +33,14 @@ export function WorkflowImprovements({
   companyId,
   accountId,
   config,
+  currentChoice,
   request,
   onCreate,
 }: {
   companyId: string;
   accountId: string | null;
   config: WorkflowConfiguration;
+  currentChoice?: WorkflowChoice;
   request: DraftRequest | null;
   onCreate: () => void;
 }) {
@@ -83,6 +85,7 @@ export function WorkflowImprovements({
   const heading = useRef<HTMLHeadingElement>(null);
   const workspaceTabs = useRef<HTMLDivElement>(null);
   const drafts = config.revisions.filter((row) => row.status === "draft");
+  const hasDraftWorkspace = !!definition || drafts.length > 0;
   const revision = config.revisions.find((row) => row.id === revisionId);
   const parsed = useMemo(() => {
     if (!definition) return { value: null, error: "" };
@@ -270,7 +273,7 @@ export function WorkflowImprovements({
   }, [request]);
   useEffect(() => {
     if (open && step === "draft") heading.current?.focus();
-  }, [open, step, request]);
+  }, [open, step, request, hasDraftWorkspace]);
   useEffect(() => {
     if (open && step !== "draft")
       workspaceTabs.current
@@ -342,15 +345,17 @@ export function WorkflowImprovements({
               open ? "Close revision workspace" : "Open revision workspace",
             )}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={busy}
-            onClick={onCreate}
-          >
-            <Plus aria-hidden="true" />
-            {uiText("Create revision")}
-          </Button>
+          {(!open || hasDraftWorkspace) && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy || !currentChoice}
+              onClick={onCreate}
+            >
+              <Plus aria-hidden="true" />
+              {uiText("Create revision")}
+            </Button>
+          )}
         </div>
       </div>
       {open && (
@@ -410,854 +415,905 @@ export function WorkflowImprovements({
               </div>
             </div>
           )}
-          <label className="flex max-w-xl flex-col gap-1.5 text-sm">
-            {uiText("Select an existing draft")}
-            <SelectField
-              aria-label={uiText("Select an existing draft")}
-              value={revisionId}
-              disabled={busy}
-              onValueChange={(optionValue) =>
-                dirty
-                  ? setPendingRevision(optionValue)
-                  : chooseRevision(optionValue)
-              }
-            >
-              <option value="">{uiText("Select a draft")}</option>
-              {drafts.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {workflowTemplateText(
-                    {
-                      definition: item.definition,
-                      builtIn: false,
-                      revision: item.revision,
-                    },
-                    "name",
-                  )}{" "}
-                  · {uiText("Version {{version}}", { version: item.revision })}
-                </option>
-              ))}
-            </SelectField>
-            {drafts.length === 0 && (
-              <span className="text-xs text-muted-foreground">
-                {uiText("No saved drafts yet")}
-              </span>
-            )}
-          </label>
-          <Tabs ref={workspaceTabs} value={step} onValueChange={setStep}>
-            <TabsList
-              variant="line"
-              className="h-auto max-w-full flex-wrap justify-start gap-2"
-              aria-label={uiText("Workflow revisions")}
-            >
-              <TabsTrigger disabled={busy} value="draft">
-                1 · {uiText("Edit draft")}
-              </TabsTrigger>
-              <TabsTrigger disabled={busy} value="regressions">
-                2 · {uiText("Run regressions")}
-              </TabsTrigger>
-              <TabsTrigger disabled={busy} value="publish">
-                3 · {uiText("Review and publish")}
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="draft" className="flex flex-col gap-4 pt-4">
+          {drafts.length > 0 && (
+            <label className="flex max-w-xl flex-col gap-1.5 text-sm">
+              {uiText("Select an existing draft")}
+              <SelectField
+                aria-label={uiText("Select an existing draft")}
+                value={revisionId}
+                disabled={busy}
+                onValueChange={(optionValue) =>
+                  dirty
+                    ? setPendingRevision(optionValue)
+                    : chooseRevision(optionValue)
+                }
+              >
+                <option value="">{uiText("Select a draft")}</option>
+                {drafts.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {workflowTemplateText(
+                      {
+                        definition: item.definition,
+                        builtIn: false,
+                        revision: item.revision,
+                      },
+                      "name",
+                    )}{" "}
+                    ·{" "}
+                    {uiText("Version {{version}}", { version: item.revision })}
+                  </option>
+                ))}
+              </SelectField>
+            </label>
+          )}
+          {!hasDraftWorkspace ? (
+            <div className="flex min-w-0 flex-col items-start gap-3 py-4">
               <h3
                 ref={heading}
                 tabIndex={-1}
-                className="text-sm font-semibold outline-none"
+                className="text-sm font-medium outline-none"
               >
-                {base ? title(base) : uiText("Draft instructions")}
+                {uiText("No saved drafts yet")}
               </h3>
-              {definition ? (
-                <form
-                  noValidate
-                  className="flex flex-col gap-4"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    setValidation(true);
-                    if (
-                      !parsed.value ||
-                      !rationale.trim() ||
-                      (parsed.value.improvement &&
-                        Object.values(parsed.value.improvement).some(
-                          (value) => !value.trim(),
-                        ))
-                    )
-                      return;
-                    const basedOn = config.revisions.find(
-                      (item) =>
-                        item.status === "published" &&
-                        item.templateKey === parsed.value!.key &&
-                        item.revision === base?.revision,
-                    );
-                    propose.mutate({
-                      definition: parsed.value,
-                      rationale: rationale.trim(),
-                      basedOnRevisionId: basedOn?.id ?? null,
-                    });
-                  }}
+              <p className="max-w-3xl text-sm text-muted-foreground">
+                {uiText(
+                  currentChoice
+                    ? "Start from the current workflow. Edit its execution instructions, then save a draft before validating and publishing."
+                    : "Choose an available template in Edit rules, then save again.",
+                )}
+              </p>
+              <Button
+                variant="outline"
+                disabled={busy || !currentChoice}
+                onClick={onCreate}
+                className="h-auto min-h-10 max-w-full whitespace-normal text-left"
+              >
+                <Plus aria-hidden="true" />
+                <span className="min-w-0 break-words">
+                  {currentChoice
+                    ? uiText("Create a revision from {{workflow}}", {
+                        workflow: title(currentChoice),
+                      })
+                    : uiText("Create revision")}
+                </span>
+              </Button>
+            </div>
+          ) : (
+            <Tabs ref={workspaceTabs} value={step} onValueChange={setStep}>
+              <TabsList
+                variant="line"
+                className="h-auto max-w-full flex-wrap justify-start gap-2"
+                aria-label={uiText("Workflow revisions")}
+              >
+                <TabsTrigger disabled={busy} value="draft">
+                  1 · {uiText("Edit draft")}
+                </TabsTrigger>
+                <TabsTrigger disabled={busy} value="regressions">
+                  2 · {uiText("Run regressions")}
+                </TabsTrigger>
+                <TabsTrigger disabled={busy} value="publish">
+                  3 · {uiText("Review and publish")}
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="draft" className="flex flex-col gap-4 pt-4">
+                <h3
+                  ref={heading}
+                  tabIndex={-1}
+                  className="text-sm font-semibold outline-none"
                 >
-                  <p role="status" className="text-sm text-muted-foreground">
-                    {uiText(
-                      revisionId
-                        ? "Saved draft. Editing it creates a new draft revision."
-                        : "Draft ready to edit. Nothing has been saved yet.",
-                    )}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {uiText(
-                      "Acceptance checks, review instructions and dependencies stay fixed. Change the execution instructions below.",
-                    )}
-                  </p>
-                  <fieldset
-                    disabled={busy}
-                    className="flex min-w-0 flex-col gap-4"
+                  {base ? title(base) : uiText("Draft instructions")}
+                </h3>
+                {definition ? (
+                  <form
+                    noValidate
+                    className="flex flex-col gap-4"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      setValidation(true);
+                      if (
+                        !parsed.value ||
+                        !rationale.trim() ||
+                        (parsed.value.improvement &&
+                          Object.values(parsed.value.improvement).some(
+                            (value) => !value.trim(),
+                          ))
+                      )
+                        return;
+                      const basedOn = config.revisions.find(
+                        (item) =>
+                          item.status === "published" &&
+                          item.templateKey === parsed.value!.key &&
+                          item.revision === base?.revision,
+                      );
+                      propose.mutate({
+                        definition: parsed.value,
+                        rationale: rationale.trim(),
+                        basedOnRevisionId: basedOn?.id ?? null,
+                      });
+                    }}
                   >
-                    {parsed.value?.nodes
-                      .filter((node) => node.kind === "task")
-                      .map((node) => (
-                        <label
-                          key={node.id}
-                          className="flex min-w-0 flex-col gap-1.5 text-sm"
-                        >
-                          {uiText("Instructions for {{stage}}", {
-                            stage: base
-                              ? workflowNodeTitle(base, node)
-                              : node.title,
-                          })}
-                          <Textarea
-                            rows={3}
-                            value={node.instructions}
-                            onChange={(event) =>
-                              setDefinition(
-                                JSON.stringify(
-                                  {
-                                    ...parsed.value,
-                                    nodes: parsed.value!.nodes.map((item) =>
-                                      item.id === node.id
-                                        ? {
-                                            ...item,
-                                            instructions: event.target.value,
-                                          }
-                                        : item,
-                                    ),
-                                  },
-                                  null,
-                                  2,
-                                ),
-                              )
-                            }
-                          />
-                        </label>
-                      ))}
-                    <div className="flex flex-col gap-3 border-t border-border pt-4">
-                      <h4 className="text-sm font-medium">
-                        {uiText("Evidence-based improvement proposal")}
-                      </h4>
-                      <p className="text-xs text-muted-foreground">
-                        {uiText(
-                          "Describe where this change applies. Saving a proposal does not update global instructions or the Wiki.",
-                        )}
-                      </p>
-                      {(
-                        [
-                          ["applicability", "Applicable tasks and exclusions"],
-                          ["evidence", "Observed problem and source evidence"],
-                          [
-                            "hypothesis",
-                            "Proposed change and expected benefit",
-                          ],
-                          [
-                            "validation",
-                            "Validation plan and regression risks",
-                          ],
-                        ] as const
-                      ).map(([key, label]) => (
-                        <label
-                          key={key}
-                          className="flex flex-col gap-1.5 text-sm"
-                        >
-                          {uiText(label)}
-                          <Textarea
-                            rows={2}
-                            maxLength={key === "evidence" ? 4000 : 2000}
-                            value={parsed.value?.improvement?.[key] ?? ""}
-                            aria-invalid={
-                              validation &&
-                              !parsed.value?.improvement?.[key]?.trim()
-                            }
-                            onChange={(event) =>
-                              setDefinition(
-                                JSON.stringify(
-                                  {
-                                    ...parsed.value,
-                                    improvement: {
-                                      applicability: "",
-                                      evidence: "",
-                                      hypothesis: "",
-                                      validation: "",
-                                      ...parsed.value?.improvement,
-                                      [key]: event.target.value,
+                    <p role="status" className="text-sm text-muted-foreground">
+                      {uiText(
+                        revisionId
+                          ? "Saved draft. Editing it creates a new draft revision."
+                          : "Draft ready to edit. Nothing has been saved yet.",
+                      )}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {uiText(
+                        "Acceptance checks, review instructions and dependencies stay fixed. Change the execution instructions below.",
+                      )}
+                    </p>
+                    <fieldset
+                      disabled={busy}
+                      className="flex min-w-0 flex-col gap-4"
+                    >
+                      {parsed.value?.nodes
+                        .filter((node) => node.kind === "task")
+                        .map((node) => (
+                          <label
+                            key={node.id}
+                            className="flex min-w-0 flex-col gap-1.5 text-sm"
+                          >
+                            {uiText("Instructions for {{stage}}", {
+                              stage: base
+                                ? workflowNodeTitle(base, node)
+                                : node.title,
+                            })}
+                            <Textarea
+                              rows={3}
+                              value={node.instructions}
+                              onChange={(event) =>
+                                setDefinition(
+                                  JSON.stringify(
+                                    {
+                                      ...parsed.value,
+                                      nodes: parsed.value!.nodes.map((item) =>
+                                        item.id === node.id
+                                          ? {
+                                              ...item,
+                                              instructions: event.target.value,
+                                            }
+                                          : item,
+                                      ),
                                     },
-                                  },
-                                  null,
-                                  2,
-                                ),
-                              )
-                            }
-                          />
-                        </label>
-                      ))}
-                      {validation &&
-                        parsed.value?.improvement &&
-                        Object.values(parsed.value.improvement).some(
-                          (value) => !value.trim(),
-                        ) && (
-                          <p role="alert" className="text-sm text-destructive">
-                            {uiText(
-                              "Complete all improvement fields before saving.",
-                            )}
-                          </p>
-                        )}
-                    </div>
-                    <label className="flex flex-col gap-1.5 text-sm">
-                      {uiText("Why is this revision needed?")}
-                      <Textarea
-                        rows={2}
-                        maxLength={4000}
-                        value={rationale}
-                        placeholder={uiText(
-                          "Explain the problem this change solves.",
-                        )}
-                        aria-invalid={validation && !rationale.trim()}
-                        aria-describedby="workflow-rationale-help"
-                        onChange={(event) => setRationale(event.target.value)}
-                      />
-                    </label>
-                    {validation && !rationale.trim() && (
-                      <p
-                        id="workflow-rationale-help"
-                        className="text-sm text-destructive"
-                      >
-                        {uiText("Enter a reason for this revision.")}
-                      </p>
-                    )}
-                    <details>
-                      <summary className="cursor-pointer text-sm text-muted-foreground">
-                        {uiText("Advanced JSON editor")}
-                      </summary>
-                      <label className="flex flex-col gap-2 pt-3 text-sm">
-                        {uiText("Template definition")}
+                                    null,
+                                    2,
+                                  ),
+                                )
+                              }
+                            />
+                          </label>
+                        ))}
+                      <div className="flex flex-col gap-3 border-t border-border pt-4">
+                        <h4 className="text-sm font-medium">
+                          {uiText("Evidence-based improvement proposal")}
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          {uiText(
+                            "Describe where this change applies. Saving a proposal does not update global instructions or the Wiki.",
+                          )}
+                        </p>
+                        {(
+                          [
+                            [
+                              "applicability",
+                              "Applicable tasks and exclusions",
+                            ],
+                            [
+                              "evidence",
+                              "Observed problem and source evidence",
+                            ],
+                            [
+                              "hypothesis",
+                              "Proposed change and expected benefit",
+                            ],
+                            [
+                              "validation",
+                              "Validation plan and regression risks",
+                            ],
+                          ] as const
+                        ).map(([key, label]) => (
+                          <label
+                            key={key}
+                            className="flex flex-col gap-1.5 text-sm"
+                          >
+                            {uiText(label)}
+                            <Textarea
+                              rows={2}
+                              maxLength={key === "evidence" ? 4000 : 2000}
+                              value={parsed.value?.improvement?.[key] ?? ""}
+                              aria-invalid={
+                                validation &&
+                                !parsed.value?.improvement?.[key]?.trim()
+                              }
+                              onChange={(event) =>
+                                setDefinition(
+                                  JSON.stringify(
+                                    {
+                                      ...parsed.value,
+                                      improvement: {
+                                        applicability: "",
+                                        evidence: "",
+                                        hypothesis: "",
+                                        validation: "",
+                                        ...parsed.value?.improvement,
+                                        [key]: event.target.value,
+                                      },
+                                    },
+                                    null,
+                                    2,
+                                  ),
+                                )
+                              }
+                            />
+                          </label>
+                        ))}
+                        {validation &&
+                          parsed.value?.improvement &&
+                          Object.values(parsed.value.improvement).some(
+                            (value) => !value.trim(),
+                          ) && (
+                            <p
+                              role="alert"
+                              className="text-sm text-destructive"
+                            >
+                              {uiText(
+                                "Complete all improvement fields before saving.",
+                              )}
+                            </p>
+                          )}
+                      </div>
+                      <label className="flex flex-col gap-1.5 text-sm">
+                        {uiText("Why is this revision needed?")}
                         <Textarea
-                          rows={12}
-                          className="font-mono"
-                          value={definition}
-                          aria-invalid={!!parsed.error}
-                          aria-describedby="workflow-definition-error"
-                          onChange={(event) =>
-                            setDefinition(event.target.value)
-                          }
+                          rows={2}
+                          maxLength={4000}
+                          value={rationale}
+                          placeholder={uiText(
+                            "Explain the problem this change solves.",
+                          )}
+                          aria-invalid={validation && !rationale.trim()}
+                          aria-describedby="workflow-rationale-help"
+                          onChange={(event) => setRationale(event.target.value)}
                         />
                       </label>
-                    </details>
-                  </fieldset>
-                  {parsed.error && (
-                    <p
-                      id="workflow-definition-error"
-                      role="alert"
-                      className="text-sm text-destructive"
-                    >
-                      {parsed.error}
-                    </p>
-                  )}
-                  {propose.error && (
-                    <p role="alert" className="text-sm text-destructive">
-                      {fixedGate
-                        ? uiText(
-                            "Fixed verification rules cannot be changed: {{stage}}.",
-                            {
-                              stage:
-                                parsed.value?.nodes.find(
-                                  (node) => node.id === fixedGate,
-                                )?.title ?? fixedGate,
-                            },
-                          )
-                        : uiText(
-                            "Could not save the draft. Your edits are preserved.",
-                          )}
-                    </p>
-                  )}
-                  <div className="flex items-center justify-between gap-3">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      disabled={busy}
-                      onClick={() => {
-                        setDefinition("");
-                        setOriginalDefinition("");
-                        setRationale("");
-                        setBase(null);
-                      }}
-                    >
-                      {uiText("Discard changes")}
-                    </Button>
-                    <Button type="submit" disabled={busy}>
-                      {uiText(
-                        propose.isPending ? "Saving draft…" : "Save draft",
+                      {validation && !rationale.trim() && (
+                        <p
+                          id="workflow-rationale-help"
+                          className="text-sm text-destructive"
+                        >
+                          {uiText("Enter a reason for this revision.")}
+                        </p>
                       )}
-                    </Button>
+                      <details>
+                        <summary className="cursor-pointer text-sm text-muted-foreground">
+                          {uiText("Advanced JSON editor")}
+                        </summary>
+                        <label className="flex flex-col gap-2 pt-3 text-sm">
+                          {uiText("Template definition")}
+                          <Textarea
+                            rows={12}
+                            className="font-mono"
+                            value={definition}
+                            aria-invalid={!!parsed.error}
+                            aria-describedby="workflow-definition-error"
+                            onChange={(event) =>
+                              setDefinition(event.target.value)
+                            }
+                          />
+                        </label>
+                      </details>
+                    </fieldset>
+                    {parsed.error && (
+                      <p
+                        id="workflow-definition-error"
+                        role="alert"
+                        className="text-sm text-destructive"
+                      >
+                        {parsed.error}
+                      </p>
+                    )}
+                    {propose.error && (
+                      <p role="alert" className="text-sm text-destructive">
+                        {fixedGate
+                          ? uiText(
+                              "Fixed verification rules cannot be changed: {{stage}}.",
+                              {
+                                stage:
+                                  parsed.value?.nodes.find(
+                                    (node) => node.id === fixedGate,
+                                  )?.title ?? fixedGate,
+                              },
+                            )
+                          : uiText(
+                              "Could not save the draft. Your edits are preserved.",
+                            )}
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between gap-3">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={busy}
+                        onClick={() => {
+                          setDefinition("");
+                          setOriginalDefinition("");
+                          setRationale("");
+                          setBase(null);
+                        }}
+                      >
+                        {uiText("Discard changes")}
+                      </Button>
+                      <Button type="submit" disabled={busy}>
+                        {uiText(
+                          propose.isPending ? "Saving draft…" : "Save draft",
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="flex flex-col items-start gap-3 py-4">
+                    <p className="text-sm text-muted-foreground">
+                      {uiText(
+                        "Select a saved draft above, or create a revision to start editing.",
+                      )}
+                    </p>
                   </div>
-                </form>
-              ) : (
-                <div className="flex flex-col items-start gap-3 py-4">
-                  <p className="text-sm text-muted-foreground">
+                )}
+              </TabsContent>
+              <TabsContent
+                value="regressions"
+                className="flex flex-col gap-4 pt-4"
+              >
+                {propose.isSuccess && (
+                  <p role="status" className="text-sm">
+                    {uiText("Draft saved. Select baseline tasks to verify it.")}
+                  </p>
+                )}
+                {!revisionId ? (
+                  <p className="py-4 text-sm text-muted-foreground">
                     {uiText(
                       "Save a draft in the first step to select baseline tasks.",
                     )}
                   </p>
-                  <Button variant="outline" onClick={onCreate}>
-                    {uiText("Create revision")}
-                  </Button>
-                </div>
-              )}
-            </TabsContent>
-            <TabsContent
-              value="regressions"
-              className="flex flex-col gap-4 pt-4"
-            >
-              {propose.isSuccess && (
-                <p role="status" className="text-sm">
-                  {uiText("Draft saved. Select baseline tasks to verify it.")}
-                </p>
-              )}
-              {!revisionId ? (
-                <p className="py-4 text-sm text-muted-foreground">
+                ) : (
+                  <>
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-sm font-semibold">
+                        {uiText(
+                          "Select 3–10 tasks with different frozen objectives.",
+                        )}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {uiText(
+                          "Only successful runs of the matching baseline version are listed.",
+                        )}
+                      </p>
+                    </div>
+                    <form
+                      className="flex flex-col gap-2 sm:flex-row"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        setQuery(search);
+                        setOffset(0);
+                      }}
+                    >
+                      <label className="flex min-w-0 flex-1 flex-col gap-1">
+                        <span className="sr-only">
+                          {uiText("Search successful tasks")}
+                        </span>
+                        <Input
+                          maxLength={200}
+                          value={search}
+                          placeholder={uiText("Task title or identifier")}
+                          onChange={(event) => setSearch(event.target.value)}
+                        />
+                      </label>
+                      <Button type="submit" variant="outline">
+                        {uiText("Search")}
+                      </Button>
+                    </form>
+                    {selected.length > 0 && (
+                      <div className="flex flex-col gap-2">
+                        <h4 className="text-xs font-medium text-muted-foreground">
+                          {uiText("Selected baseline tasks")}
+                        </h4>
+                        <ul className="flex flex-wrap gap-2">
+                          {selected.map((item) => (
+                            <li key={item.id}>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="h-auto max-w-full whitespace-normal text-left"
+                                aria-label={uiText("Remove {{title}}", {
+                                  title: item.objectiveTitle,
+                                })}
+                                onClick={() =>
+                                  setSelected(
+                                    selected.filter(
+                                      (row) => row.id !== item.id,
+                                    ),
+                                  )
+                                }
+                              >
+                                {item.issueIdentifier} · {item.objectiveTitle}
+                                <X
+                                  aria-hidden="true"
+                                  className="size-3 shrink-0"
+                                />
+                              </Button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    <p role="status" className="text-sm font-medium">
+                      {uiText("{{count}} of 3 required objectives selected", {
+                        count: selectedObjectives.size,
+                      })}
+                    </p>
+                    {baselines.isPending && (
+                      <p
+                        role="status"
+                        className="text-sm text-muted-foreground"
+                      >
+                        {uiText("Loading...")}
+                      </p>
+                    )}
+                    {baselines.error && (
+                      <div
+                        role="alert"
+                        className="flex flex-col items-start gap-2 text-sm text-destructive"
+                      >
+                        <p>
+                          {uiText(
+                            "Could not load baseline tasks. Retry the search.",
+                          )}
+                        </p>
+                        <Button
+                          variant="outline"
+                          onClick={() => void baselines.refetch()}
+                        >
+                          {uiText("Retry")}
+                        </Button>
+                      </div>
+                    )}
+                    {baselines.data?.items.length === 0 && (
+                      <div className="flex flex-col gap-1 rounded-lg border border-dashed border-border p-5">
+                        <h4 className="text-sm font-medium">
+                          {uiText("No eligible baseline tasks")}
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          {uiText(
+                            "Complete successful tasks with this workflow first, or try another search. No tasks are started automatically.",
+                          )}
+                        </p>
+                      </div>
+                    )}
+                    <ul className="divide-y divide-border">
+                      {baselines.data?.items.map((item) => {
+                        const checked = selected.some(
+                          (row) => row.id === item.id,
+                        );
+                        const duplicate =
+                          !checked &&
+                          selectedObjectives.has(item.objectiveFingerprint);
+                        return (
+                          <li key={item.id}>
+                            <label className="flex cursor-pointer items-start gap-3 py-3">
+                              <Checkbox
+                                className="mt-1"
+                                checked={checked}
+                                disabled={
+                                  busy ||
+                                  duplicate ||
+                                  (!checked && selected.length >= 10)
+                                }
+                                onCheckedChange={(checked) =>
+                                  setSelected((current) => {
+                                    if (checked !== true)
+                                      return current.filter(
+                                        (row) => row.id !== item.id,
+                                      );
+                                    if (
+                                      current.length >= 10 ||
+                                      current.some(
+                                        (row) =>
+                                          row.objectiveFingerprint ===
+                                          item.objectiveFingerprint,
+                                      )
+                                    )
+                                      return current;
+                                    return [...current, item];
+                                  })
+                                }
+                              />
+                              <span className="flex min-w-0 flex-1 flex-col gap-1">
+                                <span className="break-words text-sm font-medium">
+                                  {item.objectiveTitle}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  <span className="font-mono">
+                                    {item.issueIdentifier}
+                                  </span>{" "}
+                                  ·{" "}
+                                  {uiText("Completed {{date}}", {
+                                    date: formatDateTime(
+                                      item.finishedAt ?? item.createdAt,
+                                    ),
+                                  })}
+                                </span>
+                                {duplicate && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {uiText(
+                                      "This objective is already selected",
+                                    )}
+                                  </span>
+                                )}
+                              </span>
+                            </label>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {(offset > 0 || baselines.data?.hasMore) && (
+                      <div className="flex justify-between gap-2">
+                        <Button
+                          variant="ghost"
+                          disabled={offset === 0}
+                          onClick={() => setOffset(Math.max(0, offset - 20))}
+                        >
+                          {uiText("Previous page")}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          disabled={!baselines.data?.hasMore}
+                          onClick={() => setOffset(offset + 20)}
+                        >
+                          {uiText("Next page")}
+                        </Button>
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-3 border-t border-border pt-4">
+                      <p className="text-xs text-muted-foreground">
+                        {uiText(
+                          "This starts real agent tasks and may incur usage costs. Existing budgets and workflow limits apply.",
+                        )}
+                      </p>
+                      {trials.error && (
+                        <p role="alert" className="text-sm text-destructive">
+                          {uiText(
+                            "Could not start regressions. Your selection is preserved.",
+                          )}
+                        </p>
+                      )}
+                      <div className="flex justify-end">
+                        <Button
+                          disabled={!canRun || busy}
+                          onClick={() =>
+                            trials.mutate(selected.map((item) => item.id))
+                          }
+                        >
+                          {trials.isPending
+                            ? uiText("Starting regressions…")
+                            : uiText("Start {{count}} candidate tasks", {
+                                count: selected.length,
+                              })}
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </TabsContent>
+              <TabsContent value="publish" className="flex flex-col gap-4 pt-4">
+                {trials.isSuccess && (
+                  <p role="status" className="text-sm">
+                    {uiText(
+                      "Candidate tasks started. Results update automatically.",
+                    )}
+                  </p>
+                )}
+                {revision && (
+                  <details className="text-sm">
+                    <summary className="cursor-pointer font-medium">
+                      {uiText("Saved improvement proposal")}
+                    </summary>
+                    <div className="flex flex-col gap-3 pt-3">
+                      <p className="whitespace-pre-wrap">
+                        {revision.rationale}
+                      </p>
+                      {revision.definition.improvement &&
+                        Object.entries(revision.definition.improvement).map(
+                          ([key, value]) => (
+                            <div key={key}>
+                              <p className="text-xs text-muted-foreground">
+                                {uiText(
+                                  {
+                                    applicability:
+                                      "Applicable tasks and exclusions",
+                                    evidence:
+                                      "Observed problem and source evidence",
+                                    hypothesis:
+                                      "Proposed change and expected benefit",
+                                    validation:
+                                      "Validation plan and regression risks",
+                                  }[key] ?? key,
+                                )}
+                              </p>
+                              <p className="whitespace-pre-wrap">{value}</p>
+                            </div>
+                          ),
+                        )}
+                    </div>
+                  </details>
+                )}
+                <p className="text-xs text-muted-foreground">
                   {uiText(
-                    "Save a draft in the first step to select baseline tasks.",
+                    "Regression replay checks compatibility with known tasks. It does not prove improvement on unseen tasks; retain separate evaluation tasks before broad adoption.",
                   )}
                 </p>
-              ) : (
-                <>
-                  <div className="flex flex-col gap-1">
-                    <h3 className="text-sm font-semibold">
-                      {uiText(
-                        "Select 3–10 tasks with different frozen objectives.",
-                      )}
-                    </h3>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold">
+                    {uiText("Regression results")}
+                  </h3>
+                  {revisionId && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void evaluations.refetch()}
+                    >
+                      {uiText("Refresh results")}
+                    </Button>
+                  )}
+                </div>
+                {evaluations.error && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {evaluations.error.message}
+                  </p>
+                )}
+                {results.length === 0 ? (
+                  <div className="flex flex-col gap-1 py-4">
+                    <h4 className="text-sm font-medium">
+                      {uiText("No regression results yet")}
+                    </h4>
                     <p className="text-sm text-muted-foreground">
                       {uiText(
-                        "Only successful runs of the matching baseline version are listed.",
+                        "Start regressions in the previous step, then review their evidence here.",
                       )}
                     </p>
                   </div>
-                  <form
-                    className="flex flex-col gap-2 sm:flex-row"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      setQuery(search);
-                      setOffset(0);
-                    }}
-                  >
-                    <label className="flex min-w-0 flex-1 flex-col gap-1">
-                      <span className="sr-only">
-                        {uiText("Search successful tasks")}
-                      </span>
-                      <Input
-                        maxLength={200}
-                        value={search}
-                        placeholder={uiText("Task title or identifier")}
-                        onChange={(event) => setSearch(event.target.value)}
-                      />
-                    </label>
-                    <Button type="submit" variant="outline">
-                      {uiText("Search")}
-                    </Button>
-                  </form>
-                  {selected.length > 0 && (
-                    <div className="flex flex-col gap-2">
-                      <h4 className="text-xs font-medium text-muted-foreground">
-                        {uiText("Selected baseline tasks")}
-                      </h4>
-                      <ul className="flex flex-wrap gap-2">
-                        {selected.map((item) => (
-                          <li key={item.id}>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="h-auto max-w-full whitespace-normal text-left"
-                              aria-label={uiText("Remove {{title}}", {
-                                title: item.objectiveTitle,
-                              })}
-                              onClick={() =>
-                                setSelected(
-                                  selected.filter((row) => row.id !== item.id),
-                                )
-                              }
-                            >
-                              {item.issueIdentifier} · {item.objectiveTitle}
-                              <X
-                                aria-hidden="true"
-                                className="size-3 shrink-0"
-                              />
-                            </Button>
-                          </li>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="border-b border-border text-xs text-muted-foreground">
+                        <tr>
+                          <th className="p-2 font-medium">
+                            {uiText("Objective")}
+                          </th>
+                          <th className="p-2 font-medium">
+                            {uiText("Baseline task")}
+                          </th>
+                          <th className="p-2 font-medium">
+                            {uiText("Candidate task")}
+                          </th>
+                          <th className="p-2 font-medium">
+                            {uiText("Evaluation result")}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {results.map((result) => (
+                          <tr key={result.id}>
+                            <td className="p-2">
+                              <span className="break-words">
+                                {result.objectiveTitle ??
+                                  selected.find(
+                                    (item) => item.id === result.baselineRunId,
+                                  )?.objectiveTitle ??
+                                  result.scenarioKey}
+                              </span>
+                            </td>
+                            <td className="p-2">
+                              {result.baselineIssueId ? (
+                                <Link
+                                  className="underline underline-offset-4"
+                                  to={`/issues/${result.baselineIssueId}`}
+                                >
+                                  {uiText("Open task")}
+                                </Link>
+                              ) : (
+                                <span className="font-mono">
+                                  {result.baselineRunId.slice(0, 8)}
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-2">
+                              {result.candidateIssueId ? (
+                                <Link
+                                  className="underline underline-offset-4"
+                                  to={`/issues/${result.candidateIssueId}`}
+                                >
+                                  {uiText("Open task")}
+                                </Link>
+                              ) : (
+                                <span className="font-mono">
+                                  {result.candidateRunId.slice(0, 8)}
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-2">
+                              <span className="font-medium">
+                                {uiText(
+                                  result.passed
+                                    ? "Passed"
+                                    : result.findings.includes(
+                                          "Candidate execution pending",
+                                        )
+                                      ? "Waiting for results"
+                                      : "Needs attention",
+                                )}
+                              </span>
+                              {!result.passed && (
+                                <p className="text-xs text-muted-foreground">
+                                  {result.findings.join("; ")}
+                                </p>
+                              )}
+                            </td>
+                          </tr>
                         ))}
-                      </ul>
-                    </div>
-                  )}
-                  <p role="status" className="text-sm font-medium">
-                    {uiText("{{count}} of 3 required objectives selected", {
-                      count: selectedObjectives.size,
-                    })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <div className="flex flex-col gap-3 border-t border-border pt-4">
+                  <h4 className="text-sm font-medium">
+                    {uiText("Publish readiness")}
+                  </h4>
+                  <ul className="flex flex-col gap-2 text-sm">
+                    {[
+                      [
+                        revision?.status === "draft" && !dirty,
+                        "Draft is saved and ready",
+                      ],
+                      [
+                        distinctPassed >= 3,
+                        "At least 3 distinct objectives passed",
+                      ],
+                      [allPassed, "No failed or pending evaluations"],
+                    ].map(([passed, label]) => (
+                      <li
+                        key={String(label)}
+                        className="flex items-center gap-2"
+                      >
+                        {passed ? (
+                          <Check
+                            aria-label={uiText("Passed")}
+                            className="size-4 shrink-0"
+                          />
+                        ) : (
+                          <Circle
+                            aria-label={uiText("Needs attention")}
+                            className="size-4 shrink-0 text-muted-foreground"
+                          />
+                        )}
+                        <span>{uiText(String(label))}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-muted-foreground">
+                    {uiText(
+                      "Publication creates a new available revision. Unpinned defaults adopt it for future tasks; pinned versions and existing runs stay unchanged.",
+                    )}
                   </p>
-                  {baselines.isPending && (
-                    <p role="status" className="text-sm text-muted-foreground">
-                      {uiText("Loading...")}
+                  {publish.error && (
+                    <p role="alert" className="text-sm text-destructive">
+                      {uiText(
+                        "Could not publish this revision. Refresh results and check the readiness list.",
+                      )}
                     </p>
                   )}
-                  {baselines.error && (
-                    <div
-                      role="alert"
-                      className="flex flex-col items-start gap-2 text-sm text-destructive"
+                  {publish.isSuccess && (
+                    <p role="status" className="text-sm">
+                      {uiText(
+                        "Revision published. Existing runs keep their original rules.",
+                      )}
+                    </p>
+                  )}
+                  <div className="flex justify-end">
+                    <Button
+                      disabled={!ready || busy || evaluations.isFetching}
+                      onClick={() => publish.mutate()}
                     >
-                      <p>
+                      {uiText(
+                        publish.isPending ? "Publishing…" : "Publish revision",
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                {revision?.status === "draft" && (
+                  <details className="border-t border-border pt-4">
+                    <summary className="cursor-pointer text-sm text-muted-foreground">
+                      {uiText("Advanced manual comparison")}
+                    </summary>
+                    <form
+                      noValidate
+                      className="flex flex-col gap-3 pt-4"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        const result =
+                          workflowEvaluationSchema.safeParse(manual);
+                        setManualInvalid(!result.success);
+                        if (result.success) evaluate.mutate(result.data);
+                      }}
+                    >
+                      <p className="text-xs text-muted-foreground">
                         {uiText(
-                          "Could not load baseline tasks. Retry the search.",
+                          "Compare matching frozen objectives only. Run IDs are available in each task's workflow details.",
                         )}
                       </p>
-                      <Button
-                        variant="outline"
-                        onClick={() => void baselines.refetch()}
-                      >
-                        {uiText("Retry")}
-                      </Button>
-                    </div>
-                  )}
-                  {baselines.data?.items.length === 0 && (
-                    <div className="flex flex-col gap-1 rounded-lg border border-dashed border-border p-5">
-                      <h4 className="text-sm font-medium">
-                        {uiText("No eligible baseline tasks")}
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        {uiText(
-                          "Complete successful tasks with this workflow first, or try another search. No tasks are started automatically.",
-                        )}
-                      </p>
-                    </div>
-                  )}
-                  <ul className="divide-y divide-border">
-                    {baselines.data?.items.map((item) => {
-                      const checked = selected.some(
-                        (row) => row.id === item.id,
-                      );
-                      const duplicate =
-                        !checked &&
-                        selectedObjectives.has(item.objectiveFingerprint);
-                      return (
-                        <li key={item.id}>
-                          <label className="flex cursor-pointer items-start gap-3 py-3">
-                            <Checkbox
-                              className="mt-1"
-                              checked={checked}
-                              disabled={
-                                busy ||
-                                duplicate ||
-                                (!checked && selected.length >= 10)
-                              }
-                              onCheckedChange={(checked) =>
-                                setSelected((current) => {
-                                  if (checked !== true)
-                                    return current.filter(
-                                      (row) => row.id !== item.id,
-                                    );
-                                  if (
-                                    current.length >= 10 ||
-                                    current.some(
-                                      (row) =>
-                                        row.objectiveFingerprint ===
-                                        item.objectiveFingerprint,
-                                    )
-                                  )
-                                    return current;
-                                  return [...current, item];
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        {(
+                          [
+                            "baselineRunId",
+                            "candidateRunId",
+                            "scenarioKey",
+                          ] as const
+                        ).map((key) => (
+                          <label
+                            key={key}
+                            className="flex min-w-0 flex-col gap-1 text-sm"
+                          >
+                            {uiText(
+                              key === "baselineRunId"
+                                ? "Baseline run ID"
+                                : key === "candidateRunId"
+                                  ? "Candidate run ID"
+                                  : "Scenario label",
+                            )}
+                            <Input
+                              value={manual[key]}
+                              onChange={(event) =>
+                                setManual({
+                                  ...manual,
+                                  [key]: event.target.value,
                                 })
                               }
                             />
-                            <span className="flex min-w-0 flex-1 flex-col gap-1">
-                              <span className="break-words text-sm font-medium">
-                                {item.objectiveTitle}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                <span className="font-mono">
-                                  {item.issueIdentifier}
-                                </span>{" "}
-                                ·{" "}
-                                {uiText("Completed {{date}}", {
-                                  date: formatDateTime(
-                                    item.finishedAt ?? item.createdAt,
-                                  ),
-                                })}
-                              </span>
-                              {duplicate && (
-                                <span className="text-xs text-muted-foreground">
-                                  {uiText("This objective is already selected")}
-                                </span>
-                              )}
-                            </span>
                           </label>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  {(offset > 0 || baselines.data?.hasMore) && (
-                    <div className="flex justify-between gap-2">
-                      <Button
-                        variant="ghost"
-                        disabled={offset === 0}
-                        onClick={() => setOffset(Math.max(0, offset - 20))}
-                      >
-                        {uiText("Previous page")}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        disabled={!baselines.data?.hasMore}
-                        onClick={() => setOffset(offset + 20)}
-                      >
-                        {uiText("Next page")}
-                      </Button>
-                    </div>
-                  )}
-                  <div className="flex flex-col gap-3 border-t border-border pt-4">
-                    <p className="text-xs text-muted-foreground">
-                      {uiText(
-                        "This starts real agent tasks and may incur usage costs. Existing budgets and workflow limits apply.",
+                        ))}
+                      </div>
+                      {(manualInvalid || evaluate.error) && (
+                        <p role="alert" className="text-sm text-destructive">
+                          {uiText(
+                            "Could not evaluate this pair. Check the run IDs and their frozen objectives.",
+                          )}
+                        </p>
                       )}
-                    </p>
-                    {trials.error && (
-                      <p role="alert" className="text-sm text-destructive">
-                        {uiText(
-                          "Could not start regressions. Your selection is preserved.",
-                        )}
-                      </p>
-                    )}
-                    <div className="flex justify-end">
-                      <Button
-                        disabled={!canRun || busy}
-                        onClick={() =>
-                          trials.mutate(selected.map((item) => item.id))
-                        }
-                      >
-                        {trials.isPending
-                          ? uiText("Starting regressions…")
-                          : uiText("Start {{count}} candidate tasks", {
-                              count: selected.length,
-                            })}
-                      </Button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </TabsContent>
-            <TabsContent value="publish" className="flex flex-col gap-4 pt-4">
-              {trials.isSuccess && (
-                <p role="status" className="text-sm">
-                  {uiText(
-                    "Candidate tasks started. Results update automatically.",
-                  )}
-                </p>
-              )}
-              {revision && (
-                <details className="text-sm">
-                  <summary className="cursor-pointer font-medium">
-                    {uiText("Saved improvement proposal")}
-                  </summary>
-                  <div className="flex flex-col gap-3 pt-3">
-                    <p className="whitespace-pre-wrap">{revision.rationale}</p>
-                    {revision.definition.improvement &&
-                      Object.entries(revision.definition.improvement).map(
-                        ([key, value]) => (
-                          <div key={key}>
-                            <p className="text-xs text-muted-foreground">
-                              {uiText(
-                                {
-                                  applicability:
-                                    "Applicable tasks and exclusions",
-                                  evidence:
-                                    "Observed problem and source evidence",
-                                  hypothesis:
-                                    "Proposed change and expected benefit",
-                                  validation:
-                                    "Validation plan and regression risks",
-                                }[key] ?? key,
-                              )}
-                            </p>
-                            <p className="whitespace-pre-wrap">{value}</p>
-                          </div>
-                        ),
+                      {evaluate.isSuccess && (
+                        <p role="status" className="text-sm">
+                          {uiText("Comparison saved. Review the result above.")}
+                        </p>
                       )}
-                  </div>
-                </details>
-              )}
-              <p className="text-xs text-muted-foreground">
-                {uiText(
-                  "Regression replay checks compatibility with known tasks. It does not prove improvement on unseen tasks; retain separate evaluation tasks before broad adoption.",
-                )}
-              </p>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold">
-                  {uiText("Regression results")}
-                </h3>
-                {revisionId && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => void evaluations.refetch()}
-                  >
-                    {uiText("Refresh results")}
-                  </Button>
-                )}
-              </div>
-              {evaluations.error && (
-                <p role="alert" className="text-sm text-destructive">
-                  {evaluations.error.message}
-                </p>
-              )}
-              {results.length === 0 ? (
-                <div className="flex flex-col gap-1 py-4">
-                  <h4 className="text-sm font-medium">
-                    {uiText("No regression results yet")}
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    {uiText(
-                      "Start regressions in the previous step, then review their evidence here.",
-                    )}
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead className="border-b border-border text-xs text-muted-foreground">
-                      <tr>
-                        <th className="p-2 font-medium">
-                          {uiText("Objective")}
-                        </th>
-                        <th className="p-2 font-medium">
-                          {uiText("Baseline task")}
-                        </th>
-                        <th className="p-2 font-medium">
-                          {uiText("Candidate task")}
-                        </th>
-                        <th className="p-2 font-medium">
-                          {uiText("Evaluation result")}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {results.map((result) => (
-                        <tr key={result.id}>
-                          <td className="p-2">
-                            <span className="break-words">
-                              {result.objectiveTitle ??
-                                selected.find(
-                                  (item) => item.id === result.baselineRunId,
-                                )?.objectiveTitle ??
-                                result.scenarioKey}
-                            </span>
-                          </td>
-                          <td className="p-2">
-                            {result.baselineIssueId ? (
-                              <Link
-                                className="underline underline-offset-4"
-                                to={`/issues/${result.baselineIssueId}`}
-                              >
-                                {uiText("Open task")}
-                              </Link>
-                            ) : (
-                              <span className="font-mono">
-                                {result.baselineRunId.slice(0, 8)}
-                              </span>
-                            )}
-                          </td>
-                          <td className="p-2">
-                            {result.candidateIssueId ? (
-                              <Link
-                                className="underline underline-offset-4"
-                                to={`/issues/${result.candidateIssueId}`}
-                              >
-                                {uiText("Open task")}
-                              </Link>
-                            ) : (
-                              <span className="font-mono">
-                                {result.candidateRunId.slice(0, 8)}
-                              </span>
-                            )}
-                          </td>
-                          <td className="p-2">
-                            <span className="font-medium">
-                              {uiText(
-                                result.passed
-                                  ? "Passed"
-                                  : result.findings.includes(
-                                        "Candidate execution pending",
-                                      )
-                                    ? "Waiting for results"
-                                    : "Needs attention",
-                              )}
-                            </span>
-                            {!result.passed && (
-                              <p className="text-xs text-muted-foreground">
-                                {result.findings.join("; ")}
-                              </p>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              <div className="flex flex-col gap-3 border-t border-border pt-4">
-                <h4 className="text-sm font-medium">
-                  {uiText("Publish readiness")}
-                </h4>
-                <ul className="flex flex-col gap-2 text-sm">
-                  {[
-                    [
-                      revision?.status === "draft" && !dirty,
-                      "Draft is saved and ready",
-                    ],
-                    [
-                      distinctPassed >= 3,
-                      "At least 3 distinct objectives passed",
-                    ],
-                    [allPassed, "No failed or pending evaluations"],
-                  ].map(([passed, label]) => (
-                    <li key={String(label)} className="flex items-center gap-2">
-                      {passed ? (
-                        <Check
-                          aria-label={uiText("Passed")}
-                          className="size-4 shrink-0"
-                        />
-                      ) : (
-                        <Circle
-                          aria-label={uiText("Needs attention")}
-                          className="size-4 shrink-0 text-muted-foreground"
-                        />
-                      )}
-                      <span>{uiText(String(label))}</span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-xs text-muted-foreground">
-                  {uiText(
-                    "Publication creates a new available revision. Unpinned defaults adopt it for future tasks; pinned versions and existing runs stay unchanged.",
-                  )}
-                </p>
-                {publish.error && (
-                  <p role="alert" className="text-sm text-destructive">
-                    {uiText(
-                      "Could not publish this revision. Refresh results and check the readiness list.",
-                    )}
-                  </p>
-                )}
-                {publish.isSuccess && (
-                  <p role="status" className="text-sm">
-                    {uiText(
-                      "Revision published. Existing runs keep their original rules.",
-                    )}
-                  </p>
-                )}
-                <div className="flex justify-end">
-                  <Button
-                    disabled={!ready || busy || evaluations.isFetching}
-                    onClick={() => publish.mutate()}
-                  >
-                    {uiText(
-                      publish.isPending ? "Publishing…" : "Publish revision",
-                    )}
-                  </Button>
-                </div>
-              </div>
-              {revision?.status === "draft" && (
-                <details className="border-t border-border pt-4">
-                  <summary className="cursor-pointer text-sm text-muted-foreground">
-                    {uiText("Advanced manual comparison")}
-                  </summary>
-                  <form
-                    noValidate
-                    className="flex flex-col gap-3 pt-4"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      const result = workflowEvaluationSchema.safeParse(manual);
-                      setManualInvalid(!result.success);
-                      if (result.success) evaluate.mutate(result.data);
-                    }}
-                  >
-                    <p className="text-xs text-muted-foreground">
-                      {uiText(
-                        "Compare matching frozen objectives only. Run IDs are available in each task's workflow details.",
-                      )}
-                    </p>
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      {(
-                        [
-                          "baselineRunId",
-                          "candidateRunId",
-                          "scenarioKey",
-                        ] as const
-                      ).map((key) => (
-                        <label
-                          key={key}
-                          className="flex min-w-0 flex-col gap-1 text-sm"
+                      <div className="flex justify-end">
+                        <Button
+                          variant="outline"
+                          disabled={busy || dirty}
+                          type="submit"
                         >
                           {uiText(
-                            key === "baselineRunId"
-                              ? "Baseline run ID"
-                              : key === "candidateRunId"
-                                ? "Candidate run ID"
-                                : "Scenario label",
+                            evaluate.isPending
+                              ? "Evaluating…"
+                              : "Evaluate comparison",
                           )}
-                          <Input
-                            value={manual[key]}
-                            onChange={(event) =>
-                              setManual({
-                                ...manual,
-                                [key]: event.target.value,
-                              })
-                            }
-                          />
-                        </label>
-                      ))}
-                    </div>
-                    {(manualInvalid || evaluate.error) && (
-                      <p role="alert" className="text-sm text-destructive">
-                        {uiText(
-                          "Could not evaluate this pair. Check the run IDs and their frozen objectives.",
-                        )}
-                      </p>
-                    )}
-                    {evaluate.isSuccess && (
-                      <p role="status" className="text-sm">
-                        {uiText("Comparison saved. Review the result above.")}
-                      </p>
-                    )}
-                    <div className="flex justify-end">
-                      <Button
-                        variant="outline"
-                        disabled={busy || dirty}
-                        type="submit"
-                      >
-                        {uiText(
-                          evaluate.isPending
-                            ? "Evaluating…"
-                            : "Evaluate comparison",
-                        )}
-                      </Button>
-                    </div>
-                  </form>
-                </details>
-              )}
-            </TabsContent>
-          </Tabs>
+                        </Button>
+                      </div>
+                    </form>
+                  </details>
+                )}
+              </TabsContent>
+            </Tabs>
+          )}
         </div>
       )}
     </section>

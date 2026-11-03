@@ -22,19 +22,22 @@ const kinds = {
 // 根据内容区域宽度切换整条流程，避免侧栏展开时挤压阶段列或中途折行。
 const layouts = {
   2: {
-    columns: "@2xl:grid-cols-2",
-    horizontal: "@2xl:block",
-    vertical: "@2xl:hidden",
+    columns: "@xl:grid-cols-2",
+    horizontal: "@xl:block",
+    vertical: "@xl:hidden",
+    nodes: "@xl:grid-cols-1",
   },
   3: {
-    columns: "@4xl:grid-cols-3",
-    horizontal: "@4xl:block",
-    vertical: "@4xl:hidden",
+    columns: "@3xl:grid-cols-3",
+    horizontal: "@3xl:block",
+    vertical: "@3xl:hidden",
+    nodes: "@3xl:grid-cols-1",
   },
   4: {
-    columns: "@5xl:grid-cols-4",
-    horizontal: "@5xl:block",
-    vertical: "@5xl:hidden",
+    columns: "@4xl:grid-cols-4",
+    horizontal: "@4xl:block",
+    vertical: "@4xl:hidden",
+    nodes: "@4xl:grid-cols-1",
   },
 };
 
@@ -54,7 +57,7 @@ export function WorkflowDiagram({ choice }: { choice: WorkflowChoice }) {
         className={cn("grid grid-cols-1 items-start gap-4", layout?.columns)}
       >
         {stages.map((nodes, index) => (
-          <li key={nodes[0].id} className="flex min-w-0 flex-col gap-3">
+          <li key={nodes[0].id} className="flex min-w-0 flex-col gap-2">
             <div className="flex min-h-6 items-center justify-between gap-2 text-xs text-muted-foreground">
               <div className="flex flex-wrap items-center gap-2">
                 <span>{uiText("Stage {{number}}", { number: index + 1 })}</span>
@@ -72,13 +75,19 @@ export function WorkflowDiagram({ choice }: { choice: WorkflowChoice }) {
                 />
               )}
             </div>
-            <div className="flex min-w-0 flex-col gap-3">
+            <div
+              className={cn(
+                "grid min-w-0 grid-cols-1 gap-2",
+                nodes.length > 1 && "@lg:grid-cols-2",
+                layout?.nodes,
+              )}
+            >
               {nodes.map((node) => {
                 const { icon: Icon, label } = kinds[node.kind];
                 return (
                   <div
                     key={node.id}
-                    className="flex min-h-36 min-w-0 flex-col gap-3 rounded-lg border border-border bg-background p-4"
+                    className="flex min-w-0 flex-col gap-2 rounded-lg border border-border bg-background p-3"
                   >
                     <div className="flex items-start gap-2">
                       <Icon
@@ -89,7 +98,7 @@ export function WorkflowDiagram({ choice }: { choice: WorkflowChoice }) {
                         {names.get(node.id)}
                       </h3>
                     </div>
-                    <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                       {names.get(node.id) !== uiText(label) && (
                         <p>{uiText(label)}</p>
                       )}

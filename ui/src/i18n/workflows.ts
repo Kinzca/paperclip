@@ -3,6 +3,20 @@ import { i18n } from "./index";
 // Keep this surface's copy together without changing the global UI catalog.
 const messages = {
   "Rule scope": "规则范围",
+  "Rule scope: {{scope}}": "规则范围：{{scope}}",
+  "Project rules: {{project}}": "项目规则：{{project}}",
+  "Edit rules: {{scope}}": "修改规则：{{scope}}",
+  "Use this workflow: {{name}}": "采用此工作流：{{name}}",
+  "Improve this workflow: {{name}}": "改进此工作流：{{name}}",
+  "Inherit: {{responsibility}}": "继承上级 · {{responsibility}}",
+  "Role: {{role}}": "角色 · {{role}}",
+  "Loading agent name…": "正在读取 Agent 名称…",
+  "Agent name unavailable": "Agent 名称暂不可用",
+  "Create a revision from {{workflow}}": "基于「{{workflow}}」创建修订",
+  "Start from the current workflow. Edit its execution instructions, then save a draft before validating and publishing.":
+    "从当前工作流创建修订，先编辑执行指令并保存草案，再进行验证与发布。",
+  "Select a saved draft above, or create a revision to start editing.":
+    "选择上方已有草案，或创建修订后开始编辑。",
   "How these rules apply": "规则适用说明",
   "System check": "系统自动核验",
   "Application development": "应用开发",

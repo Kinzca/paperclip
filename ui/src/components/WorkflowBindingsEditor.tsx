@@ -38,6 +38,18 @@ export function WorkflowBindingsEditor({
     queryKey: ["workflow-binding-agents", companyId, accountId],
     queryFn: () => agentsApi.list(companyId),
   });
+  function bindingLabel(binding: WorkflowBinding) {
+    if (binding.kind === "executor") return uiText("Task assignee");
+    if (binding.kind === "human") return uiText("Responsible human");
+    if (binding.kind === "role")
+      return uiText("Role: {{role}}", { role: uiText(binding.role) });
+    return (
+      roster.data?.find((agent) => agent.id === binding.agentId)?.name ??
+      uiText(
+        roster.isPending ? "Loading agent name…" : "Agent name unavailable",
+      )
+    );
+  }
   return (
     <fieldset disabled={disabled} className="flex flex-col gap-3">
       <legend className="pb-2 text-sm font-medium">
@@ -82,8 +94,11 @@ export function WorkflowBindingsEditor({
                   }}
                 >
                   <option value="">
-                    {uiText("Inherit")} ·{" "}
-                    {valueOf(inherited[node.id] ?? node.binding)}
+                    {uiText("Inherit: {{responsibility}}", {
+                      responsibility: bindingLabel(
+                        inherited[node.id] ?? node.binding,
+                      ),
+                    })}
                   </option>
                   <option value="human">{uiText("Responsible human")}</option>
                   {node.kind !== "approval" && (
@@ -103,7 +118,7 @@ export function WorkflowBindingsEditor({
                           (agent) => agent.id === selected.agentId,
                         ) && (
                           <option value={`agent:${selected.agentId}`}>
-                            {selected.agentId}
+                            {bindingLabel(selected)}
                           </option>
                         )}
                       {roster.data

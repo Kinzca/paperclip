@@ -125,6 +125,9 @@ function CompanyWorkflows({
   const [showValidation, setShowValidation] = useState(false);
   const [draftRequest, setDraftRequest] = useState<DraftRequest | null>(null);
   const editorHeading = useRef<HTMLHeadingElement>(null);
+  const editButton = useRef<HTMLButtonElement>(null);
+  const editOrigin = useRef<HTMLButtonElement | null>(null);
+  const wasEditing = useRef(editing);
   const config = useQuery({
     queryKey: ["workflows", companyId, accountId],
     queryFn: ({ signal }) => workflowsApi.configuration(companyId, { signal }),
@@ -177,6 +180,14 @@ function CompanyWorkflows({
   }, [dirty]);
   useEffect(() => {
     if (editing) editorHeading.current?.focus();
+    else if (wasEditing.current) {
+      const origin = editOrigin.current;
+      (origin?.isConnected && !origin.disabled
+        ? origin
+        : editButton.current
+      )?.focus();
+    }
+    wasEditing.current = editing;
   }, [editing]);
 
   const save = useMutation({
@@ -192,7 +203,8 @@ function CompanyWorkflows({
       setEditing(false);
     },
   });
-  function editRules(templateKey?: string) {
+  function editRules(templateKey?: string, origin?: HTMLButtonElement) {
+    editOrigin.current = origin ?? editButton.current;
     const next = workflowDraftFromPolicy(policy?.policy);
     if (templateKey) {
       next.templateKey = templateKey;
@@ -238,9 +250,14 @@ function CompanyWorkflows({
 
   const data = config.data;
   const choices = workflowChoices(data);
-  const scopeLabel = uiText(
-    projectId ? "Project defaults" : "Company defaults",
-  );
+  const projectName = projects.data?.find(
+    (project) => project.id === projectId,
+  )?.name;
+  const scopeLabel =
+    projectId && projectName
+      ? uiText("Project rules: {{project}}", { project: projectName })
+      : uiText(projectId ? "Project defaults" : "Company defaults");
+  const editorTitle = uiText("Edit rules: {{scope}}", { scope: scopeLabel });
   const companyPolicy = data.policies.find((row) => row.scope === "company");
   const layers = [
     { name: uiText("Platform defaults"), policy: data.platform.policy },
@@ -319,14 +336,26 @@ function CompanyWorkflows({
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             disabled={editing}
-            onClick={() => editRules(choice.definition.key)}
+            aria-label={uiText("Use this workflow: {{name}}", {
+              name: name(choice),
+            })}
+            onClick={(event) =>
+              editRules(choice.definition.key, event.currentTarget)
+            }
           >
             {uiText("Use this workflow")}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => prepare(choice)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={uiText("Improve this workflow: {{name}}", {
+              name: name(choice),
+            })}
+            onClick={() => prepare(choice)}
+          >
             {uiText("Improve this workflow")}
           </Button>
         </div>
@@ -376,7 +405,11 @@ function CompanyWorkflows({
           </div>
         </div>
         {!editing && (
-          <Button variant="outline" onClick={() => editRules()}>
+          <Button
+            ref={editButton}
+            variant="outline"
+            onClick={(event) => editRules(undefined, event.currentTarget)}
+          >
             <Pencil aria-hidden="true" />
             {uiText("Edit rules")}
           </Button>
@@ -452,35 +485,10 @@ function CompanyWorkflows({
             </div>
           </div>
         </div>
-        {activeChoice && (
-          <WorkflowDiagram
-            choice={{
-              ...activeChoice,
-              definition: {
-                ...activeChoice.definition,
-                nodes: activeChoice.definition.nodes.map((node) => ({
-                  ...node,
-                  binding: preview.bindings[node.id] ?? node.binding,
-                })),
-              },
-            }}
-          />
-        )}
-        {preview.context.length > 0 && (
-          <details className="text-sm">
-            <summary className="cursor-pointer text-muted-foreground">
-              {uiText("Effective execution context")}
-            </summary>
-            <div className="flex flex-col gap-3 pt-3">
-              {preview.context.map((text, index) => (
-                <p key={index} className="whitespace-pre-wrap">
-                  {text}
-                </p>
-              ))}
-            </div>
-          </details>
-        )}
-        <dl className="grid gap-4 border-y border-border py-4 sm:grid-cols-2 lg:grid-cols-4">
+        <dl
+          aria-label={uiText("Execution limits")}
+          className="grid gap-4 border-y border-border py-4 sm:grid-cols-2 lg:grid-cols-4"
+        >
           {workflowLimitFields.map((field) => {
             const source =
               layers.find(
@@ -512,6 +520,34 @@ function CompanyWorkflows({
             );
           })}
         </dl>
+        {activeChoice && (
+          <WorkflowDiagram
+            choice={{
+              ...activeChoice,
+              definition: {
+                ...activeChoice.definition,
+                nodes: activeChoice.definition.nodes.map((node) => ({
+                  ...node,
+                  binding: preview.bindings[node.id] ?? node.binding,
+                })),
+              },
+            }}
+          />
+        )}
+        {preview.context.length > 0 && (
+          <details className="text-sm">
+            <summary className="cursor-pointer text-muted-foreground">
+              {uiText("Effective execution context")}
+            </summary>
+            <div className="flex flex-col gap-3 pt-3">
+              {preview.context.map((text, index) => (
+                <p key={index} className="whitespace-pre-wrap">
+                  {text}
+                </p>
+              ))}
+            </div>
+          </details>
+        )}
         <details className="text-xs text-muted-foreground">
           <summary className="cursor-pointer">
             {uiText("How these rules apply")}
@@ -560,7 +596,7 @@ function CompanyWorkflows({
               tabIndex={-1}
               className="text-base font-semibold outline-none"
             >
-              {uiText("Change defaults")}
+              {editorTitle}
             </h2>
             <p className="text-sm text-muted-foreground">
               {uiText(
@@ -572,7 +608,7 @@ function CompanyWorkflows({
             disabled={save.isPending}
             className="grid min-w-0 gap-4 sm:grid-cols-2"
           >
-            <legend className="sr-only">{uiText("Change defaults")}</legend>
+            <legend className="sr-only">{editorTitle}</legend>
             <div className="flex min-w-0 flex-col gap-1.5 text-sm">
               <span>{uiText("Template")}</span>
               <Select
@@ -794,23 +830,28 @@ function CompanyWorkflows({
             </div>
           )}
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={save.isPending}
-              onClick={() => {
-                setEditing(false);
-                save.reset();
-              }}
-            >
-              {uiText("Discard changes")}
-            </Button>
-            <Button
-              type="submit"
-              disabled={!dirty || save.isPending || changedElsewhere}
-            >
-              {uiText(save.isPending ? "Saving rules…" : "Save rules")}
-            </Button>
+            <p className="min-w-0 break-words text-sm text-muted-foreground">
+              {uiText("Rule scope: {{scope}}", { scope: scopeLabel })}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={save.isPending}
+                onClick={() => {
+                  setEditing(false);
+                  save.reset();
+                }}
+              >
+                {uiText("Discard changes")}
+              </Button>
+              <Button
+                type="submit"
+                disabled={!dirty || save.isPending || changedElsewhere}
+              >
+                {uiText(save.isPending ? "Saving rules…" : "Save rules")}
+              </Button>
+            </div>
           </div>
         </form>
       )}
@@ -849,6 +890,7 @@ function CompanyWorkflows({
         companyId={companyId}
         accountId={accountId}
         config={data}
+        currentChoice={activeChoice}
         request={draftRequest}
         onCreate={() => activeChoice && prepare(activeChoice)}
       />
