@@ -2,6 +2,31 @@ import { i18n } from "./index";
 
 // Keep this surface's copy together without changing the global UI catalog.
 const messages = {
+  "Platform limits": "平台上限",
+  "Applies to new workflows in every company. Company and project rules may lower these limits. Existing tasks keep their original allowance.":
+    "适用于所有公司的新工作流。公司和项目可以收紧额度，已有任务保留原额度。",
+  "Attempts per stage": "每阶段最多尝试次数",
+  "Active execution minutes": "累计执行时长（分钟）",
+  "Recorded cost ceiling (cents, optional)": "已记录费用上限（美分，可留空）",
+  "Human-only acceptance waits do not consume execution time. Manual grants apply to one stopped task and remain subject to company budgets.":
+    "仅等待人工审查或验收时不消耗执行时长。人工追加仅作用于单个暂停的任务，仍受公司预算约束。",
+  "Check the limit values.":
+    "请检查额度：次数 1–10，分钟 1–1440，并发 1–10，费用留空或 1–1000000 美分。",
+  "Save platform limits": "保存平台上限",
+  "Waiting for human acceptance — execution clock stopped.":
+    "正在等待人工审查或验收，执行计时已暂停。",
+  "Repeated failure detected at {{node}} ({{count}} times). Inspect the evidence before continuing.":
+    "阶段 {{node}} 连续 {{count}} 次出现相同失败信号，请查看证据后决定是否继续。",
+  "Add allowance and resume": "追加额度并续跑",
+  "Add to this task only; original rules and evidence are retained. Total ceiling: 10 attempts per stage, 1440 minutes, 1000000 cents. Enter a reason above.":
+    "仅追加当前任务的额度，保留原规则与证据。累计最多每阶段 10 次、1440 分钟、1000000 美分。请在上方填写原因。",
+  "Additional attempts per stage": "每阶段追加次数",
+  "Additional execution minutes": "追加执行时长（分钟）",
+  "Additional recorded cost (cents)": "追加已记录费用额度（美分）",
+  "Manual allowance history": "人工追加记录",
+  "Added: {{attempts}} attempts, {{minutes}} minutes, {{cost}} cents":
+    "追加 {{attempts}} 次尝试、{{minutes}} 分钟、{{cost}} 美分",
+
   "Rule scope": "规则范围",
   "Rule scope: {{scope}}": "规则范围：{{scope}}",
   "Project rules: {{project}}": "项目规则：{{project}}",

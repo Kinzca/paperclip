@@ -21,6 +21,11 @@ import {
   workflowRepairNodes,
   workflowAncestorIds,
   workflowReviewError,
+  workflowReviewReportSchema,
+  workflowBudgetExtensionSchema,
+  workflowLimitsSchema,
+  effectiveWorkflowLimits,
+  type WorkflowControl,
   type WorkflowReviewReport,
 } from "@paperclipai/shared";
 import { conflict, forbidden, notFound, unprocessable } from "../../errors.js";
@@ -46,6 +51,12 @@ import {
   workflowHandoffInstructions,
   workflowReviewFeedback,
 } from "./handoff.js";
+import {
+  settleHumanWait,
+  updateHumanWait,
+  recordWorkflowFailure,
+  REPEATED_FAILURE_LIMIT,
+} from "./runtime.js";
 
 type Run = typeof workflowRuns.$inferSelect;
 type Attempt = typeof workflowNodeAttempts.$inferSelect;
@@ -78,6 +89,11 @@ export function workflowEngine(db: Db, effects: Effects) {
   let nextDeadline: number | null = null;
 
   async function save(tx: Transaction, run: Run) {
+    updateHumanWait(run);
+    for (const [id, node] of Object.entries(run.nodes)) {
+      if (node.status === "passed" && run.runtime.repeatedFailures)
+        delete run.runtime.repeatedFailures[id];
+    }
     run.version += 1;
     run.updatedAt = new Date();
     await tx
@@ -86,6 +102,7 @@ export function workflowEngine(db: Db, effects: Effects) {
         status: run.status,
         version: run.version,
         nodes: run.nodes,
+        runtime: run.runtime,
         stopReason: run.stopReason,
         pauseHoldId: run.pauseHoldId,
         cancelRunIds: run.cancelRunIds,
@@ -213,6 +230,7 @@ export function workflowEngine(db: Db, effects: Effects) {
   }
 
   async function stop(context: WorkflowTransaction, run: Run, reason: string) {
+    settleHumanWait(run);
     const { tx } = context;
     run.status = "waiting_human";
     run.stopReason = reason;
@@ -267,14 +285,52 @@ export function workflowEngine(db: Db, effects: Effects) {
     reason: string,
   ) {
     const { tx } = context;
+    const [attemptEvidence] = await tx
+      .select({ evidence: workflowNodeAttempts.evidence })
+      .from(workflowNodeAttempts)
+      .where(
+        and(
+          eq(workflowNodeAttempts.runId, run.id),
+          eq(workflowNodeAttempts.nodeId, nodeId),
+          eq(workflowNodeAttempts.attempt, run.nodes[nodeId].attempt),
+        ),
+      );
+    const report = workflowReviewReportSchema.safeParse(
+      attemptEvidence?.evidence?.report,
+    );
+    const repeated = recordWorkflowFailure(
+      run.runtime,
+      nodeId,
+      run.nodes[nodeId].attempt,
+      reason,
+      report.success ? report.data : undefined,
+    );
     await failAttempt(tx, run, nodeId, reason);
+    if (repeated) {
+      await stop(context, run, `Repeated failure detected: ${nodeId}`);
+      await context.activity({
+        companyId: run.companyId,
+        actorType: "system",
+        actorId: "native-workflows",
+        action: "workflow.repeated_failure_detected",
+        entityType: "issue",
+        entityId: run.issueId,
+        details: {
+          workflowRunId: run.id,
+          nodeId,
+          ...run.runtime.repeatedFailures?.[nodeId],
+        },
+      });
+      return;
+    }
     const node = run.snapshot.definition.nodes.find(
       (item) => item.id === nodeId,
     )!;
     const target = node.onFailure ?? (node.kind === "task" ? node.id : null);
     if (
       !target ||
-      run.nodes[target].attempt >= run.snapshot.limits.maxAttempts
+      run.nodes[target].attempt >=
+        effectiveWorkflowLimits(run.snapshot, run.runtime).maxAttempts
     ) {
       await stop(context, run, `Retry limit reached: ${reason}`);
       return;
@@ -597,7 +653,9 @@ export function workflowEngine(db: Db, effects: Effects) {
       if (!run.startedAt) {
         run.startedAt = new Date();
         run.deadlineAt = new Date(
-          Date.now() + run.snapshot.limits.timeoutMinutes * 60_000,
+          Date.now() +
+            effectiveWorkflowLimits(run.snapshot, run.runtime).timeoutMinutes *
+              60_000,
         );
         run.status = "running";
         await context.updateIssue(parent.id, {
@@ -605,12 +663,17 @@ export function workflowEngine(db: Db, effects: Effects) {
           companyGuard: run.companyId,
         });
       }
+      settleHumanWait(run);
       if (run.deadlineAt.getTime() <= Date.now()) {
         await stop(context, run, "Workflow deadline reached");
         await save(tx, run);
         return;
       }
-      if (run.snapshot.limits.maxCostCents !== null) {
+      const effectiveLimits = effectiveWorkflowLimits(
+        run.snapshot,
+        run.runtime,
+      );
+      if (effectiveLimits.maxCostCents !== null) {
         const taskIds = (
           await issueTreeControlService(tx as unknown as Db).listTreeIssues(
             run.companyId,
@@ -640,7 +703,7 @@ export function workflowEngine(db: Db, effects: Effects) {
           await save(tx, run);
           return;
         }
-        if (Number(spend?.cents ?? 0) >= run.snapshot.limits.maxCostCents) {
+        if (Number(spend?.cents ?? 0) >= effectiveLimits.maxCostCents) {
           await stop(context, run, "Workflow cost ceiling reached");
           await save(tx, run);
           return;
@@ -997,7 +1060,7 @@ export function workflowEngine(db: Db, effects: Effects) {
             });
           }
         }
-        if (current.attempt >= run.snapshot.limits.maxAttempts) {
+        if (current.attempt >= effectiveLimits.maxAttempts) {
           await stop(context, run, `Retry limit reached: ${node.id}`);
           break;
         }
@@ -1353,6 +1416,7 @@ export function workflowEngine(db: Db, effects: Effects) {
                 eq(workflowRuns.needsReconcile, true),
                 and(
                   eq(workflowRuns.status, "running"),
+                  sql`${workflowRuns.runtime}->>'humanWaitStartedAt' is null`,
                   lte(workflowRuns.deadlineAt, new Date()),
                 ),
                 sql`exists (select 1 from ${workflowNodeAttempts} where ${workflowNodeAttempts.runId} = ${workflowRuns.id} and ${workflowNodeAttempts.status} = 'running' and ${workflowNodeAttempts.leaseExpiresAt} <= now())`,
@@ -1372,7 +1436,12 @@ export function workflowEngine(db: Db, effects: Effects) {
           deadline: sql<string | null>`min(${workflowRuns.deadlineAt})`,
         })
         .from(workflowRuns)
-        .where(eq(workflowRuns.status, "running"));
+        .where(
+          and(
+            eq(workflowRuns.status, "running"),
+            sql`${workflowRuns.runtime}->>'humanWaitStartedAt' is null`,
+          ),
+        );
       const [lease] = await db
         .select({
           deadline: sql<
@@ -1541,6 +1610,11 @@ export function workflowEngine(db: Db, effects: Effects) {
           );
         const reportError = workflowReviewError(input.outcome, input.report);
         if (reportError) throw unprocessable(reportError);
+        settleHumanWait(run);
+        if (run.deadlineAt.getTime() <= Date.now())
+          throw conflict(
+            "Workflow time allowance is exhausted; ask an operator to add time",
+          );
         const feedback = workflowReviewFeedback(input.comment, input.report);
         state.status =
           input.outcome === "passed" && actor.agentId
@@ -1605,11 +1679,7 @@ export function workflowEngine(db: Db, effects: Effects) {
     async control(
       companyId: string,
       issueId: string,
-      input: {
-        action: "pause" | "resume" | "cancel" | "retry";
-        expectedVersion: number;
-        reason: string;
-      },
+      input: WorkflowControl,
       userId: string,
     ) {
       const result = await workflowTransaction(db, async (context) => {
@@ -1635,6 +1705,7 @@ export function workflowEngine(db: Db, effects: Effects) {
           ["succeeded", "cancelled"].includes(run.status)
         )
           throw conflict("Workflow changed or has finished");
+        settleHumanWait(run);
         if (input.action === "pause" || input.action === "cancel") {
           run.status = input.action === "pause" ? "paused" : "cancelled";
           run.stopReason = input.reason;
@@ -1647,12 +1718,53 @@ export function workflowEngine(db: Db, effects: Effects) {
         } else {
           if (!["paused", "waiting_human"].includes(run.status))
             throw conflict("Only stopped workflows may be resumed");
+          if (input.action === "extend") {
+            const parsed = workflowBudgetExtensionSchema.safeParse(
+              input.extension,
+            );
+            if (!parsed.success)
+              throw unprocessable(
+                "Add a positive, valid allowance before resuming",
+              );
+            const grant = {
+              ...parsed.data,
+              id: randomUUID(),
+              userId,
+              reason: input.reason,
+              grantedAt: new Date().toISOString(),
+            };
+            const before = effectiveWorkflowLimits(run.snapshot, run.runtime);
+            if (before.maxCostCents === null && grant.additionalCostCents)
+              throw unprocessable(
+                "This workflow has no additional cost ceiling to extend",
+              );
+            run.runtime.grants = [...(run.runtime.grants ?? []), grant];
+            const after = effectiveWorkflowLimits(run.snapshot, run.runtime);
+            if (!workflowLimitsSchema.safeParse(after).success)
+              throw unprocessable(
+                "Total allowances must stay within 10 attempts, 1440 minutes and $10000",
+              );
+            if (grant.additionalMinutes > 0)
+              run.deadlineAt = new Date(
+                Math.max(run.deadlineAt.getTime(), run.updatedAt.getTime()) +
+                  grant.additionalMinutes * 60_000,
+              );
+            await context.activity({
+              companyId,
+              actorType: "user",
+              actorId: userId,
+              action: "workflow.allowance_extended",
+              entityType: "issue",
+              entityId: issueId,
+              details: { workflowRunId: run.id, grant, before, after },
+            });
+          }
           if (
             run.startedAt &&
             run.deadlineAt.getTime() <= run.updatedAt.getTime()
           )
             throw conflict(
-              "The immutable deadline is exhausted; create a new authorized task",
+              "The time allowance is exhausted; add time to continue this task",
             );
           run.deadlineAt = new Date(
             run.deadlineAt.getTime() + Date.now() - run.updatedAt.getTime(),
@@ -1677,6 +1789,26 @@ export function workflowEngine(db: Db, effects: Effects) {
           }
           run.status = "running";
           run.stopReason = null;
+          for (const [nodeId, failure] of Object.entries(
+            run.runtime.repeatedFailures ?? {},
+          )) {
+            if (failure.consecutive < REPEATED_FAILURE_LIMIT) continue;
+            await context.activity({
+              companyId,
+              actorType: "user",
+              actorId: userId,
+              action: "workflow.repeated_failure_acknowledged",
+              entityType: "issue",
+              entityId: issueId,
+              details: {
+                workflowRunId: run.id,
+                nodeId,
+                reason: input.reason,
+                failure: { ...failure },
+              },
+            });
+            failure.consecutive = 0;
+          }
           if (!(await resumeInterruptedNodes(context, run)))
             throw conflict(
               "The previous executor is still stopping; retry after it settles",
@@ -1688,11 +1820,18 @@ export function workflowEngine(db: Db, effects: Effects) {
                 node.status === "running" &&
                 !node.issueId)
             ) {
-              if (node.attempt >= run.snapshot.limits.maxAttempts)
+              if (
+                node.attempt >=
+                effectiveWorkflowLimits(run.snapshot, run.runtime).maxAttempts
+              )
                 throw conflict(
-                  "The immutable retry ceiling is exhausted; create a new authorized task",
+                  "The retry ceiling is exhausted; add attempts to continue this task",
                 );
               await repair(context, run, id, input.reason);
+              if (["waiting_human"].includes(run.status))
+                throw conflict(
+                  "The repair target needs additional attempts before this task can continue",
+                );
             }
           }
         }

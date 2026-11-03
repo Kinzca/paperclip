@@ -193,6 +193,9 @@ export function workflowRoutes(
     res.json({
       ...templates,
       platform: { version: platform.version, policy: platform.policy },
+      canManagePlatformDefaults:
+        req.actor.type === "board" &&
+        (req.actor.source === "local_implicit" || !!req.actor.isInstanceAdmin),
       policies: policies.filter(
         (policy) => !policy.projectId || projectIds.has(policy.projectId),
       ),
@@ -570,6 +573,7 @@ function publicRun(run: typeof workflowRuns.$inferSelect) {
     status: run.status,
     version: run.version,
     snapshot: run.snapshot,
+    runtime: run.runtime,
     nodes: run.nodes,
     stopReason: run.stopReason,
     deadlineAt: run.deadlineAt,

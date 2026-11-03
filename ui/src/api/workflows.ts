@@ -7,6 +7,7 @@ import type {
   WorkflowRunDetail,
   WorkflowTemplate,
   WorkflowBaselinePage,
+  WorkflowControl,
 } from "@paperclipai/shared";
 import { api, detachInflightGet, type RequestOptions } from "./client";
 
@@ -18,12 +19,24 @@ function accountScopedGet<T>(path: string, options?: RequestOptions) {
 }
 
 export interface WorkflowConfiguration {
+  canManagePlatformDefaults?: boolean;
   platform: { version: number; policy: WorkflowPolicy };
   builtIn: WorkflowTemplate[];
   revisions: WorkflowRevision[];
   policies: WorkflowPolicyRecord[];
 }
 export const workflowsApi = {
+  platform: () =>
+    accountScopedGet<{
+      version: number;
+      policy: WorkflowPolicy;
+      allowHostCommands: boolean;
+    }>("/instance/workflows/defaults"),
+  savePlatform: (input: {
+    expectedVersion: number;
+    policy: WorkflowPolicy;
+    allowHostCommands: boolean;
+  }) => api.put("/instance/workflows/defaults", input),
   configuration: (companyId: string, options?: RequestOptions) =>
     accountScopedGet<WorkflowConfiguration>(
       `/companies/${companyId}/workflows`,
@@ -95,14 +108,8 @@ export const workflowsApi = {
     ),
   run: (issueId: string) =>
     api.get<WorkflowRunDetail | null>(`/issues/${issueId}/workflow`),
-  control: (
-    issueId: string,
-    input: {
-      expectedVersion: number;
-      action: "pause" | "resume" | "retry" | "cancel";
-      reason: string;
-    },
-  ) => api.post(`/issues/${issueId}/workflow/control`, input),
+  control: (issueId: string, input: WorkflowControl) =>
+    api.post(`/issues/${issueId}/workflow/control`, input),
   decide: (
     issueId: string,
     input: {

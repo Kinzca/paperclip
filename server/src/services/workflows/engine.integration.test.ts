@@ -315,7 +315,7 @@ suite("native workflow execution", () => {
       },
       context.userId,
     );
-    expect((await context.read()).snapshot.limits.maxAttempts).toBe(3);
+    expect((await context.read()).snapshot.limits.maxAttempts).toBe(5);
     const next = await issueService(db).create(context.companyId, {
       title: "Next task",
       status: "todo",
@@ -1191,4 +1191,269 @@ suite("native workflow execution", () => {
     ).toBe("published");
     expect((await context.read()).snapshot.revisionId).toBeNull();
   }, 45_000);
+
+  it("人工验收跨长时间等待仍可决定，冻结时不被超时扫描停止", async () => {
+    const context = await setup();
+    const original = await context.read();
+    original.snapshot.definition.nodes.find(
+      (node) => node.id === "review",
+    )!.binding = { kind: "human" };
+    original.nodes.review.agentId = null;
+    original.nodes.review.userId = context.userId;
+    await db
+      .update(workflowRuns)
+      .set({ snapshot: original.snapshot, nodes: original.nodes })
+      .where(eq(workflowRuns.id, original.id));
+    await context.engine.sweepPending();
+    await completeExecution(context);
+    const waiting = await context.read();
+    expect(waiting.nodes.review.userId).toBe(context.userId);
+    expect(waiting.runtime.humanWaitStartedAt).toBeTruthy();
+    // 模拟两小时人工等待，开始等待时还有一分钟执行额度。
+    const started = Date.now() - 7_200_000;
+    await db
+      .update(workflowRuns)
+      .set({
+        deadlineAt: new Date(started + 60_000),
+        runtime: {
+          ...waiting.runtime,
+          humanWaitStartedAt: new Date(started).toISOString(),
+        },
+        needsReconcile: false,
+      })
+      .where(eq(workflowRuns.id, waiting.id));
+    await context.engine.sweepPending();
+    expect((await context.read()).status).toBe("running");
+    await expect(
+      assertWorkflowIssueExecutionAllowed(
+        db,
+        context.companyId,
+        waiting.nodes.review.issueId!,
+      ),
+    ).resolves.toBeUndefined();
+    await context.engine.decide(
+      context.companyId,
+      context.parent.id,
+      {
+        expectedVersion: waiting.version,
+        nodeId: "review",
+        attempt: waiting.nodes.review.attempt,
+        outcome: "passed",
+        comment: "人工完成独立验收",
+      },
+      { userId: context.userId, agentId: null, runId: null },
+    );
+    await context.engine.sweepPending();
+    const completed = await context.read();
+    expect(completed.status).toBe("succeeded");
+    expect(completed.runtime.humanWaitStartedAt).toBeUndefined();
+    expect(completed.deadlineAt.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it("超时后追加时间续跑原任务，保留快照并拒绝重复版本与超额授权", async () => {
+    const context = await setup();
+    await context.engine.sweepPending();
+    const original = await context.read();
+    await db
+      .update(workflowRuns)
+      .set({ deadlineAt: new Date(Date.now() - 1000), needsReconcile: true })
+      .where(eq(workflowRuns.id, original.id));
+    await context.engine.sweepPending();
+    const stopped = await context.read();
+    const input = {
+      action: "extend" as const,
+      expectedVersion: stopped.version,
+      reason: "人工同意追加半小时",
+      extension: {
+        additionalAttempts: 1,
+        additionalMinutes: 30,
+        additionalCostCents: 0,
+      },
+    };
+    await expect(
+      context.engine.control(
+        context.companyId,
+        context.parent.id,
+        { ...input, extension: { ...input.extension, additionalAttempts: 9 } },
+        context.userId,
+      ),
+    ).rejects.toThrow("Total allowances");
+    expect((await context.read()).runtime.grants).toBeUndefined();
+    await context.engine.control(
+      context.companyId,
+      context.parent.id,
+      input,
+      context.userId,
+    );
+    const resumed = await context.read();
+    expect(resumed.id).toBe(original.id);
+    expect(resumed.snapshot).toEqual(original.snapshot);
+    expect(resumed.nodes.execute.issueId).toBe(original.nodes.execute.issueId);
+    expect(resumed.status).toBe("running");
+    expect(resumed.deadlineAt.getTime() - Date.now()).toBeGreaterThan(
+      29 * 60_000,
+    );
+    expect(resumed.runtime.grants).toHaveLength(1);
+    expect(resumed.runtime.grants![0].userId).toBe(context.userId);
+    await expect(
+      context.engine.control(
+        context.companyId,
+        context.parent.id,
+        input,
+        context.userId,
+      ),
+    ).rejects.toThrow("changed");
+  });
+
+  it("重试耗尽后可增加次数，继续新的尝试且保留失败证据", async () => {
+    const context = await setup();
+    const original = await context.read();
+    original.snapshot.limits.maxAttempts = 1;
+    await db
+      .update(workflowRuns)
+      .set({ snapshot: original.snapshot, nodes: original.nodes })
+      .where(eq(workflowRuns.id, original.id));
+    await context.engine.sweepPending();
+    const running = await context.read();
+    await db.insert(heartbeatRuns).values({
+      companyId: context.companyId,
+      agentId: context.executor,
+      issueId: running.nodes.execute.issueId,
+      status: "failed",
+      error: "compile failed",
+    });
+    await context.store.markIssueChanged(
+      context.companyId,
+      running.nodes.execute.issueId!,
+    );
+    await context.engine.sweepPending();
+    const stopped = await context.read();
+    expect(stopped.status).toBe("waiting_human");
+    await expect(
+      context.engine.control(
+        context.companyId,
+        context.parent.id,
+        {
+          action: "resume",
+          expectedVersion: stopped.version,
+          reason: "普通恢复不增加额度",
+        },
+        context.userId,
+      ),
+    ).rejects.toThrow("retry ceiling");
+    await context.engine.control(
+      context.companyId,
+      context.parent.id,
+      {
+        action: "extend",
+        expectedVersion: stopped.version,
+        reason: "允许一次修复",
+        extension: {
+          additionalAttempts: 1,
+          additionalMinutes: 0,
+          additionalCostCents: 0,
+        },
+      },
+      context.userId,
+    );
+    await context.engine.sweepPending();
+    const resumed = await context.read();
+    expect(resumed.nodes.execute.attempt).toBe(2);
+    expect(resumed.nodes.execute.issueId).not.toBe(
+      running.nodes.execute.issueId,
+    );
+    expect(resumed.snapshot.limits.maxAttempts).toBe(1);
+    const evidence = await db
+      .select()
+      .from(workflowNodeAttempts)
+      .where(
+        and(
+          eq(workflowNodeAttempts.runId, running.id),
+          eq(workflowNodeAttempts.nodeId, "execute"),
+        ),
+      );
+    expect(evidence.find((attempt) => attempt.attempt === 1)?.status).toBe(
+      "failed",
+    );
+  });
+
+  it("相同错误连续三次转人工，人工确认后不会重新累计旧失败", async () => {
+    const context = await setup();
+    await context.engine.sweepPending();
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const running = await context.read();
+      expect(running.nodes.execute.attempt).toBe(attempt);
+      await db.insert(heartbeatRuns).values({
+        companyId: context.companyId,
+        agentId: context.executor,
+        issueId: running.nodes.execute.issueId,
+        status: "failed",
+        error: "unchanged build failure",
+      });
+      await context.store.markIssueChanged(
+        context.companyId,
+        running.nodes.execute.issueId!,
+      );
+      await context.engine.sweepPending();
+    }
+    const stopped = await context.read();
+    expect(stopped.status).toBe("waiting_human");
+    expect(stopped.stopReason).toContain("Repeated failure");
+    expect(stopped.runtime.repeatedFailures?.execute.consecutive).toBe(3);
+    await context.engine.control(
+      context.companyId,
+      context.parent.id,
+      {
+        action: "resume",
+        expectedVersion: stopped.version,
+        reason: "已修复外部依赖，继续尝试",
+      },
+      context.userId,
+    );
+    await context.engine.sweepPending();
+    const resumed = await context.read();
+    expect(resumed.status).toBe("running");
+    expect(resumed.nodes.execute.attempt).toBe(4);
+    expect(resumed.runtime.repeatedFailures?.execute.consecutive).toBe(0);
+  });
+
+  it("Agent 不能修改平台上限或自行追加额度", async () => {
+    const context = await setup();
+    const app = express();
+    app.use(express.json());
+    app.use((req, _res, next) => {
+      req.actor = {
+        type: "agent",
+        agentId: context.executor,
+        companyId: context.companyId,
+      };
+      next();
+    });
+    app.use("/api", workflowRoutes(db, context.engine));
+    app.use(errorHandler);
+    const run = await context.read();
+    expect(
+      (
+        await request(app)
+          .put("/api/instance/workflows/defaults")
+          .send({
+            expectedVersion: 1,
+            policy: { limits: { maxAttempts: 10 } },
+            allowHostCommands: false,
+          })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await request(app)
+          .post(`/api/issues/${context.parent.id}/workflow/control`)
+          .send({
+            action: "extend",
+            expectedVersion: run.version,
+            reason: "不能自行授权",
+            extension: { additionalMinutes: 30 },
+          })
+      ).status,
+    ).toBe(403);
+  });
 });

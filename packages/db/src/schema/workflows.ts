@@ -18,6 +18,7 @@ import type {
   WorkflowSnapshot,
   WorkflowNodeState,
   WorkflowTemplate,
+  WorkflowRuntimeState,
 } from "@paperclipai/shared";
 import { companies } from "./companies.js";
 import { projects } from "./projects.js";
@@ -102,6 +103,10 @@ export const workflowRuns = pgTable(
     status: text("status").notNull().default("pending"),
     version: integer("version").notNull().default(1),
     snapshot: jsonb("snapshot").$type<WorkflowSnapshot>().notNull(),
+    runtime: jsonb("runtime")
+      .$type<WorkflowRuntimeState>()
+      .notNull()
+      .default({}),
     needsReconcile: boolean("needs_reconcile").notNull().default(true),
     nodes: jsonb("nodes").$type<Record<string, WorkflowNodeState>>().notNull(),
     stopReason: text("stop_reason"),

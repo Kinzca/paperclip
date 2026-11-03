@@ -1,4 +1,10 @@
-import { workflowReviewReportSchema } from "@paperclipai/shared";
+import {
+  workflowReviewReportSchema,
+  effectiveWorkflowLimits,
+  workflowBudgetExtensionSchema,
+  workflowLimitsSchema,
+  type WorkflowControl,
+} from "@paperclipai/shared";
 import {
   workflowNodeTitle,
   workflowTemplateText,
@@ -11,12 +17,18 @@ import { workflowsApi } from "../api/workflows";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Textarea } from "./ui/textarea";
+import { Input } from "./ui/input";
 import { uiText, useUiLocale } from "@/i18n/ui";
 
 export function IssueWorkflowPanel({ issueId }: { issueId: string }) {
   useUiLocale();
   const client = useQueryClient();
   const [reason, setReason] = useState("");
+  const [extension, setExtension] = useState({
+    additionalAttempts: "0",
+    additionalMinutes: "0",
+    additionalCostCents: "0",
+  });
   const query = useQuery({
     queryKey: ["issue-workflow", issueId],
     queryFn: () => workflowsApi.run(issueId),
@@ -29,11 +41,23 @@ export function IssueWorkflowPanel({ issueId }: { issueId: string }) {
   const refresh = () =>
     client.invalidateQueries({ queryKey: ["issue-workflow", issueId] });
   const control = useMutation({
-    mutationFn: (action: "pause" | "resume" | "retry" | "cancel") =>
+    mutationFn: (action: WorkflowControl["action"]) =>
       workflowsApi.control(issueId, {
         action,
         reason,
         expectedVersion: query.data!.version,
+        ...(action === "extend"
+          ? {
+              extension: workflowBudgetExtensionSchema.parse(
+                Object.fromEntries(
+                  Object.entries(extension).map(([key, value]) => [
+                    key,
+                    Number(value),
+                  ]),
+                ),
+              ),
+            }
+          : {}),
       }),
     onSuccess: refresh,
     onError: refresh,
@@ -68,6 +92,23 @@ export function IssueWorkflowPanel({ issueId }: { issueId: string }) {
   };
   const stopped = ["paused", "waiting_human"].includes(run.status);
   const finished = ["succeeded", "cancelled"].includes(run.status);
+  const limits = effectiveWorkflowLimits(run.snapshot, run.runtime);
+  const grant = workflowBudgetExtensionSchema.safeParse(
+    Object.fromEntries(
+      Object.entries(extension).map(([key, value]) => [key, Number(value)]),
+    ),
+  );
+  const validGrant =
+    grant.success &&
+    workflowLimitsSchema.safeParse({
+      ...limits,
+      maxAttempts: limits.maxAttempts + grant.data.additionalAttempts,
+      timeoutMinutes: limits.timeoutMinutes + grant.data.additionalMinutes,
+      maxCostCents:
+        limits.maxCostCents == null
+          ? null
+          : limits.maxCostCents + grant.data.additionalCostCents,
+    }).success;
   return (
     <section
       className="flex flex-col gap-3 rounded-lg border border-border p-4"
@@ -80,9 +121,25 @@ export function IssueWorkflowPanel({ issueId }: { issueId: string }) {
       <p className="text-sm text-muted-foreground">
         {workflowTemplateText(choice, "name")} · {uiText("Revision")}{" "}
         {run.snapshot.revision} · {uiText("Attempt ceiling")}{" "}
-        {run.snapshot.limits.maxAttempts}
+        {limits.maxAttempts} · {uiText("Active execution minutes")}{" "}
+        {limits.timeoutMinutes}
       </p>
       <p className="text-xs font-mono text-muted-foreground">{run.id}</p>
+      {run.runtime?.humanWaitStartedAt && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {uiText("Waiting for human acceptance — execution clock stopped.")}
+        </p>
+      )}
+      {Object.entries(run.runtime?.repeatedFailures ?? {})
+        .filter(([, failure]) => failure.consecutive >= 3)
+        .map(([nodeId, failure]) => (
+          <p key={nodeId} role="status" className="text-sm text-destructive">
+            {uiText(
+              "Repeated failure detected at {{node}} ({{count}} times). Inspect the evidence before continuing.",
+              { node: nodeId, count: failure.consecutive },
+            )}
+          </p>
+        ))}
       {run.stopReason && (
         <p role="status" className="text-sm text-destructive">
           {run.stopReason}
@@ -139,8 +196,7 @@ export function IssueWorkflowPanel({ issueId }: { issueId: string }) {
                   </span>
                 )}
                 <span className="text-xs text-muted-foreground">
-                  {uiText(state.status)} · {state.attempt}/
-                  {run.snapshot.limits.maxAttempts}
+                  {uiText(state.status)} · {state.attempt}/{limits.maxAttempts}
                 </span>
               </div>
               {node.dependsOn.length > 0 && (
@@ -227,12 +283,102 @@ export function IssueWorkflowPanel({ issueId }: { issueId: string }) {
               )}
             </div>
           )}
+          {run.isRoot && stopped && (
+            <details className="rounded-md border border-border p-3 text-sm">
+              <summary className="cursor-pointer font-medium">
+                {uiText("Add allowance and resume")}
+              </summary>
+              <div className="flex flex-col gap-3 pt-3">
+                <p className="text-xs text-muted-foreground">
+                  {uiText(
+                    "Add to this task only; original rules and evidence are retained. Total ceiling: 10 attempts per stage, 1440 minutes, 1000000 cents. Enter a reason above.",
+                  )}
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    {
+                      key: "additionalAttempts" as const,
+                      label: "Additional attempts per stage",
+                      max: 10 - limits.maxAttempts,
+                    },
+                    {
+                      key: "additionalMinutes" as const,
+                      label: "Additional execution minutes",
+                      max: 1440 - limits.timeoutMinutes,
+                    },
+                    ...(limits.maxCostCents == null
+                      ? []
+                      : [
+                          {
+                            key: "additionalCostCents" as const,
+                            label: "Additional recorded cost (cents)",
+                            max: 1000000 - limits.maxCostCents,
+                          },
+                        ]),
+                  ].map((field) => (
+                    <label key={field.key} className="flex flex-col gap-2">
+                      {uiText(field.label)}
+                      <Input
+                        type="number"
+                        min={0}
+                        max={field.max}
+                        step={1}
+                        value={extension[field.key]}
+                        disabled={control.isPending}
+                        onChange={(event) =>
+                          setExtension({
+                            ...extension,
+                            [field.key]: event.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                  ))}
+                </div>
+                <Button
+                  className="self-end"
+                  size="sm"
+                  disabled={!validGrant || !reason.trim() || control.isPending}
+                  onClick={() => control.mutate("extend")}
+                >
+                  {uiText("Add allowance and resume")}
+                </Button>
+              </div>
+            </details>
+          )}
         </>
       )}
       {(control.error || decision.error) && (
         <p role="alert" className="text-sm text-destructive">
           {(control.error ?? decision.error)!.message}
         </p>
+      )}
+      {!!run.runtime?.grants?.length && (
+        <details className="text-sm">
+          <summary className="cursor-pointer font-medium">
+            {uiText("Manual allowance history")} ({run.runtime.grants.length})
+          </summary>
+          <ul className="flex flex-col gap-3 pt-3">
+            {run.runtime.grants.map((grant) => (
+              <li key={grant.id} className="rounded-md bg-muted p-3">
+                <p>
+                  {uiText(
+                    "Added: {{attempts}} attempts, {{minutes}} minutes, {{cost}} cents",
+                    {
+                      attempts: grant.additionalAttempts,
+                      minutes: grant.additionalMinutes,
+                      cost: grant.additionalCostCents,
+                    },
+                  )}
+                </p>
+                <p className="whitespace-pre-wrap">{grant.reason}</p>
+                <p className="text-xs text-muted-foreground">
+                  {grant.userId} · {new Date(grant.grantedAt).toLocaleString()}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
       <details className="text-sm">
         <summary className="cursor-pointer text-muted-foreground">

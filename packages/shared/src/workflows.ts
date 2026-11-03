@@ -223,13 +223,36 @@ export const createWorkflowRevisionSchema = z
           });
       }
   });
+export const workflowBudgetExtensionSchema = z
+  .object({
+    additionalAttempts: z.number().int().min(0).max(9).default(0),
+    additionalMinutes: z.number().int().min(0).max(1439).default(0),
+    additionalCostCents: z.number().int().min(0).max(1_000_000).default(0),
+  })
+  .strict()
+  .refine((value) => Object.values(value).some((amount) => amount > 0), {
+    message: "Add at least one positive allowance",
+  });
+export type WorkflowBudgetExtension = z.infer<
+  typeof workflowBudgetExtensionSchema
+>;
 export const workflowControlSchema = z
   .object({
-    action: z.enum(["pause", "resume", "cancel", "retry"]),
+    action: z.enum(["pause", "resume", "cancel", "retry", "extend"]),
     expectedVersion: z.number().int().positive(),
     reason: z.string().trim().min(1).max(2000),
+    extension: workflowBudgetExtensionSchema.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((input, ctx) => {
+    if ((input.action === "extend") !== !!input.extension)
+      ctx.addIssue({
+        code: "custom",
+        path: ["extension"],
+        message: "Only extend requires an allowance",
+      });
+  });
+export type WorkflowControl = z.infer<typeof workflowControlSchema>;
 export const workflowReviewReportSchema = z
   .object({
     artifact: z.string().trim().min(1).max(2000),
@@ -374,6 +397,43 @@ export type WorkflowRunStatus =
   | "waiting_human"
   | "succeeded"
   | "cancelled";
+export interface WorkflowBudgetGrant extends WorkflowBudgetExtension {
+  id: string;
+  userId: string;
+  reason: string;
+  grantedAt: string;
+}
+export interface WorkflowRuntimeState {
+  humanWaitStartedAt?: string;
+  grants?: WorkflowBudgetGrant[];
+  repeatedFailures?: Record<
+    string,
+    {
+      fingerprint: string;
+      consecutive: number;
+      lastAttempt: number;
+      reason: string;
+    }
+  >;
+}
+/** 原始快照不变；只有经过人工授权的增量影响当前运行。 */
+export function effectiveWorkflowLimits(
+  snapshot: Pick<WorkflowSnapshot, "limits">,
+  runtime: WorkflowRuntimeState = {},
+): WorkflowLimits {
+  return (runtime.grants ?? []).reduce(
+    (limits, grant) => ({
+      ...limits,
+      maxAttempts: limits.maxAttempts + grant.additionalAttempts,
+      timeoutMinutes: limits.timeoutMinutes + grant.additionalMinutes,
+      maxCostCents:
+        limits.maxCostCents == null
+          ? null
+          : limits.maxCostCents + grant.additionalCostCents,
+    }),
+    { ...snapshot.limits },
+  );
+}
 export interface WorkflowRun {
   id: string;
   companyId: string;
@@ -381,6 +441,7 @@ export interface WorkflowRun {
   status: WorkflowRunStatus;
   version: number;
   snapshot: WorkflowSnapshot;
+  runtime?: WorkflowRuntimeState;
   nodes: Record<string, WorkflowNodeState>;
   stopReason: string | null;
   deadlineAt: string;
@@ -455,8 +516,8 @@ export interface WorkflowPolicyRecord {
 }
 
 export const DEFAULT_WORKFLOW_LIMITS: Readonly<WorkflowLimits> = {
-  maxAttempts: 3,
-  timeoutMinutes: 60,
+  maxAttempts: 5,
+  timeoutMinutes: 180,
   maxParallelism: 2,
   maxCostCents: null,
 };

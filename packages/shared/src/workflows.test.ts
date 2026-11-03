@@ -8,6 +8,8 @@ import {
   workflowAncestorIds,
   workflowTemplateSchema,
   workflowDecisionSchema,
+  workflowControlSchema,
+  effectiveWorkflowLimits,
   createWorkflowRevisionSchema,
   type WorkflowNodeState,
 } from "./workflows.js";
@@ -286,5 +288,72 @@ describe("通用工作流交接契约", () => {
         rationale: "改进",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("人工追加额度契约", () => {
+  it("默认使用 5 次、180 分钟、并发 2", () => {
+    expect(DEFAULT_WORKFLOW_LIMITS).toEqual({
+      maxAttempts: 5,
+      timeoutMinutes: 180,
+      maxParallelism: 2,
+      maxCostCents: null,
+    });
+  });
+  it("追加必须有正数、原因、版本，不能夹带在普通恢复中", () => {
+    const base = { action: "extend", expectedVersion: 1, reason: "人工授权" };
+    expect(workflowControlSchema.safeParse(base).success).toBe(false);
+    expect(
+      workflowControlSchema.safeParse({ ...base, extension: {} }).success,
+    ).toBe(false);
+    expect(
+      workflowControlSchema.safeParse({
+        ...base,
+        reason: " ",
+        extension: { additionalMinutes: 30 },
+      }).success,
+    ).toBe(false);
+    expect(
+      workflowControlSchema.safeParse({
+        ...base,
+        extension: { additionalMinutes: -1 },
+      }).success,
+    ).toBe(false);
+    expect(
+      workflowControlSchema.safeParse({
+        ...base,
+        action: "resume",
+        extension: { additionalMinutes: 30 },
+      }).success,
+    ).toBe(false);
+    expect(
+      workflowControlSchema.parse({
+        ...base,
+        extension: { additionalMinutes: 30 },
+      }).extension,
+    ).toEqual({
+      additionalAttempts: 0,
+      additionalMinutes: 30,
+      additionalCostCents: 0,
+    });
+  });
+  it("增量不修改快照、并发或无额外费用上限的含义", () => {
+    const snapshot = { limits: { ...DEFAULT_WORKFLOW_LIMITS } };
+    const before = structuredClone(snapshot);
+    const grant = {
+      id: "g1",
+      userId: "user",
+      reason: "reason",
+      grantedAt: "date",
+      additionalAttempts: 2,
+      additionalMinutes: 30,
+      additionalCostCents: 0,
+    };
+    expect(effectiveWorkflowLimits(snapshot, { grants: [grant] })).toEqual({
+      ...DEFAULT_WORKFLOW_LIMITS,
+      maxAttempts: 7,
+      timeoutMinutes: 210,
+    });
+    expect(snapshot).toEqual(before);
   });
 });

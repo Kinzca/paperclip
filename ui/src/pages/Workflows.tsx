@@ -15,6 +15,7 @@ import { useBreadcrumbs } from "@/context/BreadcrumbContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WorkflowBindingsEditor } from "@/components/WorkflowBindingsEditor";
+import { WorkflowPlatformLimits } from "@/components/WorkflowPlatformLimits";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import {
@@ -404,6 +405,9 @@ function CompanyWorkflows({
             </Select>
           </div>
         </div>
+        {config.data.canManagePlatformDefaults && (
+          <WorkflowPlatformLimits disabled={editing} />
+        )}
         {!editing && (
           <Button
             ref={editButton}

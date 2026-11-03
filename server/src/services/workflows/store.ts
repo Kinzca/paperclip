@@ -15,6 +15,7 @@ import {
 import {
   BUILT_IN_WORKFLOW_TEMPLATES,
   resolveWorkflowPolicy,
+  effectiveWorkflowLimits,
   workflowTemplateSchema,
   type WorkflowTemplate,
   type WorkflowPolicy,
@@ -622,8 +623,12 @@ export function workflowStore(db: Db) {
             "Execution context changed between baseline and candidate",
           );
         if (
-          JSON.stringify(baseline.snapshot.limits) !==
-          JSON.stringify(candidate.snapshot.limits)
+          JSON.stringify(
+            effectiveWorkflowLimits(baseline.snapshot, baseline.runtime),
+          ) !==
+          JSON.stringify(
+            effectiveWorkflowLimits(candidate.snapshot, candidate.runtime),
+          )
         )
           findings.push(
             "Execution limits changed between baseline and candidate",

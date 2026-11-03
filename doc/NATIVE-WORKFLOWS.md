@@ -80,8 +80,9 @@ Deadlines/check leases schedule timed wakeups without periodic idle agent heartb
 Pause uses native tree holds, cancels unclaimed wakes and retains live-run cancellation
 in an outbox. Execution/write boundaries reject stopped/expired/superseded nodes.
 Resume preserves ceilings. Exhausted retries/time/cost, unavailable tools or changed
-assignments produce a human wait. Cancellation is final; exhausted ceilings require
-a new authorized task.
+assignments produce a human wait. Cancellation is final. Board operators can explicitly
+grant additional allowance to a stopped run without changing its frozen snapshot.
+See [工作流额度、停表与人工续跑](WORKFLOW-RUNTIME-CONTROLS.zh-CN.md).
 
 Reported costs include delegated descendants. Unpriced usage stops cost-capped
 workflows. This is a reported-usage stop, not a prepaid reservation: in-flight work
