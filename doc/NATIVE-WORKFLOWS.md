@@ -1,5 +1,10 @@
 # Native task workflows
 
+Task details show workflows as a compact, collapsed status row. Expand it to
+inspect stages, controls and retained evidence. Background refreshes preserve the
+chosen disclosure state; changing tasks starts collapsed. Historical cancellation
+reasons use neutral styling and do not occupy the conversation by default.
+
 Paperclip owns a bounded execute / verify / review / repair loop. Adapters such as
 `codex_local` provide tools, credentials and the inner coding loop; the server owns
 dependencies, retained evidence, recovery and stopping rules.

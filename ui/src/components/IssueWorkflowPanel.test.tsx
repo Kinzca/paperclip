@@ -150,3 +150,23 @@ it("人工等待显示停表状态，运行中不显示追加入口", async () =
   );
   expect(grantButton()).toBeUndefined();
 });
+it.each(["cancelled", "succeeded", "running", "waiting_human"] as const)(
+  "%s 工作流默认折叠，展开状态不被后台刷新重置",
+  async (status) => {
+    run.status = status;
+    await render();
+    const disclosure = container.querySelector("section > details")!;
+    const summary = disclosure.querySelector("summary")!;
+    expect(disclosure.hasAttribute("open")).toBe(false);
+    expect(summary.textContent).toContain("Task workflow");
+    expect(summary.textContent).toContain(status === "waiting_human" ? "waiting_human" : status);
+    expect(container.querySelector("textarea") === null).toBe(
+      status === "cancelled" || status === "succeeded",
+    );
+    disclosure.setAttribute("open", "");
+    await client.invalidateQueries({ queryKey: ["issue-workflow", "task-1"] });
+    expect(disclosure.hasAttribute("open")).toBe(true);
+    expect(disclosure.textContent).toContain("Retained attempt evidence");
+    expect(mocks.control).not.toHaveBeenCalled();
+  },
+);
