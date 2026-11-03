@@ -17,11 +17,12 @@ node scripts/local/codex.mjs login
 node scripts/local/start.mjs
 ```
 
-保持服务终端运行，在第二个终端进入同一仓库，登记两个插件：
+保持服务终端运行，在第二个终端进入同一仓库，登记插件：
 
 ```sh
 node scripts/local/install-office.mjs
 node scripts/local/install-wiki.mjs
+node scripts/local/install-workspace-diff.mjs
 ```
 
 - [完整安装、Codex 订阅登录、Wiki 初始化与更新说明](FORK.md)

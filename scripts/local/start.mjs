@@ -10,6 +10,7 @@ import {
   verifyRelease,
   writeJson,
   pluginKeys,
+  pluginNames,
 } from "./release-lib.mjs";
 import { registerLocalPlugin } from "./plugin-install.mjs";
 
@@ -89,7 +90,7 @@ try {
         throw new Error("服务未在 60 秒内就绪，请查看日志；未进行功能验收。");
       let pluginsPendingSync = false;
       if (state.pluginsPendingSync) {
-        for (const name of ["office", "wiki"]) {
+        for (const name of Object.keys(target.manifest.plugins)) {
           const response = await fetch(
             `http://127.0.0.1:${port}/api/plugins/${encodeURIComponent(pluginKeys[name])}`,
             { signal: AbortSignal.timeout(10000) },
@@ -110,11 +111,8 @@ try {
           }
           await registerLocalPlugin({
             pluginKey: pluginKeys[name],
-            displayName: name === "office" ? "Office" : "Wiki",
-            packageName:
-              name === "office"
-                ? "@agent-pixels/paperclip-plugin"
-                : "@paperclipai/plugin-llm-wiki",
+            displayName: name,
+            packageName: pluginNames[name],
             packagePath: state.pluginPaths[name],
             args: ["--upgrade"],
           });

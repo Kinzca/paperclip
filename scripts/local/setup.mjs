@@ -102,6 +102,8 @@ try {
       "@paperclipai/ui...",
       "--filter",
       "@paperclipai/plugin-llm-wiki...",
+      "--filter",
+      "@paperclipai/plugin-workspace-diff...",
       "install",
       "--frozen-lockfile",
       "--ignore-scripts",
@@ -229,6 +231,11 @@ try {
     copy(path.join(root, "skills"), path.join(server, "skills"));
     fs.rmSync(path.join(server, "ui-dist"), { recursive: true, force: true });
     copy(path.join(root, "ui/dist"), path.join(server, "ui-dist"));
+    runNode([path.join(root, "scripts/local/build-workspace-diff.mjs")]);
+    copyPlugin(
+      path.join(root, "packages/plugins/plugin-workspace-diff"),
+      path.join(stage, "plugins/workspace-diff"),
+    );
     const office = path.join(
       localDir,
       "build-sources",
@@ -278,6 +285,7 @@ try {
       "runtime/node_modules/@paperclipai/server/ui-dist",
       "plugins/office",
       "plugins/wiki",
+      "plugins/workspace-diff",
     ])
       artifacts[relative] = files(path.join(stage, relative));
     const manifest = {
@@ -290,14 +298,14 @@ try {
       runtimeLock,
       workspaceLock: sha(path.join(root, "pnpm-lock.yaml")),
       builtAt: new Date().toISOString(),
-      sourceComponents: [...sourcePackages, "ui", "wiki"],
+      sourceComponents: [...sourcePackages, "ui", "wiki", "workspace-diff"],
       dependencyComponents: [
         "published runner and native binaries",
         "published CLI and external dependencies",
       ],
       migrations: migrationLedger(runtime),
       plugins: Object.fromEntries(
-        ["office", "wiki"].map((name) => [
+        ["office", "wiki", "workspace-diff"].map((name) => [
           name,
           pluginInfo(path.join(stage, "plugins", name), name),
         ]),
@@ -312,12 +320,12 @@ try {
       !args.includes("--prepare-only")
     ) {
       const pluginPaths = Object.fromEntries(
-        ["office", "wiki"].map((name) => [
+        ["office", "wiki", "workspace-diff"].map((name) => [
           name,
           path.join(localDir, "plugins", name),
         ]),
       );
-      for (const name of ["office", "wiki"]) {
+      for (const name of ["office", "wiki", "workspace-diff"]) {
         if (fs.existsSync(pluginPaths[name]))
           throw new Error(`插件目标已存在，保留现场：${pluginPaths[name]}`);
         copy(path.join(destination, "plugins", name), pluginPaths[name]);

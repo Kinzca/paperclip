@@ -18,6 +18,9 @@ export const office =
   state?.pluginPaths?.office || path.join(localDir, "plugins/office");
 export const wiki =
   state?.pluginPaths?.wiki || path.join(localDir, "plugins/wiki");
+export const workspaceDiff =
+  state?.pluginPaths?.["workspace-diff"] ||
+  path.join(localDir, "plugins/workspace-diff");
 export const pnpm = path.join(
   localDir,
   "build-tools/node_modules/pnpm/bin/pnpm.cjs",

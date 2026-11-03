@@ -11,10 +11,12 @@ export const pins = {
   officeCommit: "a3fff4a71eeca595572decfdca7adffeadd26a85",
 };
 export const pluginNames = {
+  "workspace-diff": "@paperclipai/plugin-workspace-diff",
   office: "@agent-pixels/paperclip-plugin",
   wiki: "@paperclipai/plugin-llm-wiki",
 };
 export const pluginKeys = {
+  "workspace-diff": "paperclip.workspace-diff",
   office: "agent-pixels.compat",
   wiki: "paperclipai.plugin-llm-wiki",
 };
@@ -82,10 +84,10 @@ export function assertTransition(from, to, rollback = false) {
     );
   if (
     rollback &&
-    ["office", "wiki"].some(
+    Object.keys(from.plugins).some(
       (name) =>
         JSON.stringify(from.plugins[name].migrations) !==
-        JSON.stringify(to.plugins[name].migrations),
+        JSON.stringify(to.plugins[name]?.migrations),
     )
   )
     throw new Error(

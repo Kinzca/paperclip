@@ -206,3 +206,7 @@ node scripts/local/install-wiki.mjs
 ## 工作流运行控制（2026-11-03）
 
 平台上限、人工验收停表、人工追加额度续跑和连续重复失败转人工的操作说明见[工作流运行控制](doc/WORKFLOW-RUNTIME-CONTROLS.zh-CN.md)。默认每阶段 5 次、180 分钟、并发 2；已有任务和显式公司／项目规则保持原值。此次新增数据库迁移 `0336_calm_rocket_racer.sql`，迁移前备份。代码提交、构建和本机部署状态分别记录，界面及真实 Agent 流程仍交由用户验收。
+
+## Workspace Diff Viewer（2026-11-03）
+
+固定使用本仓库的 `@paperclipai/plugin-workspace-diff@0.1.0`，纳入统一发布清单。首次登记执行 `node scripts/local/install-workspace-diff.mjs`；入口在项目工作区或执行工作区的 Changes 页签，仅读取 Git 差异。该插件不增加独立侧栏入口。安装、升级和跨机路径说明见[发布流程](doc/LOCAL-RELEASES.zh-CN.md#workspace-diff-viewer)。页面和真实工作区内容由用户检查。

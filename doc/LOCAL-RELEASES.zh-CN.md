@@ -115,3 +115,15 @@ node scripts/local/start.mjs
 工作流平台出厂默认是**每阶段 5 次、累计执行 180 分钟、同时 2 个阶段**，人工验收等待停表；人工追加额度和无效循环识别见[运行控制说明](WORKFLOW-RUNTIME-CONTROLS.zh-CN.md)。已有平台／公司／项目设置与运行快照继续沿用，升级脚本不强行改写为出厂值。
 
 工程检查、构建、迁移状态和服务健康只说明对应步骤完成。另一台电脑安装、跨平台恢复、页面与真实 Agent 工作流仍由用户验收。
+
+## Workspace Diff Viewer
+
+新发布包同时构建仓库中的 `@paperclipai/plugin-workspace-diff@0.1.0`，其源代码和依赖随主线提交及锁文件固定。worker 与匹配的 SDK 打包，不依赖插件目录中的开发依赖。首次登记在服务运行时执行：
+
+```sh
+node scripts/local/install-workspace-diff.mjs
+```
+
+已有安装使用同路径正式升级接口，日常版本升级会同步已安装且 ready 的插件。它增加工作区的 Changes 页签，不新增侧栏菜单，不创建 Agent 或例程；Git 工作目录必须在宿主可访问的位置。新电脑恢复数据库时，还需将 `paperclip.workspace-diff` 的 package_path 调整到该电脑 `$PAPERCLIP_LOCAL_DIR/plugins/workspace-diff`。
+
+回退到不包含当前托管插件的早期发布包会停止，以免把新插件代码留在旧宿主上却声称已完整回退；请使用包含同一组插件的兼容发布版本，或按完整恢复流程处理。

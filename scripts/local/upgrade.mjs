@@ -68,8 +68,18 @@ export async function activate({ to, rollback = false }) {
       );
     fs.mkdirSync(checkpoint, { recursive: true, mode: 0o700 });
     if (!pending) {
+      for (const name of Object.keys(target.manifest.plugins)) {
+        const folder =
+          state.pluginPaths[name] || path.join(localDir, "plugins", name);
+        if (
+          !from.manifest.plugins[name] &&
+          fs.existsSync(folder) &&
+          fs.readdirSync(folder).length
+        )
+          throw new Error(`新增插件目标已存在，请保留现场：${folder}`);
+      }
       // 只管理发布清单内的文件；其他知识文件和用户源码不清除。
-      for (const name of ["office", "wiki"]) {
+      for (const name of Object.keys(from.manifest.plugins)) {
         for (const [relative, hash] of Object.entries(
           from.manifest.plugins[name].files,
         )) {
@@ -95,7 +105,7 @@ export async function activate({ to, rollback = false }) {
       copy(env.PAPERCLIP_CONFIG, path.join(checkpoint, "config.json"));
       fs.chmodSync(path.join(checkpoint, "config.json"), 0o600);
       writeJson(path.join(checkpoint, "current-before.json"), state);
-      for (const name of ["office", "wiki"])
+      for (const name of Object.keys(from.manifest.plugins))
         copy(
           path.join(from.directory, "plugins", name),
           path.join(checkpoint, "plugins", name),
@@ -121,9 +131,17 @@ export async function activate({ to, rollback = false }) {
       rollback,
       phase: "plugins",
     });
-    for (const name of ["office", "wiki"]) {
-      const folder = state.pluginPaths[name];
-      for (const relative of Object.keys(from.manifest.plugins[name].files)) {
+    const pluginPaths = Object.fromEntries(
+      Object.keys(target.manifest.plugins).map((name) => [
+        name,
+        state.pluginPaths[name] || path.join(localDir, "plugins", name),
+      ]),
+    );
+    for (const name of Object.keys(target.manifest.plugins)) {
+      const folder = pluginPaths[name];
+      for (const relative of Object.keys(
+        from.manifest.plugins[name]?.files || {},
+      )) {
         if (!(relative in target.manifest.plugins[name].files))
           fs.rmSync(path.join(folder, relative), { force: true });
       }
@@ -132,6 +150,7 @@ export async function activate({ to, rollback = false }) {
     const next = {
       ...state,
       release: selected,
+      pluginPaths,
       previous: state.release,
       databaseLedger: target.manifest.migrations,
       checkpoint,
@@ -149,7 +168,7 @@ export async function activate({ to, rollback = false }) {
     });
     fs.unlinkSync(pendingFile);
     console.log(
-      `已${rollback ? "回退" : "切换"}到 ${selected}，备份：${checkpoint}\n请执行 node scripts/local/start.mjs；启动会通过正式接口同步已安装的 Office / Wiki，未安装插件仍需显式登记。`,
+      `已${rollback ? "回退" : "切换"}到 ${selected}，备份：${checkpoint}\n请执行 node scripts/local/start.mjs；启动会通过正式接口同步已安装的 托管插件，未安装插件仍需显式登记。`,
     );
   } finally {
     unlock();
