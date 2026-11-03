@@ -106,7 +106,7 @@ try {
       "--frozen-lockfile",
       "--ignore-scripts",
     ]);
-    // 锁定发布依赖提供 runner / 适配器声明与原生程序；当前 Fork 的宿主核心从源码重编译。
+    // 锁定发布依赖提供 runner 声明与原生程序；当前 Fork 的宿主核心从源码重编译。
     function seedDeclarations(dir) {
       if (!fs.existsSync(dir)) return;
       const pkgFile = path.join(dir, "package.json");
@@ -144,15 +144,44 @@ try {
     });
     copy(runner, path.join(root, "packages/paperclip-runner/dist"));
     const tsc = path.join(root, "node_modules/typescript/bin/tsc");
-    for (const pkg of [
+    const serverDependencies = json(
+      path.join(root, "server/package.json"),
+    ).dependencies;
+    const adapters = fs
+      .readdirSync(path.join(root, "packages/adapters"))
+      .map((name) => `packages/adapters/${name}`)
+      .filter((folder) =>
+        fs.existsSync(path.join(root, folder, "package.json")),
+      )
+      .filter(
+        (folder) =>
+          json(path.join(root, folder, "package.json")).name in
+          serverDependencies,
+      );
+    const sourcePackages = [
       "packages/shared",
+      "packages/adapter-utils",
       "packages/db",
       "packages/plugins/sdk",
+      ...adapters,
       "server",
-    ]) {
+    ];
+    for (const pkg of sourcePackages) {
       fs.rmSync(path.join(root, pkg, "dist"), { recursive: true, force: true });
       runNode([tsc, "-p", path.join(root, pkg, "tsconfig.json")]);
     }
+    for (const [adapter, names] of [
+      [
+        "codex-local",
+        ["codex-auth-merge-decision.cjs", "codex-auth-merge-extract.sh"],
+      ],
+      ["grok-local", ["grok-auth-merge-decision.cjs"]],
+    ])
+      for (const name of names)
+        copy(
+          path.join(root, "packages/adapters", adapter, "src/server", name),
+          path.join(root, "packages/adapters", adapter, "dist/server", name),
+        );
     runNode(["--import", "tsx", "src/check-migration-numbering.ts"], {
       cwd: path.join(root, "packages/db"),
     });
@@ -176,18 +205,9 @@ try {
     runNode([path.join(root, "server/scripts/write-build-stamp.mjs")]);
     runNode([pnpm, "--filter", "@paperclipai/ui", "build"]);
     runNode([pnpm, "--filter", "@paperclipai/plugin-llm-wiki", "build"]);
-    for (const [source, name] of [
-      ["packages/shared", "shared"],
-      ["packages/db", "db"],
-      ["packages/plugins/sdk", "plugin-sdk"],
-      ["server", "server"],
-    ]) {
-      const target = path.join(
-        runtime,
-        "node_modules/@paperclipai",
-        name,
-        "dist",
-      );
+    for (const source of sourcePackages) {
+      const name = json(path.join(root, source, "package.json")).name;
+      const target = path.join(runtime, "node_modules", name, "dist");
       fs.rmSync(target, { recursive: true, force: true });
       copy(path.join(root, source, "dist"), target);
     }
@@ -251,11 +271,11 @@ try {
       throw new Error("构建期间源码发生变化，拒绝发布。");
     const artifacts = {};
     for (const relative of [
-      "runtime/node_modules/@paperclipai/server/dist",
+      ...sourcePackages.map(
+        (folder) =>
+          `runtime/node_modules/${json(path.join(root, folder, "package.json")).name}/dist`,
+      ),
       "runtime/node_modules/@paperclipai/server/ui-dist",
-      "runtime/node_modules/@paperclipai/shared/dist",
-      "runtime/node_modules/@paperclipai/db/dist",
-      "runtime/node_modules/@paperclipai/plugin-sdk/dist",
       "plugins/office",
       "plugins/wiki",
     ])
@@ -270,10 +290,9 @@ try {
       runtimeLock,
       workspaceLock: sha(path.join(root, "pnpm-lock.yaml")),
       builtAt: new Date().toISOString(),
-      sourceComponents: ["server", "db", "shared", "plugin-sdk", "ui", "wiki"],
+      sourceComponents: [...sourcePackages, "ui", "wiki"],
       dependencyComponents: [
         "published runner and native binaries",
-        "published adapters",
         "published CLI and external dependencies",
       ],
       migrations: migrationLedger(runtime),

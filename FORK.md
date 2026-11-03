@@ -138,7 +138,7 @@ node scripts/local/install-wiki.mjs
 
 - `ui/src/components/SidebarPlugins.tsx` 负责分组；两种侧栏均复用该组件。
 - `server/src/services/heartbeat/{queue,run-control,run-preparation,stage-handoff}.ts` 保存阶段交接修复的源码形式。
-- 宿主核心从当前提交编译；锁定发布依赖只提供 runner、原生程序、适配器、CLI 与外部依赖。新构建不再将旧 stage-handoff 或 sidebar-schema JS 覆盖到新后端；这些修复已在源码中。release.json 明确记录来源。
+- 宿主核心从当前提交编译；锁定发布依赖只提供 runner、原生程序、CLI 与外部依赖。新构建不再将旧 stage-handoff 或 sidebar-schema JS 覆盖到新后端；这些修复已在源码中。release.json 明确记录来源。
 - `scripts/local/overlays/postgres/` 是同版本上游 `patches/postgres@3.4.9.patch` 的发布运行时形式。npm 安装不会执行 pnpm patchedDependencies，所以安装器补齐此官方补丁。文件包含其他修改或版本不同会停止，不会强行覆盖。
 - 阶段交接沿用此前受限扫描恢复方式，并非新增无轮询或休眠安全保证。升级调度器时应另行适配和验证，本轮只保留现有行为。
 - 不包含当前电脑的公司、员工、任务、附件、数据库、密钥或 Codex 登录。新电脑默认是全新实例。已有公司需要导入员工模板/重新配置；同一台电脑现有实例中的公司继续使用原数据。若要完整迁移，需通过数据库备份及对应文件存储、加密密钥的安全迁移单独操作，不能只 git pull。

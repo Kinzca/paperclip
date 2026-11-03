@@ -6,7 +6,7 @@
 
 安装 Git、npm 和 **Node.js 24.22.2**。脚本固定 pnpm 9.15.4，并使用已提交的两个锁文件。Windows 可使用原来的 `.paperclip-local/node-v24.22.2-win-x64/node.exe`，或 PATH 中的同版本 Node；旧稀疏检出必须先运行 `git sparse-checkout disable`，取得 server、skills、cli 等完整目录。
 
-当前提交的 server、db、shared、插件 SDK、UI 和 Wiki 从源码构建，Office 固定为 `a3fff4a71eeca595572decfdca7adffeadd26a85`。runner、原生二进制、适配器和 CLI 使用锁定的 `paperclipai@2026.1023.0` 依赖套件；这不是对上游所有组件的全量源码编译。后续修改这些组件时，应同步调整构建器和依赖套件，不能仅修改源码就声称运行时已接入。
+当前提交的 server、db、shared、adapter-utils、服务依赖的适配器、插件 SDK、UI 和 Wiki 从源码构建，Office 固定为 `a3fff4a71eeca595572decfdca7adffeadd26a85`。runner、原生二进制和 CLI 使用锁定的 `paperclipai@2026.1023.0` 依赖套件；这不是对上游所有组件的全量源码编译。后续修改这些组件时，应同步调整构建器和依赖套件，不能仅修改源码就声称运行时已接入。
 
 不同电脑应使用同一提交和工具链，在各自平台构建。不要跨平台复制 node_modules、PostgreSQL 程序或 releases。清单记录平台、工具版本、插件版本、SQL 哈希与产物哈希；同一逻辑版本不保证不同平台的构建字节完全一致。
 
