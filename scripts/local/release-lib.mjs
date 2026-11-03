@@ -93,12 +93,27 @@ export function assertTransition(from, to, rollback = false) {
     );
 }
 export function copy(source, target) {
+  // macOS 的 cp -c 使用 APFS 克隆；Node COPYFILE_FICLONE 在部分 macOS 版本会退化为完整复制。
+  if (process.platform === "darwin") {
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    const directory = fs.lstatSync(source).isDirectory();
+    if (directory) fs.mkdirSync(target, { recursive: true });
+    const result = spawnSync(
+      "/bin/cp",
+      ["-cR", directory ? path.join(source, ".") + "/." : source, target],
+      { encoding: "utf8" },
+    );
+    if (result.status === 0) return;
+    if (result.error) throw result.error;
+    // 非 APFS 目标仍允许标准复制；空间不足会由复制操作明确报错。
+  }
   fs.cpSync(source, target, {
     recursive: true,
     dereference: false,
     mode: fs.constants.COPYFILE_FICLONE,
   });
 }
+
 export function copyPlugin(source, target) {
   fs.mkdirSync(target, { recursive: true });
   for (const name of [
