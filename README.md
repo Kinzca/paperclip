@@ -1,11 +1,15 @@
 ## 本地定制版：中文安装入口
 
-本仓库的定制分支为 **`codex-local`**，包含简体中文 / English 切换、统一 Plugins 入口、Office，以及保留 Paperclip 主侧栏的 Wiki。
+本仓库的定制分支为 **`codex/native-workflow-engine`**，包含简体中文 / English 切换、统一 Plugins 入口、Office，以及保留 Paperclip 主侧栏的 Wiki。
+
+日常开发与两台电脑交接统一使用此主线，规则见 [分支协作约定](FORK.md#统一主线与跨电脑协作)。旧 `codex-local` 分支已退役，不再作为安装或推送目标。
+
+主线包含原生工作流与共享 Agent 规则的源码；下方固定安装入口仍使用 `2026.1023.0` 发布服务。新后端功能需要配套部署及数据库迁移，不能将拉取源码等同于运行环境已经升级。
 
 新电脑需要 Git、npm、Node.js **>= 24.11**，然后：
 
 ```sh
-git clone --branch codex-local https://github.com/Kinzca/paperclip.git
+git clone --branch codex/native-workflow-engine https://github.com/Kinzca/paperclip.git
 cd paperclip
 node scripts/local/setup.mjs
 node scripts/local/codex.mjs login

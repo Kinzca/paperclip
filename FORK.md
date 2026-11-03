@@ -1,6 +1,58 @@
 # Paperclip 本地定制版
 
-此 Fork 基于官方 `v2026.1023.0`，定制分支是 **codex-local**。为保持现有本地实例兼容，不直接追随上游 master 升级。
+此 Fork 基于官方 `v2026.1023.0`，定制分支是 **codex/native-workflow-engine**。为保持现有本地实例兼容，不直接追随上游 master 升级。
+
+## 统一主线与跨电脑协作
+
+本 Fork 唯一长期开发主线和 GitHub 默认分支统一为 **`codex/native-workflow-engine`**。
+`origin` 指向 `Kinzca/paperclip`，是正常推送目标；`upstream` 指向官方 `paperclipai/paperclip`，用于只读获取、比较和选择性移植更新。官方代码不自动混入本主线。
+
+### 开始、结束与换电脑
+
+1. 开始任务先查看 `git status --short`、`git branch --show-current` 和 `git remote -v`，确认工作目录、分支和仓库；保留已有未提交内容，不自动丢弃或覆盖。
+2. 日常开发在主线上先执行以下命令。只有快进成功后才以这份代码继续；如出现分叉，先明确两端改动，不用强推、硬重置或丢弃提交解决。
+
+   ```sh
+   git switch codex/native-workflow-engine
+   git pull --ff-only origin codex/native-workflow-engine
+   ```
+
+3. 完成本次任务后，提交对应文件并推送 `origin` 的同名主线。报告分支、提交 SHA、北京时间，以及是否构建、是否部署、是否执行数据库迁移；提交成功不等于已经部署或功能通过验收。
+4. 换电脑前先提交并推送；另一台电脑先拉取再开始。两台电脑尽量不同时修改同一批内容。
+5. 并行或隔离任务可以使用临时分支 / worktree，但开始时必须明确归并目标为本主线，完成后整合并按任务授权清理；不自动创建新的长期主线。临时分支上的工作不视为主线已更新。
+6. 主线使用普通快进推送，不强推覆盖其他电脑的提交。不要向官方 `upstream` 推送本 Fork 的改造。公司数据、Wiki 资料、数据库、密钥、登录和机器环境不提交到 Git。
+
+建议每台电脑在此仓库设置一次以下 Git 选项。它们是仓库级的本机配置，不会随着 Git 拉取自动同步到另一台电脑：
+
+```sh
+git config remote.pushDefault origin
+git config push.default simple
+git config checkout.defaultRemote origin
+```
+
+### 已有电脑切换主线
+
+先保存未提交工作，再获取远程信息：
+
+```sh
+git fetch origin
+```
+
+如果本地已经有目标分支，执行日常开发的 switch / pull 命令；尚无目标分支时执行：
+
+```sh
+git switch --create codex/native-workflow-engine --track origin/codex/native-workflow-engine
+git pull --ff-only origin codex/native-workflow-engine
+```
+
+旧 `codex-local` 分支停止作为开发和推送目标。迁移前它位于 `83112b373956ec0559d055ef015aaece562e92dd`，是目标主线中 `9e9025c9730ce36ec0a0d3411849bb5d852294f6` 的祖先；当前电脑已有的改造与另一台电脑新增的 5 条提交全部保留。只有确认目标主线保留这些提交并推送成功后，才删除旧的本地 / 远程分支。
+
+其他电脑若还保留本地 `codex-local`，先核对是否有尚未推送的独有提交，再切换和清理，不能直接按旧电脑的状态删除。不要重新推送已退役的远程分支。
+
+### 分支统一与运行环境的边界
+
+统一分支只迁移代码与协作入口，不自动升级服务、运行迁移或同步业务数据。
+本主线含原生工作流和共享 Agent 规则的后端源码及 `0334`、`0335` 迁移；现有固定安装器仍以 `2026.1023.0` 发布服务为基础。仅运行 setup 或替换 UI 不代表已部署这些后端能力；后端与数据库需另行配套部署。参见 [原生工作流](doc/NATIVE-WORKFLOWS.md) 和 [共享 Agent 规则](doc/shared-agent-instructions.md)。
 
 ## 本次改动
 
@@ -22,7 +74,7 @@
 ### 1. 拉取代码并构建
 
 ```sh
-git clone --branch codex-local https://github.com/Kinzca/paperclip.git
+git clone --branch codex/native-workflow-engine https://github.com/Kinzca/paperclip.git
 cd paperclip
 node scripts/local/setup.mjs
 ```
@@ -105,7 +157,7 @@ Wiki 的默认安装包位置是当前 Paperclip 仓库的 `packages/plugins/plu
 先停止服务并备份数据及插件文件，再在代码干净、可快进更新的仓库执行：
 
 ```sh
-git pull --ff-only origin codex-local
+git pull --ff-only origin codex/native-workflow-engine
 node scripts/local/setup.mjs
 node scripts/local/start.mjs
 ```
@@ -144,7 +196,9 @@ node scripts/local/install-wiki.mjs --upgrade
 本轮只实现、构建、提交和部署，没有运行开发测试、单独类型检查、代码审查、机械设计检测、浏览器或 Agent 任务验收。构建包含生成必需 SDK 产物的 TypeScript 编译。
 
 
-## 本机 Windows 安装记录（2026-11-02）
+## Windows 电脑历史安装记录（2026-11-02）
+
+以下是另一台电脑当时的安装记录，路径和验证结论只适用于该环境，不是其他电脑的固定配置。
 
 安装目录：`D:\Projects\Tool\paperclip`。使用目录内独立的 Node.js 24.22.2，不替换系统 Node。双击 `Start-Paperclip.cmd` 启动服务，再打开 http://127.0.0.1:3100 。双击 `Login-Codex.cmd` 完成此工具独立 Codex 目录的订阅登录；本次没有复制其他应用的凭据。后续重建可使用 `Setup-Paperclip.cmd`，先停止服务。
 

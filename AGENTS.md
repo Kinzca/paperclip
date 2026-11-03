@@ -2,6 +2,10 @@
 
 Guidance for human and AI contributors working in this repository.
 
+## 本 Fork 的主线协作规则
+
+开始工作前阅读 [FORK.md 的统一主线与跨电脑协作约定](FORK.md#统一主线与跨电脑协作)。本 Fork 唯一长期主线为 `codex/native-workflow-engine`，正常推送到 `origin` 的同名分支；开始前核对工作区与远程，使用快进拉取，保留其他电脑及现有未提交改动。临时分支必须以此主线为归并目标，不再使用退役的 `codex-local` 分支。代码推送、服务部署和数据库迁移应分别报告真实状态。
+
 ## 1. Purpose
 
 Paperclip is a control plane for AI-agent companies.

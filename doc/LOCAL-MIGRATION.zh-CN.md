@@ -1,6 +1,8 @@
 # 本地定制版：安装与迁移
 
-适用范围：`codex-local` 分支，固定服务 `2026.1023.0`、Office `0.4.0`、Wiki `0.1.3`。新电脑全新安装见 [FORK.md](../FORK.md)。本文的完整迁移使用**逻辑数据库备份 + 文件复制**，目标数据库采用单独启动的 PostgreSQL 18；新装仍可使用安装入口默认的嵌入式 PostgreSQL。
+适用范围：`codex/native-workflow-engine` 分支，固定服务 `2026.1023.0`、Office `0.4.0`、Wiki `0.1.3`。新电脑全新安装见 [FORK.md](../FORK.md)。本文的完整迁移使用**逻辑数据库备份 + 文件复制**，目标数据库采用单独启动的 PostgreSQL 18；新装仍可使用安装入口默认的嵌入式 PostgreSQL。
+
+开发主线已统一为 `codex/native-workflow-engine`，旧 `codex-local` 分支停止使用。已有电脑的分支切换见 [FORK.md](../FORK.md#已有电脑切换主线)。本主线另含 `0334`、`0335` 后端迁移；本文的文件 / 数据迁移不等于部署这些源码功能，固定运行时与源码后端升级需分别安排。
 
 按用户要求，本次仅补齐脚本与说明，没有执行备份恢复、另一台电脑安装、接口演练或界面验收。下面是供用户操作的步骤，不是已经通过的迁移记录。
 
@@ -77,7 +79,7 @@ rsync -a --exclude='/instances/default/db/' \
 安装 Git、npm、Node.js >= 24.11：
 
 ```sh
-git clone --branch codex-local https://github.com/Kinzca/paperclip.git
+git clone --branch codex/native-workflow-engine https://github.com/Kinzca/paperclip.git
 cd paperclip
 export PAPERCLIP_LOCAL_DIR="/新电脑的绝对路径/paperclip-local"
 node scripts/local/setup.mjs
