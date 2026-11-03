@@ -10,7 +10,7 @@ Open **Task workflows** in the sidebar. Company/project defaults apply automatic
 to newly assigned standard root tasks, including initially unassigned tasks at
 first assignment. Existing assigned tasks are not retrofitted. Platform defaults
 enable `standard`: execute → retain a successful run receipt → independently
-review, with three attempts per node, 60 active minutes and two concurrent stages.
+review, with five attempts per node, 180 active minutes and two concurrent stages.
 Native company budgets remain enforced; an additional workflow cost cap is optional.
 
 The board page is `/:companyPrefix/workflows` (for example, `/AIG/workflows`).
@@ -136,7 +136,7 @@ cancellation data. Mutations are audited; policies/controls use optimistic versi
 | POST | `/companies/:companyId/workflows/revisions/:revisionId/trials` | Replay `baselineRunIds` against draft |
 | POST | `/companies/:companyId/workflows/revisions/:revisionId/publish` | Board publication gate |
 | GET | `/issues/:issueId/workflow` | Snapshot, graph and attempt evidence |
-| POST | `/issues/:issueId/workflow/control` | Board pause/resume/retry/cancel |
+| POST | `/issues/:issueId/workflow/control` | Board pause/resume/retry/cancel/extend |
 | POST | `/issues/:issueId/workflow/decisions` | Current participant verdict |
 
 Controls require `action`, `reason`, `expectedVersion`. Decisions require `nodeId`,

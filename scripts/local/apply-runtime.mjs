@@ -10,6 +10,7 @@ for (const [overlay, target] of [
   ['postgres', 'node_modules/postgres'],
   ['sidebar-schema', 'node_modules/@paperclipai/shared'],
 ]) {
+  if (process.argv.includes('--dependencies-only') && overlay !== 'postgres') continue;
   const source = path.join(root, 'scripts/local/overlays', overlay);
   const manifest = JSON.parse(readFileSync(path.join(source, 'manifest.json'), 'utf8'));
   const packageRoot = path.join(runtime, target);

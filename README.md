@@ -4,13 +4,14 @@
 
 日常开发与两台电脑交接统一使用此主线，规则见 [分支协作约定](FORK.md#统一主线与跨电脑协作)。旧 `codex-local` 分支已退役，不再作为安装或推送目标。
 
-主线包含原生工作流与共享 Agent 规则的源码；下方固定安装入口仍使用 `2026.1023.0` 发布服务。新后端功能需要配套部署及数据库迁移，不能将拉取源码等同于运行环境已经升级。
+主线提供统一安装、升级和兼容回退入口，配套构建本提交的后端、UI、SDK、Office 和 Wiki。以 `release.json` 中的完整提交识别版本；拉取源码后仍需构建和切换。另一台电脑使用同一提交与工具链，具体见[版本发布操作说明](doc/LOCAL-RELEASES.zh-CN.md)。
 
-新电脑需要 Git、npm、Node.js **>= 24.11**，然后：
+新电脑需要 Git、npm、Node.js **24.22.2**，然后：
 
 ```sh
 git clone --branch codex/native-workflow-engine https://github.com/Kinzca/paperclip.git
 cd paperclip
+# 复现另一台电脑时，先 git checkout --detach <旧电脑 status 输出的完整提交>
 node scripts/local/setup.mjs
 node scripts/local/codex.mjs login
 node scripts/local/start.mjs
@@ -28,7 +29,7 @@ node scripts/local/install-wiki.mjs
 
 `setup` 负责构建宿主、Office 和 Wiki，插件登记单独执行；安装不自动创建员工或启动任务。桌面应用的登录不会自动写入此独立 CLI 登录目录，新电脑需用自己的账号授权。Git 拉取只带代码，不带公司数据、知识库资料或登录信息。
 
-按用户要求，本次补齐了脚本和文档，没有运行全新安装、跨电脑迁移或界面验收。下方保留上游原始介绍；使用本定制版请优先遵循上述中文文档。
+运行版本查看 `node scripts/local/status.mjs`。已有实例升级、回退和旧安装接管统一遵循[发布流程](doc/LOCAL-RELEASES.zh-CN.md)；全新安装、跨电脑迁移和页面功能由用户验收。下方保留上游原始介绍；使用本定制版请优先遵循上述中文文档。
 
 ---
 

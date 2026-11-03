@@ -3,8 +3,7 @@ import path from 'node:path';
 import { port } from './common.mjs';
 
 // 仅调用本机正式接口，不自动初始化公司、知识库或唤醒 Agent。
-export async function registerLocalPlugin({ pluginKey, displayName, packageName, packagePath }) {
-  const args = process.argv.slice(2);
+export async function registerLocalPlugin({ pluginKey, displayName, packageName, packagePath, args = process.argv.slice(2) }) {
   if (args.includes('--help')) {
     console.log(`用法：node scripts/local/install-${displayName.toLowerCase()}.mjs [--upgrade]\n默认：首次安装；已安装则保留。--upgrade：显式升级同路径的已有插件。`);
     return;

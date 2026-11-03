@@ -1,10 +1,8 @@
 # 本地定制版：安装与迁移
 
-适用范围：`codex/native-workflow-engine` 分支，固定服务 `2026.1023.0`、Office `0.4.0`、Wiki `0.1.3`。新电脑全新安装见 [FORK.md](../FORK.md)。本文的完整迁移使用**逻辑数据库备份 + 文件复制**，目标数据库采用单独启动的 PostgreSQL 18；新装仍可使用安装入口默认的嵌入式 PostgreSQL。
+适用范围：`codex/native-workflow-engine`。安装、升级与回退统一见[发布流程](LOCAL-RELEASES.zh-CN.md)，运行版本以 release.json 的完整提交为准。完整迁移使用**逻辑数据库备份 + 文件复制**，目标数据库采用单独启动的 PostgreSQL 18；新装仍可使用嵌入式 PostgreSQL。
 
-开发主线已统一为 `codex/native-workflow-engine`，旧 `codex-local` 分支停止使用。已有电脑的分支切换见 [FORK.md](../FORK.md#已有电脑切换主线)。本主线另含 `0334`、`0335` 后端迁移；本文的文件 / 数据迁移不等于部署这些源码功能，固定运行时与源码后端升级需分别安排。
-
-按用户要求，本次仅补齐脚本与说明，没有执行备份恢复、另一台电脑安装、接口演练或界面验收。下面是供用户操作的步骤，不是已经通过的迁移记录。
+旧 `codex-local` 分支已退役。迁移先复现原运行提交，再按统一升级流程前进；不要用分支最新代码搭配旧数据库直接启动。本文是供用户操作的步骤，不是已经通过的跨电脑或恢复验收记录。
 
 ## 选择迁移范围
 
@@ -20,7 +18,7 @@
 
 记录旧电脑的：
 
-- Paperclip 仓库分支和提交：`git branch --show-current`、`git rev-parse HEAD`。
+- `node scripts/local/status.mjs` 输出的运行提交和 release.json；另记录仓库分支和 HEAD，二者可能不同。旧手工安装先按发布文档接管。
 - 实际数据根目录和 config.json 位置。脚本默认是 `.paperclip-local/home/instances/default/config.json`；早期手工安装可能使用仓库外的 `paperclip-data/home/instances/default/config.json`。
 - 配置中的数据库模式 / 端口、存储目录、日志目录、加密密钥路径；实际值以 config 为准。
 - 所有公司的 Wiki 根目录及额外空间位置、Agent 工作目录、项目仓库、指令文件、外部技能目录、本地插件包目录。
@@ -76,11 +74,12 @@ rsync -a --exclude='/instances/default/db/' \
 
 ## 4. 新电脑拉取、构建，暂不启动 Paperclip
 
-安装 Git、npm、Node.js >= 24.11：
+安装 Git、npm、Node.js **24.22.2**，取得完整源码（旧稀疏检出先 `git sparse-checkout disable`）：
 
 ```sh
 git clone --branch codex/native-workflow-engine https://github.com/Kinzca/paperclip.git
 cd paperclip
+git checkout --detach <旧电脑运行清单中的完整提交>
 export PAPERCLIP_LOCAL_DIR="/新电脑的绝对路径/paperclip-local"
 node scripts/local/setup.mjs
 ```
@@ -142,15 +141,15 @@ gzip -dc "$DB_BACKUP" | psql -h 127.0.0.1 -p 54329 \
 
 旧 embeddedPostgresDataDir 字段在 postgres 模式不使用。不要顺手删除或重新生成加密主密钥；数据库里的密文需要原密钥。恢复后的密钥文件仅允许本人读取，例如对实际文件执行 `chmod 600`。检查 `.env`、终端 `DATABASE_URL`、`CODEX_HOME` 等是否仍指向旧电脑或其他实例；环境变量可能覆盖配置。配置中含密码，不提交到 Git。
 
-数据库中的本地插件包路径也需要更新。该固定版本的 upgrade 接口只能读取已有 package_path，不支持传入新路径。因此，在**新恢复副本、Paperclip 未启动**时，使用下列有明确插件 key 限制的 SQL 重新定位两项包目录，保留插件 ID、配置和命名空间；这不是通用的在线修改方式。
+数据库中的本地插件包路径也需要更新。当前 upgrade 接口只能读取已有 package_path，不支持传入新路径。因此，在**新恢复副本、Paperclip 未启动**时，使用下列有明确插件 key 限制的 SQL 重新定位两项包目录，保留插件 ID、配置和命名空间；这不是通用的在线修改方式。
 
 在新仓库根目录执行，保持 PostgreSQL 运行：
 
 ```sh
 psql -h 127.0.0.1 -p 54329 -U paperclip -W -d paperclip \
   -v ON_ERROR_STOP=1 \
-  -v office_path="$PAPERCLIP_LOCAL_DIR/Agent-Pixels" \
-  -v wiki_path="$PWD/packages/plugins/plugin-llm-wiki" <<'SQL'
+  -v office_path="$PAPERCLIP_LOCAL_DIR/plugins/office" \
+  -v wiki_path="$PAPERCLIP_LOCAL_DIR/plugins/wiki" <<'SQL'
 BEGIN;
 UPDATE plugins SET package_path = :'office_path', updated_at = now()
 WHERE plugin_key = 'agent-pixels.compat';
@@ -162,9 +161,12 @@ SQL
 
 只有旧实例本来安装过的插件会命中；没有安装过的插件后续走首次安装。其他本地插件须逐项维护路径，不批量替换数据库所有字符串。不要为了修路径卸载并 purge 插件。
 
-## 7. 登录、启动并通过正式接口升级
+## 7. 备份恢复后的库、迁移，再登录启动
+
+配置和路径调整后，运行 migrate；它先备份再应用当前发布版本所需迁移，不启动 Paperclip：
 
 ```sh
+node scripts/local/migrate.mjs
 node scripts/local/codex.mjs login
 node scripts/local/start.mjs
 ```

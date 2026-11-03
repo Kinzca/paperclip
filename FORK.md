@@ -52,9 +52,9 @@ git pull --ff-only origin codex/native-workflow-engine
 ### 分支统一与运行环境的边界
 
 统一分支只迁移代码与协作入口，不自动升级服务、运行迁移或同步业务数据。
-本主线含原生工作流和共享 Agent 规则的后端源码及 `0334`、`0335` 迁移；现有固定安装器仍以 `2026.1023.0` 发布服务为基础。仅运行 setup 或替换 UI 不代表已部署这些后端能力；后端与数据库需另行配套部署。参见 [原生工作流](doc/NATIVE-WORKFLOWS.md) 和 [共享 Agent 规则](doc/shared-agent-instructions.md)。
+本主线含原生工作流、共享 Agent 规则和运行控制。统一安装器配套编译当前提交的后端、db、shared、SDK 与 UI；已有实例通过 upgrade 备份、迁移和切换，单独 git pull 不会升级运行服务。参见[统一发布流程](doc/LOCAL-RELEASES.zh-CN.md)。参见 [原生工作流](doc/NATIVE-WORKFLOWS.md) 和 [共享 Agent 规则](doc/shared-agent-instructions.md)。
 
-## 本次改动
+## 早期改造记录（2026-11-02）
 
 - 侧栏新增可折叠的 Plugins 分组，复用原生分组、字体和间距。插件 sidebar 插槽和 sidebar launcher 从 Work 移入该组；没有插件入口时隐藏分组。主界面顺序为 Work → Org → Plugins → Agents。原有 sidebarPanel 扩展保留原位置。
 - Office 来自 [Kinzca/Agent-Pixels](https://github.com/Kinzca/Agent-Pixels)，固定在 `a3fff4a71eeca595572decfdca7adffeadd26a85`（0.4.0）。去掉页面内重复标题、徽标、说明，将刷新状态移到任务工具栏旁。保留自动刷新、防闪烁画布、任务摘要和真实流程状态。
@@ -67,7 +67,7 @@ git pull --ff-only origin codex/native-workflow-engine
 
 ## 在另一台电脑全新安装
 
-前提：Git、npm、Node.js >= 24.11。终端脚本面向 macOS / Linux；Windows 可在 WSL2 内操作，原生 Windows 与 WSL2 均尚未做安装验收。本入口固定发布服务 `2026.1023.0`、pnpm `9.15.4`、Office `0.4.0`；Wiki 随当前仓库构建，目前为 `0.1.3`。不要用上游 README 的最新版 quickstart 替换这套固定运行时。
+前提：Git、npm、Node.js **24.22.2**。pnpm 固定 9.15.4，Office 固定提交，Wiki 随当前仓库构建。完整版本来源、Windows 旧安装接管及回退步骤见[统一发布流程](doc/LOCAL-RELEASES.zh-CN.md)。Windows 旧稀疏检出先执行 `git sparse-checkout disable`。不同平台重新构建同一提交，不复制旧二进制。
 
 如果要保留旧电脑的公司与工作记录，先阅读 [迁移文档](doc/LOCAL-MIGRATION.zh-CN.md)，不要先初始化另一套空白公司再覆盖。
 
@@ -85,7 +85,7 @@ node scripts/local/setup.mjs
 export PAPERCLIP_LOCAL_DIR="/你的绝对路径/paperclip-local"
 ```
 
-`setup.mjs` 安装隔离的发布服务和构建工具，应用固定运行时覆盖，构建宿主 UI、Fork SDK、Wiki 和固定提交的 Office。它不启动服务、不登记插件、不创建公司或任务；再次运行会重建其 node_modules，但保留 home、登录目录和插件数据。已有服务必须先停止再 setup。完整下载可能较大。
+`setup.mjs` 将当前干净提交构建为独立 `releases/<提交前12位>`，不覆盖成功版本；只有空实例自动记录初始版本。已有实例必须先停止服务，构建后显式 upgrade。安装不启动服务、不登记插件、不创建公司或任务；保留 home、登录目录和插件资料。复现另一台电脑前先 checkout 它的实际运行提交。下载与保留发布包需要足够磁盘空间。
 
 ### 2. 用现有订阅账号登录 Codex
 
@@ -105,7 +105,7 @@ node scripts/local/codex.mjs login
 node scripts/local/start.mjs
 ```
 
-首次调用官方本机 onboard，默认仅在回环地址 [http://127.0.0.1:3100](http://127.0.0.1:3100) 提供服务，使用嵌入式 PostgreSQL。已有配置则复用该配置。保持此终端运行；Ctrl+C 停止通过此入口启动的服务。官方启动可能执行内置诊断和数据库迁移，不等于此 Fork 已做开发测试或跨机验收。
+首次调用官方本机 onboard，默认仅在回环地址 [http://127.0.0.1:3100](http://127.0.0.1:3100) 提供服务，使用嵌入式 PostgreSQL。已有配置则复用该配置。保持此终端运行；Ctrl+C 停止通过此入口启动的服务。新实例初始化可以执行迁移；已有实例由 upgrade 或 migrate 显式迁移，start 不自动升级数据库。启动成功不等于跨机或功能验收。
 
 ### 4. 在第二个终端登记插件
 
@@ -130,60 +130,36 @@ node scripts/local/install-wiki.mjs
 
 ### 数据目录
 
-| 路径（相对于数据根目录） | 用途 |
-| --- | --- |
-| `runtime/` | 固定发布服务，可重新安装 |
-| `build-tools/`、`npm-cache/` | 构建工具及缓存，可重新生成 |
-| `Agent-Pixels/` | 固定版本 Office 代码与产物 |
-| `home/instances/default/` | 配置、数据库、日志、存储和密钥等实例文件，实际路径以 config 为准 |
-| `codex/` | 本入口默认 Codex 登录目录，不随 Git 同步 |
-| `installation.json` | 发布版本、Office 提交和 Wiki 版本记录，不包含验收结论 |
+新安装的代码位于 `releases/`，运行选择位于 `current.json`，备份位于 `checkpoints/`，稳定插件包位于 `plugins/office` 和 `plugins/wiki`。旧安装接管保留原插件路径。Wiki 正文位于公司设置的资料目录，与插件包不同。完整目录表见[发布说明](doc/LOCAL-RELEASES.zh-CN.md#状态目录和默认额度)。
 
-Wiki 的默认安装包位置是当前 Paperclip 仓库的 `packages/plugins/plugin-llm-wiki`，与存放资料的 Wiki 根目录不同。安装后不要随意移动仓库；需要改位置时按迁移文档重新定位插件登记路径。
-
-`PAPERCLIP_PORT` 用于新实例环境和安装接口；已有服务实际端口以 config 为准。改变 `PAPERCLIP_LOCAL_DIR` 只会指向别的位置，不会搬运旧数据。
+`home/instances/default/` 保存实例配置、数据库、日志、存储和密钥；实际位置以 config 为准。`codex/` 是默认 CLI 登录目录。它们不随 Git 同步，也不随版本切换重建。`PAPERCLIP_PORT` 必须与实例端口一致；改变 `PAPERCLIP_LOCAL_DIR` 只改变目标，不搬运旧数据。
 
 ## 源码、运行时和数据的边界
 
 - `ui/src/components/SidebarPlugins.tsx` 负责分组；两种侧栏均复用该组件。
 - `server/src/services/heartbeat/{queue,run-control,run-preparation,stage-handoff}.ts` 保存阶段交接修复的源码形式。
-- 为复用当前已发布服务，安装器使用固定版本 `paperclipai@2026.1023.0`，覆盖自定义 UI，以及 `scripts/local/overlays/stage-handoff/` 内此前部署的三个 JS 文件。运行时覆盖与源码需要在后续升级时一起维护；本轮没有构建完整 TS 服务端，也没有重新验证源码移植。
+- 宿主核心从当前提交编译；锁定发布依赖只提供 runner、原生程序、适配器、CLI 与外部依赖。新构建不再将旧 stage-handoff 或 sidebar-schema JS 覆盖到新后端；这些修复已在源码中。release.json 明确记录来源。
 - `scripts/local/overlays/postgres/` 是同版本上游 `patches/postgres@3.4.9.patch` 的发布运行时形式。npm 安装不会执行 pnpm patchedDependencies，所以安装器补齐此官方补丁。文件包含其他修改或版本不同会停止，不会强行覆盖。
 - 阶段交接沿用此前受限扫描恢复方式，并非新增无轮询或休眠安全保证。升级调度器时应另行适配和验证，本轮只保留现有行为。
 - 不包含当前电脑的公司、员工、任务、附件、数据库、密钥或 Codex 登录。新电脑默认是全新实例。已有公司需要导入员工模板/重新配置；同一台电脑现有实例中的公司继续使用原数据。若要完整迁移，需通过数据库备份及对应文件存储、加密密钥的安全迁移单独操作，不能只 git pull。
 
 ## 后续维护与升级
 
-先停止服务并备份数据及插件文件，再在代码干净、可快进更新的仓库执行：
+统一执行：停服务 → 快进拉取 → `setup.mjs --prepare-only` → `upgrade.mjs --to <确切版本>` → `start.mjs`。首次从旧手工 runtime / source-releases 迁移需要先 `adopt.mjs`。升级前自动保存数据库逻辑备份、配置与插件代码检查点，启动后通过正式接口同步已安装且 ready 的 Office / Wiki。失败保留 pending 记录，不能跳过失败直接启动。
 
-```sh
-git pull --ff-only origin codex/native-workflow-engine
-node scripts/local/setup.mjs
-node scripts/local/start.mjs
-```
-
-保持服务运行，第二个终端进入同一仓库，使用相同环境变量：
-
-```sh
-node scripts/local/install-office.mjs --upgrade
-node scripts/local/install-wiki.mjs --upgrade
-```
-
-`--upgrade` 只用于已安装且 package_path 对应当前构建位置的插件，走正式 upgrade 接口，沿用原插件 ID 和配置。未安装则去掉参数；登记位置不同会停止，不会偷偷改旧路径、卸载或清空插件数据。历史手工安装位置需要维护原包目录，或按迁移文档在恢复副本上重新定位后再升级。升级激活插件不等于启动维护 Agent，但已启用的插件事件和作业按现有配置恢复运行。
-
-自定义 UI、SDK 桥、运行时覆盖、Office 固定提交和 Wiki 构建应配套更新，不能只替换其中某部分或直接升级上游服务。保留上游可用 `git remote add upstream https://github.com/paperclipai/paperclip.git`，后续选择性同步。
+停止服务后 `rollback.mjs` 可回到迁移清单兼容的上一版本；数据库或插件迁移不兼容时，恢复到独立实例。命令、失败恢复和数据备份范围均见[统一发布流程](doc/LOCAL-RELEASES.zh-CN.md)。不自动卸载插件、清空知识库或重建登录。
 
 ## 交付证据与未验证范围
 
-先前本地宿主、Office / Wiki 部署已有构建及正式登记记录；最新 Wiki 布局为 0.1.3。本次进一步修改的是安装入口和文档，不能把先前构建通过当成新安装脚本已验收。
+版本工具包含隔离检查与构建步骤，部署状态在实际交付说明中报告。UI、真实 Agent 闭环、另一台电脑全新安装和跨平台数据库恢复由用户检查；不得从健康接口或构建成功推导这些验收通过。下方早期记录保留其原有时间和验证范围。
 
-按要求不执行 setup、首次安装、升级登记演练、数据库备份恢复、跨电脑安装、跨平台兼容、Agent 任务或浏览器验收。新命令与完整迁移仍由用户检查。必要的插件构建记录在本次交付说明中单独列出。
+工作流出厂默认额度为**每阶段 5 次、累计执行 180 分钟、并发 2**；人工验收等待停表，支持人工追加额度和无效循环识别。已有显式配置和运行快照保持原规则，详见[运行控制说明](doc/WORKFLOW-RUNTIME-CONTROLS.zh-CN.md)。
 
 ## 插件侧栏规格统一（待用户检查）
 
 新增 sidebar 的可选 `navigation: { routePath, icon }` 元数据，普通入口由宿主 SidebarNavItem 绘制。Office / Wiki 已分别声明 building-2 / book-open；兼容旧单入口插件的自动页面推导，并保留复杂自绘入口的兼容挂载。详细契约、图标名、退出自动推导的方法和部署顺序见 [侧栏入口规范](doc/plugins/SIDEBAR-NAVIGATION.md)。
 
-本地发布服务通过 `scripts/local/overlays/sidebar-schema/` 获得同样的可选字段校验；不新增数据库迁移或业务权限。宿主和插件需要配套更新。本轮构建不等于验收，仍由用户检查。
+早期发布服务通过 `scripts/local/overlays/sidebar-schema/` 获得可选字段校验；新安装器直接编译包含该能力的源码，不新增数据库迁移或业务权限。宿主和插件需要配套更新。本轮构建不等于验收，仍由用户检查。
 
 ## 简体中文／English（待用户检查）
 
