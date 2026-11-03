@@ -124,6 +124,8 @@ node scripts/local/start.mjs
 node scripts/local/install-workspace-diff.mjs
 ```
 
+安装入口还会通过正式实例设置接口启用 `enableIsolatedWorkspaces`，否则宿主会将工作区详情跳转到 Dashboard。它不修改 `enableIsolatedWorkspacesByDefault` 或项目策略；认证实例需由管理员操作，受托管限制时会明确报错。设置后刷新浏览器再进入工作区。
+
 已有安装使用同路径正式升级接口，日常版本升级会同步已安装且 ready 的插件。它增加工作区的 Changes 页签，不新增侧栏菜单，不创建 Agent 或例程；Git 工作目录必须在宿主可访问的位置。新电脑恢复数据库时，还需将 `paperclip.workspace-diff` 的 package_path 调整到该电脑 `$PAPERCLIP_LOCAL_DIR/plugins/workspace-diff`。
 
 回退到不包含当前托管插件的早期发布包会停止，以免把新插件代码留在旧宿主上却声称已完整回退；请使用包含同一组插件的兼容发布版本，或按完整恢复流程处理。
