@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { uiText, useUiLocale } from "@/i18n/ui";
 import { useCompany } from "@/context/CompanyContext";
 import { useAgentAppearanceDraft } from "@/hooks/useAgentAppearanceDraft";
@@ -204,18 +205,18 @@ export function AgentBasicsDialog({
                   })}
                 </div>
                 {validAdapter && adapterType === "paperclip_runner" && (
-                  <label className="flex flex-col gap-2 text-sm font-medium">{uiText("Runner")}<select
+                  <label className="flex flex-col gap-2 text-sm font-medium">{uiText("Runner")}<SelectField
                       className="rounded-md border border-border bg-background px-3 py-2"
                       value={runnerProvider}
-                      onChange={(event) =>
-                        setRunnerProvider(event.target.value)
+                      onValueChange={(optionValue) =>
+                        setRunnerProvider(optionValue)
                       }
                     >
                       <option value="codex">{uiText("Codex (app server)")}</option>
                       <option value="claude">{uiText("Claude (ACPX)")}</option>
                       <option value="grok">{uiText("Grok Build (ACPX)")}</option>
                       <option value="opencode">{uiText("OpenCode")}</option>
-                    </select>
+                    </SelectField>
                   </label>
                 )}
               </fieldset>

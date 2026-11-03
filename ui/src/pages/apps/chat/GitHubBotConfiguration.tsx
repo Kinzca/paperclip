@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { useEffect, useId, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -302,11 +303,11 @@ export function GitHubPolicyEditor({
             <Label htmlFor={`${id}-github-prompt-event`} className="sr-only">
               Event
             </Label>
-            <select
+            <SelectField
               id={`${id}-github-prompt-event`}
               className={githubSelectClass}
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value as typeof prompt)}
+              onValueChange={(optionValue) => setPrompt(optionValue as typeof prompt)}
             >
               {GITHUB_REVIEW_EVENTS.map((event) => (
                 <option key={event} value={event}>
@@ -314,7 +315,7 @@ export function GitHubPolicyEditor({
                 </option>
               ))}
               <option value="issue_opened">New issue</option>
-            </select>
+            </SelectField>
             <MarkdownEditor
               key={prompt}
               readOnly={readOnly}
@@ -524,22 +525,21 @@ export function GitHubPolicyEditor({
               <Label htmlFor={`${id}-github-severity`}>
                 Minimum inline severity
               </Label>
-              <select
+              <SelectField
                 id={`${id}-github-severity`}
                 className={githubSelectClass}
                 value={policy.minimumCommentSeverity}
-                onChange={(e) =>
+                onValueChange={(optionValue) =>
                   set(
                     "minimumCommentSeverity",
-                    e.target
-                      .value as GitHubReviewPolicy["minimumCommentSeverity"],
+                    optionValue as GitHubReviewPolicy["minimumCommentSeverity"],
                   )
                 }
               >
                 <option value="info">Info</option>
                 <option value="warning">Warning</option>
                 <option value="error">Error</option>
-              </select>
+              </SelectField>
               <p className="text-xs text-muted-foreground">
                 Hidden findings still count in the assessment.
               </p>
@@ -895,14 +895,14 @@ export function GitHubAccessEditor({
           ) : (
             <>
               <Label htmlFor="github-responsible">Responsible member</Label>
-              <select
+              <SelectField
                 id="github-responsible"
                 className={githubSelectClass}
                 value={configuration.responsibleUserId}
-                onChange={(e) =>
+                onValueChange={(optionValue) =>
                   onChange({
                     ...configuration,
-                    responsibleUserId: e.target.value,
+                    responsibleUserId: optionValue,
                   })
                 }
               >
@@ -918,7 +918,7 @@ export function GitHubAccessEditor({
                       member.principalId}
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </>
           )}
           <p className="text-xs text-muted-foreground">
@@ -1043,11 +1043,11 @@ export function GitHubAccessEditor({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="github-guest-sponsor">Sponsor</Label>
-                <select
+                <SelectField
                   id="github-guest-sponsor"
                   className={githubSelectClass}
                   value={sponsor}
-                  onChange={(e) => setSponsor(e.target.value)}
+                  onValueChange={(optionValue) => setSponsor(optionValue)}
                 >
                   {!activeMembers.some(
                     (member) => member.principalId === sponsor,
@@ -1057,7 +1057,7 @@ export function GitHubAccessEditor({
                       {member.user?.name ?? member.principalId}
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
               {candidate && (
                 <p role="status" className="text-sm">

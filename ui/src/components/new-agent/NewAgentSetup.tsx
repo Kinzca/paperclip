@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { uiText, useUiLocale } from "@/i18n/ui";
 import { useConnectionModels } from "../ai-connections/useConnectionModels";
 import { AgentCharacter } from "../AgentCharacter";
@@ -55,7 +56,7 @@ import { Field, ToggleField } from "../agent-config-primitives";
 import { SecretPicker } from "../environment-variables-editor/SecretPicker";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { NativeSelect, nativeSelectClassName } from "../ui/select";
+import { nativeSelectClassName } from "../ui/select";
 import {
   OnboardingCard,
   OnboardingHeading,
@@ -898,11 +899,11 @@ function Setup({
                             )}
                             {efforts.length > 0 && (
                               <Field label={uiText("Thinking effort")}>
-                                <NativeSelect
+                                <SelectField
                                   aria-label={uiText("Thinking effort")}
                                   value={effort}
-                                  onChange={(event) => {
-                                    setEffort(event.target.value);
+                                  onValueChange={(optionValue) => {
+                                    setEffort(optionValue);
                                     resetTest();
                                   }}
                                 >
@@ -912,7 +913,7 @@ function Setup({
                                       {value}
                                     </option>
                                   ))}
-                                </NativeSelect>
+                                </SelectField>
                               </Field>
                             )}
                           </div>
@@ -926,12 +927,12 @@ function Setup({
                           <div className="grid gap-5 sm:grid-cols-2">
                             {chooseProvider && (
                               <Field label={uiText("API key provider")}>
-                                <select
+                                <SelectField
                                   aria-label={uiText("API key provider")}
                                   className={controlClass}
                                   value={provider}
-                                  onChange={(event) => {
-                                    setProvider(event.target.value);
+                                  onValueChange={(optionValue) => {
+                                    setProvider(optionValue);
                                     setModel("");
                                     setApiKey("");
                                     setProviderBinding(null);
@@ -954,7 +955,7 @@ function Setup({
                                               }[key] ?? key)}
                                     </option>
                                   ))}
-                                </select>
+                                </SelectField>
                               </Field>
                             )}
                             <div
@@ -1059,12 +1060,12 @@ function Setup({
                               />
                             </Field>
                             <Field label={uiText("Kimi API protocol")}>
-                              <select
+                              <SelectField
                                 aria-label={uiText("Kimi API protocol")}
                                 className={controlClass}
                                 value={kimiProtocol}
-                                onChange={(event) => {
-                                  setKimiProtocol(event.target.value);
+                                onValueChange={(optionValue) => {
+                                  setKimiProtocol(optionValue);
                                   resetTest();
                                 }}
                               >
@@ -1073,7 +1074,7 @@ function Setup({
                                     <option key={value}>{value}</option>
                                   ),
                                 )}
-                              </select>
+                              </SelectField>
                             </Field>
                             <Field
                               label={uiText("Kimi API base URL")}
@@ -1123,13 +1124,13 @@ function Setup({
                       ) && (
                         <section className="space-y-5">
                           <h3 className="text-sm font-semibold">{uiText("Environment")}</h3>
-                          <select
+                          <SelectField
                             aria-label={uiText("Environment")}
                             className={controlClass}
                             value={environmentOverride}
                             disabled={forced.forced}
-                            onChange={(event) => {
-                              setEnvironmentOverride(event.target.value);
+                            onValueChange={(optionValue) => {
+                              setEnvironmentOverride(optionValue);
                               setConnection(null);
                               resetTest();
                               if (connectionAdapter) setScreen("connect");
@@ -1144,7 +1145,7 @@ function Setup({
                                   {environmentDisplayLabel(env)}
                                 </option>
                               ))}
-                          </select>
+                          </SelectField>
                         </section>
                       )}
                     </fieldset>

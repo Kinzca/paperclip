@@ -203,6 +203,7 @@ When adding endpoints:
 
 ## 9. UI Expectations
 
+- 本 Fork 的普通单选框使用 `ui/src/components/ui/select-field.tsx`，或已有 Select 原语；不要新增可见的原生 `<select>`。插件可使用 SDK 的 `SelectField`，由宿主绘制。共享组件中的隐藏原生字段只服务于表单提交和必填校验。契约见 `doc/plugins/SELECT-FIELDS.md`。
 - Keep routes and nav aligned with available API surface
 - Use company selection context for company-scoped pages
 - Surface failures clearly; do not silently ignore API errors

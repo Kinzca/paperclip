@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useMemo, useState } from "react";
 import type { AgentPermissions, TrustPreset } from "@paperclipai/shared";
 import { Lock, ShieldAlert } from "lucide-react";
@@ -109,15 +110,15 @@ export function TrustPresetSection({
       <h3 className="mb-3 text-sm font-medium">Trust</h3>
       <div className="rounded-lg border border-border p-4 space-y-3">
         <Field label="Trust preset" hint="Choose how broadly this agent can read and act on Paperclip work objects.">
-          <select
+          <SelectField
             className={inputClass}
             value={preset}
-            onChange={(event) => handlePresetChange(event.target.value)}
+            onValueChange={(optionValue) => handlePresetChange(optionValue)}
             disabled={disabled}
           >
             <option value="standard">{TRUST_PRESET_LABELS.standard}</option>
             <option value="low_trust_review">{TRUST_PRESET_LABELS.low_trust_review}</option>
-          </select>
+          </SelectField>
         </Field>
         <p className="text-xs text-muted-foreground">{TRUST_PRESET_DESCRIPTIONS[preset]}</p>
 
@@ -152,22 +153,22 @@ export function TrustPresetSection({
                 <div className="rounded-md border border-border/70 bg-background/70 p-3 text-foreground space-y-3">
                   <div className="grid gap-3 sm:grid-cols-(--gtc-12)">
                     <Field label="Boundary type">
-                      <select
+                      <SelectField
                         className={inputClass}
                         value={targetType}
-                        onChange={(event) => setTargetType(event.target.value as LowTrustBoundaryTargetType)}
+                        onValueChange={(optionValue) => setTargetType(optionValue as LowTrustBoundaryTargetType)}
                         disabled={disabled}
                       >
                         <option value="project">Project</option>
                         <option value="root_issue">Root issue</option>
                         {allowSingleIssue && <option value="issue">Issue</option>}
-                      </select>
+                      </SelectField>
                     </Field>
                     <Field label={BOUNDARY_TARGET_LABELS[targetType]}>
-                      <select
+                      <SelectField
                         className={inputClass}
                         value={boundaryValue}
-                        onChange={(event) => handleBoundaryTargetChange(event.target.value)}
+                        onValueChange={(optionValue) => handleBoundaryTargetChange(optionValue)}
                         disabled={disabled || !companyId || candidatesLoading || targetCandidates.length === 0}
                       >
                         <option value="">
@@ -182,7 +183,7 @@ export function TrustPresetSection({
                             {candidate.label}
                           </option>
                         ))}
-                      </select>
+                      </SelectField>
                     </Field>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-2">

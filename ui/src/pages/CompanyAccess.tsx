@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -446,11 +447,11 @@ export function CompanyAccess() {
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="space-y-2 text-sm">
                   <span className="font-medium">Organization role</span>
-                  <select
+                  <SelectField
                     className="w-full rounded-md border border-border bg-background px-3 py-2"
                     value={draftRole ?? ""}
-                    onChange={(event) =>
-                      setDraftRole((event.target.value || null) as CompanyMember["membershipRole"])
+                    onValueChange={(optionValue) =>
+                      setDraftRole((optionValue || null) as CompanyMember["membershipRole"])
                     }
                   >
                     <option value="">Unset</option>
@@ -459,21 +460,21 @@ export function CompanyAccess() {
                         {label}
                       </option>
                     ))}
-                  </select>
+                  </SelectField>
                 </label>
                 <label className="space-y-2 text-sm">
                   <span className="font-medium">Membership status</span>
-                  <select
+                  <SelectField
                     className="w-full rounded-md border border-border bg-background px-3 py-2"
                     value={draftStatus}
-                    onChange={(event) =>
-                      setDraftStatus(event.target.value as EditableMemberStatus)
+                    onValueChange={(optionValue) =>
+                      setDraftStatus(optionValue as EditableMemberStatus)
                     }
                   >
                     <option value="active">Active</option>
                     <option value="pending">Pending</option>
                     <option value="suspended">Suspended</option>
-                  </select>
+                  </SelectField>
                 </label>
               </div>
             </div>
@@ -522,10 +523,10 @@ export function CompanyAccess() {
               {assignedIssues.length > 0 ? (
                 <div className="space-y-2">
                   <div className="text-sm font-medium">Task reassignment</div>
-                  <select
+                  <SelectField
                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                     value={reassignmentTarget}
-                    onChange={(event) => setReassignmentTarget(event.target.value)}
+                    onValueChange={(optionValue) => setReassignmentTarget(optionValue)}
                   >
                     <option value="__unassigned">Leave unassigned</option>
                     {activeReassignmentUsers.length > 0 ? (
@@ -546,7 +547,7 @@ export function CompanyAccess() {
                         ))}
                       </optgroup>
                     ) : null}
-                  </select>
+                  </SelectField>
                   <div className="max-h-36 overflow-auto rounded-lg border border-border">
                     {assignedIssues.slice(0, 6).map((issue) => (
                       <div key={issue.id} className="border-b border-border px-3 py-2 text-sm last:border-b-0">

@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronDown, Circle, Plus, X } from "lucide-react";
@@ -20,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { NativeSelect } from "@/components/ui/select";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export interface DraftRequest {
@@ -391,14 +392,14 @@ export function WorkflowImprovements({
           )}
           <label className="flex max-w-xl flex-col gap-1.5 text-sm">
             {uiText("Select an existing draft")}
-            <NativeSelect
+            <SelectField
               aria-label={uiText("Select an existing draft")}
               value={revisionId}
               disabled={busy}
-              onChange={(event) =>
+              onValueChange={(optionValue) =>
                 dirty
-                  ? setPendingRevision(event.target.value)
-                  : chooseRevision(event.target.value)
+                  ? setPendingRevision(optionValue)
+                  : chooseRevision(optionValue)
               }
             >
               <option value="">{uiText("Select a draft")}</option>
@@ -415,7 +416,7 @@ export function WorkflowImprovements({
                   · {uiText("Version {{version}}", { version: item.revision })}
                 </option>
               ))}
-            </NativeSelect>
+            </SelectField>
             {drafts.length === 0 && (
               <span className="text-xs text-muted-foreground">
                 {uiText("No saved drafts yet")}

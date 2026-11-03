@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { SkillBinaryFile } from "../components/SkillBinaryFile";
 import { SkillSourceProvenance } from "../components/SkillSourceProvenance";
 import { AgentIdentity } from "@/components/AgentIdentity";
@@ -2308,9 +2309,9 @@ function AttachAgentsPopover({
       headerContent={sortedVersions.length > 0 ? (
         <div className="mt-2 flex items-center gap-2 text-xs">
           <span className="shrink-0 text-muted-foreground">Version</span>
-          <select
+          <SelectField
             value={draftVersionId ?? "__latest__"}
-            onChange={(event) => setDraftVersionId(event.target.value === "__latest__" ? null : event.target.value)}
+            onValueChange={(optionValue) => setDraftVersionId(optionValue === "__latest__" ? null : optionValue)}
             className="h-8 min-w-0 flex-1 rounded-md border border-border bg-background px-2 text-xs text-foreground"
           >
             <option value="__latest__">Latest</option>
@@ -2319,7 +2320,7 @@ function AttachAgentsPopover({
                 v{version.revisionNumber}{version.label ? ` · ${version.label}` : ""}
               </option>
             ))}
-          </select>
+          </SelectField>
         </div>
       ) : null}
       emptyMessage={eligible.length === 0 ? "No agents in this company support skills yet." : "No agents yet."}
@@ -2655,28 +2656,28 @@ function SkillVersionDiffDialog({
           <div className="flex flex-wrap items-center gap-3 text-xs">
             <label className="flex items-center gap-2">
               <Badge variant="outline" className="border-red-500/30 bg-red-500/10 uppercase tracking-wider text-red-400">Old</Badge>
-              <select
+              <SelectField
                 value={leftVersionId ?? ""}
-                onChange={(event) => onLeftVersionChange(event.target.value || null)}
+                onValueChange={(optionValue) => onLeftVersionChange(optionValue || null)}
                 className="h-8 w-44 rounded-md border border-border bg-background px-2 text-xs"
               >
                 <option value="">Initial</option>
                 {sorted.map((version) => (
                   <option key={version.id} value={version.id}>{versionLabel(version)}</option>
                 ))}
-              </select>
+              </SelectField>
             </label>
             <label className="flex items-center gap-2">
               <Badge variant="outline" className="border-green-500/30 bg-green-500/10 uppercase tracking-wider text-green-400">New</Badge>
-              <select
+              <SelectField
                 value={right?.id ?? ""}
-                onChange={(event) => onRightVersionChange(event.target.value || null)}
+                onValueChange={(optionValue) => onRightVersionChange(optionValue || null)}
                 className="h-8 w-44 rounded-md border border-border bg-background px-2 text-xs"
               >
                 {sorted.map((version) => (
                   <option key={version.id} value={version.id}>{versionLabel(version)}</option>
                 ))}
-              </select>
+              </SelectField>
             </label>
           </div>
         </div>
@@ -3620,15 +3621,15 @@ export function SkillDetailPage({
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Sharing</label>
-              <select
+              <SelectField
                 value={settingsSharingScope}
-                onChange={(event) => setSettingsSharingScope(event.target.value as Exclude<CompanySkillSharingScope, "public_link">)}
+                onValueChange={(optionValue) => setSettingsSharingScope(optionValue as Exclude<CompanySkillSharingScope, "public_link">)}
                 disabled={updateSettingsPending}
                 className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground"
               >
                 <option value="company">Company — visible inside this company</option>
                 <option value="private">Private — only visible in your library</option>
-              </select>
+              </SelectField>
               <p className="text-xs text-muted-foreground">Public link sharing is coming later.</p>
             </div>
             <div className="flex justify-end gap-2 border-t border-border pt-4">

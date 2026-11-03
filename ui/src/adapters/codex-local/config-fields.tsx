@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { AdapterMark } from "../../components/AdapterMark";
 import { DotRunnerConnection } from "../../components/DotRunnerConnection";
@@ -176,14 +177,14 @@ export function CodexLocalConfigFields({
           label="Execution engine"
           hint="Default uses ACP. If ACP is unavailable, the run fails with a setup error. Choose CLI explicitly to use it."
         >
-          <select
+          <SelectField
             className={inputClass}
             value={engine}
-            onChange={(e) => {
+            onValueChange={(optionValue) => {
               const value =
-                e.target.value === "acp"
+                optionValue === "acp"
                   ? "acp"
-                  : e.target.value === "cli"
+                  : optionValue === "cli"
                     ? "cli"
                     : "auto";
               isCreate
@@ -198,7 +199,7 @@ export function CodexLocalConfigFields({
             <option value="auto">Default (ACP)</option>
             <option value="cli">Codex CLI</option>
             <option value="acp">ACP</option>
-          </select>
+          </SelectField>
         </Field>
       )}
       {runnerManaged && runnerProvider !== "openai_dot" && (
@@ -301,25 +302,25 @@ export function CodexLocalConfigFields({
       )}
       {runnerManaged && runnerProvider === "acpx" && runnerSchemaValue("acpxAgent", "claude") === "cursor" && (
         <Field configSection="adapter" label="Cursor mode" hint="Select Cursor's session mode. Permissions and company approval rules still apply.">
-          <select className={inputClass} aria-label="Cursor mode"
+          <SelectField className={inputClass} aria-label="Cursor mode"
             value={String(runnerSchemaValue("acpxSessionMode", "agent"))}
-            onChange={(event) => updateRunnerSchemaValue("acpxSessionMode", event.target.value)}>
+            onValueChange={(optionValue) => updateRunnerSchemaValue("acpxSessionMode", optionValue)}>
             {!["agent", "plan", "ask"].includes(String(runnerSchemaValue("acpxSessionMode", "agent"))) && (
               <option value={String(runnerSchemaValue("acpxSessionMode", "agent"))} disabled>Unsupported saved mode — select Agent, Plan, or Ask</option>
             )}
             <option value="agent">Agent</option>
             <option value="plan">Plan</option>
             <option value="ask">Ask</option>
-          </select>
+          </SelectField>
         </Field>
       )}
       {runnerManaged && runnerProvider === "acpx" && runnerSchemaValue("acpxAgent", "claude") === "pi" && (
         <Field configSection="adapter" label="Pi thinking level" hint="The runner verifies this exact level before each session can prompt. Changing it starts a new session.">
-          <select className={inputClass} aria-label="Pi thinking level" value={String(runnerSchemaValue("piThinkingLevel", "low"))}
-            onChange={(event) => updateRunnerSchemaValue("piThinkingLevel", event.target.value)}>
+          <SelectField className={inputClass} aria-label="Pi thinking level" value={String(runnerSchemaValue("piThinkingLevel", "low"))}
+            onValueChange={(optionValue) => updateRunnerSchemaValue("piThinkingLevel", optionValue)}>
             {!["off", "low", "high", "max"].includes(String(runnerSchemaValue("piThinkingLevel", "low"))) && <option value={String(runnerSchemaValue("piThinkingLevel", "low"))} disabled>Unsupported saved thinking level</option>}
             <option value="off">Off</option><option value="low">Low</option><option value="high">High</option><option value="max">Max</option>
-          </select>
+          </SelectField>
         </Field>
       )}
       {runnerManaged && runnerProvider === "claude_managed" && (
@@ -521,11 +522,11 @@ export function CodexLocalConfigFields({
           label="Runner lifecycle"
           hint="Turn by turn suspends after each run. Warm keeps the same provider process available between governed runs."
         >
-          <select
+          <SelectField
             className={inputClass}
             value={runnerLifecycleMode}
-            onChange={(event) => {
-              const value = event.target.value === "warm" ? "warm" : "per_turn";
+            onValueChange={(optionValue) => {
+              const value = optionValue === "warm" ? "warm" : "per_turn";
               isCreate
                 ? set!({ paperclipRunnerLifecycleMode: value })
                 : mark("adapterConfig", "lifecycleMode", value);
@@ -533,7 +534,7 @@ export function CodexLocalConfigFields({
           >
             <option value="per_turn">Turn by turn</option>
             <option value="warm">Warm session</option>
-          </select>
+          </SelectField>
         </Field>
       )}
       {runnerManaged && runnerProvider !== "openai_dot" && runnerLifecycleMode === "warm" && (
@@ -607,7 +608,7 @@ export function CodexLocalConfigFields({
             label="ACP session mode"
             hint="Persistent keeps ACP session state between runs. One-shot starts fresh each run."
           >
-            <select
+            <SelectField
               className={inputClass}
               value={
                 isCreate
@@ -618,9 +619,9 @@ export function CodexLocalConfigFields({
                       String(config.mode ?? "persistent"),
                     )
               }
-              onChange={(e) => {
+              onValueChange={(optionValue) => {
                 const value =
-                  e.target.value === "oneshot" ? "oneshot" : "persistent";
+                  optionValue === "oneshot" ? "oneshot" : "persistent";
                 isCreate
                   ? set!({ codexAcpMode: value })
                   : mark("adapterConfig", "mode", value);
@@ -628,13 +629,13 @@ export function CodexLocalConfigFields({
             >
               <option value="persistent">Persistent</option>
               <option value="oneshot">One-shot</option>
-            </select>
+            </SelectField>
           </Field>
           <Field
             label="ACP non-interactive permissions"
             hint="Fallback if the ACP agent asks for input outside an interactive session."
           >
-            <select
+            <SelectField
               className={inputClass}
               value={
                 isCreate
@@ -645,8 +646,8 @@ export function CodexLocalConfigFields({
                       String(config.nonInteractivePermissions ?? "deny"),
                     )
               }
-              onChange={(e) => {
-                const value = e.target.value === "fail" ? "fail" : "deny";
+              onValueChange={(optionValue) => {
+                const value = optionValue === "fail" ? "fail" : "deny";
                 isCreate
                   ? set!({ codexAcpNonInteractivePermissions: value })
                   : mark("adapterConfig", "nonInteractivePermissions", value);
@@ -654,7 +655,7 @@ export function CodexLocalConfigFields({
             >
               <option value="deny">Deny</option>
               <option value="fail">Fail</option>
-            </select>
+            </SelectField>
           </Field>
           {!managedSandboxOnly && (
             <Field

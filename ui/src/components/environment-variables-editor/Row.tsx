@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useRef, useState } from "react";
 import {
   ChevronDown,
@@ -421,12 +422,12 @@ export function EnvironmentVariableRow({
               ) : (
                 <div className="grid min-w-0 flex-1 grid-cols-(--gtc-13)">
                   {userSecretsEnabled ? (
-                    <select
+                    <SelectField
                       aria-label="User secret"
                       value={row.userSecretKey}
                       disabled={disabled}
-                      onChange={(event) => {
-                        const key = event.target.value;
+                      onValueChange={(optionValue) => {
+                        const key = optionValue;
                         const definition = userSecretDefinitions?.find((candidate) => candidate.key === key);
                         onPatch({
                           userSecretKey: key,
@@ -445,7 +446,7 @@ export function EnvironmentVariableRow({
                           {definition.status !== "active" ? ` (${definition.status})` : ""}
                         </option>
                       ))}
-                    </select>
+                    </SelectField>
                   ) : (
                     <input
                       className={valueTextInputClass}
@@ -457,16 +458,16 @@ export function EnvironmentVariableRow({
                       onChange={(event) => onPatch({ userSecretKey: event.target.value })}
                     />
                   )}
-                  <select
+                  <SelectField
                     aria-label="Requirement"
                     value={row.required ? "required" : "optional"}
                     disabled={disabled}
-                    onChange={(event) => onPatch({ required: event.target.value === "required" })}
+                    onValueChange={(optionValue) => onPatch({ required: optionValue === "required" })}
                     className="border-l border-border bg-transparent px-2 py-1.5 text-xs font-medium text-muted-foreground outline-none disabled:pointer-events-none"
                   >
                     <option value="required">Required</option>
                     <option value="optional">Optional</option>
-                  </select>
+                  </SelectField>
                 </div>
               )}
             </div>

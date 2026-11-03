@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { type FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ToolMcpGatewayContextScopeType, ToolProfileWithDetails } from "@paperclipai/shared";
@@ -111,10 +112,10 @@ export function NewGatewayDialog({
           </label>
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-muted-foreground">Access profile</span>
-            <select
+            <SelectField
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               value={profileId}
-              onChange={(event) => setProfileId(event.target.value)}
+              onValueChange={(optionValue) => setProfileId(optionValue)}
               required
               disabled={noProfiles}
             >
@@ -126,7 +127,7 @@ export function NewGatewayDialog({
                   {profile.name} — {allowedToolsLabel(profile)}
                 </option>
               ))}
-            </select>
+            </SelectField>
             <span className="text-xs text-muted-foreground">
               The profile decides which tools this gateway allows. You can change it later.
             </span>

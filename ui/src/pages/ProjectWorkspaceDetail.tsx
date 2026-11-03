@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "@/lib/router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -505,33 +506,33 @@ export function ProjectWorkspaceDetail() {
               </Field>
 
               <Field label="Visibility">
-                <select
+                <SelectField
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none"
                   value={form.visibility}
-                  onChange={(event) =>
-                    setForm((current) => current ? { ...current, visibility: event.target.value as ProjectWorkspaceVisibility } : current)
+                  onValueChange={(optionValue) =>
+                    setForm((current) => current ? { ...current, visibility: optionValue as ProjectWorkspaceVisibility } : current)
                   }
                 >
                   {VISIBILITY_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
-                </select>
+                </SelectField>
               </Field>
             </div>
 
             <div className="mt-4 grid gap-4">
               <Field label="Source type" hint={sourceTypeDescription ?? undefined}>
-                <select
+                <SelectField
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none"
                   value={form.sourceType}
-                  onChange={(event) =>
-                    setForm((current) => current ? { ...current, sourceType: event.target.value as ProjectWorkspaceSourceType } : current)
+                  onValueChange={(optionValue) =>
+                    setForm((current) => current ? { ...current, sourceType: optionValue as ProjectWorkspaceSourceType } : current)
                   }
                 >
                   {SOURCE_TYPE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
-                </select>
+                </SelectField>
               </Field>
 
               {/*

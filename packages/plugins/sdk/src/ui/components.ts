@@ -591,6 +591,25 @@ export const AssigneePicker = createSdkUiComponent<AssigneePickerProps>("Assigne
  */
 export const ProjectPicker = createSdkUiComponent<ProjectPickerProps>("ProjectPicker");
 
+/** 简单单选框由宿主绘制，插件不自行绘制菜单或引入第二套 UI 依赖。 */
+export interface SelectFieldProps {
+  options: readonly { value: string; label: string; disabled?: boolean; group?: string }[];
+  value?: string;
+  defaultValue?: string;
+  onValueChange?: (value: string) => void;
+  disabled?: boolean;
+  required?: boolean;
+  id?: string;
+  name?: string;
+  form?: string;
+  className?: string;
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
+  "aria-describedby"?: string;
+}
+
+export const SelectField = createSdkUiComponent<SelectFieldProps>("SelectField");
+
 /**
  * Renders Paperclip's native managed routines list for plugin settings pages.
  */

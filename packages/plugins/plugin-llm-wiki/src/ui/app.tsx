@@ -8,6 +8,7 @@ import {
   MarkdownBlock,
   MarkdownEditor,
   ProjectPicker,
+  SelectField,
   usePluginAction,
   usePluginData,
   usePluginStream,
@@ -5665,13 +5666,13 @@ function DistillationSettingsPanel({ context, settings }: { context: { companyId
               <TextInput defaultValue="48000" />
             </SettingField>
             <SettingField label={uiText("Min source age before processing")} hint={uiText("Debounces a hot project so a flurry of comments collapses into one cursor window.")}>
-              <SelectInput defaultValue="15" options={[["5", "5 min"], ["15", "15 min"], ["30", "30 min"], ["60", "1 hour"]]} />
+              <SelectInput label={uiText("Min source age before processing")} defaultValue="15" options={[["5", "5 min"], ["15", "15 min"], ["30", "30 min"], ["60", "1 hour"]]} />
             </SettingField>
             <SettingField label={uiText("Max cursor windows per routine run")} hint={uiText("Routine runs that hit this cap split the remainder into the next routine fire.")}>
               <TextInput defaultValue="6" />
             </SettingField>
             <SettingField label={uiText("Stale window threshold")} hint={uiText("After this, project pages render a 'Stale' badge until a successful run advances the cursor.")}>
-              <SelectInput defaultValue="72" options={[["24", "24 h"], ["48", "48 h"], ["72", "72 h"], ["168", "7 days"]]} />
+              <SelectInput label={uiText("Stale window threshold")} defaultValue="72" options={[["24", "24 h"], ["48", "48 h"], ["72", "72 h"], ["168", "7 days"]]} />
             </SettingField>
           </div>
         </CardBody>
@@ -5787,21 +5788,13 @@ function RadioRow({ name, value, label, defaultChecked }: { name: string; value:
   );
 }
 
-function SelectInput({ defaultValue, options }: { defaultValue: string; options: ReadonlyArray<readonly [string, string]> }) {
+function SelectInput({ label, defaultValue, options }: { label: string; defaultValue: string; options: ReadonlyArray<readonly [string, string]> }) {
   return (
-    <select
+    <SelectField
+      aria-label={label}
       defaultValue={defaultValue}
-      style={{
-        background: "oklch(0.2 0 0)",
-        color: tokens.fg,
-        border: `1px solid ${tokens.border}`,
-        borderRadius: 6,
-        padding: "6px 10px",
-        fontSize: 13,
-      }}
-    >
-      {options.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-    </select>
+      options={options.map(([value, text]) => ({ value, label: text }))}
+    />
   );
 }
 

@@ -78,6 +78,7 @@ export {
   IssuesList,
   AssigneePicker,
   ProjectPicker,
+  SelectField,
   ManagedRoutinesList,
 } from "./components.js";
 
@@ -114,6 +115,7 @@ export type {
   AssigneePickerSelection,
   AssigneePickerProps,
   ProjectPickerProps,
+  SelectFieldProps,
   ManagedRoutineMissingRef,
   ManagedRoutinesListAgent,
   ManagedRoutinesListItem,

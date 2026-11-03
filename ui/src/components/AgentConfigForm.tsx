@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { uiText, useUiLocale } from "@/i18n/ui";
 import { useConnectionModels } from "./ai-connections/useConnectionModels";
 import { aiRoutingHarness } from "@paperclipai/shared";
@@ -46,7 +47,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, selectTriggerClassName } from "@/components/ui/select";
+import { selectTriggerClassName } from "@/components/ui/select";
 import { AdapterMark } from "./AdapterMark";
 import { FolderOpen, Heart, ChevronDown, X, Copy, Check, ExternalLink, Loader2, TriangleAlert, Bug } from "lucide-react";
 import { asBoolean, asFiniteNumber, asObject, cn } from "../lib/utils";
@@ -1558,11 +1559,11 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
           <div className={cn(cards ? "border border-border rounded-lg p-4 space-y-3" : "px-4 pb-3 space-y-3")}>
             <Field label={uiText("Environment override")}>
               <div className="space-y-2">
-                <select
+                <SelectField
                   className={inputClass}
                   value={currentDefaultEnvironmentId}
-                  onChange={(event) => {
-                    const nextValue = event.target.value;
+                  onValueChange={(optionValue) => {
+                    const nextValue = optionValue;
                     if (isCreate) {
                       set!({ defaultEnvironmentId: nextValue });
                       return;
@@ -1576,7 +1577,7 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
                       {environmentDisplayLabel(environment)}
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
             </Field>
           </div>
@@ -3833,13 +3834,13 @@ export function ModelDropdown({
     const extraModels = [...new Set([value, ...promotedModelIds])].filter(id => id && (!models.some(model => model.id === id) || promotedModelIds.has(id)));
     return (
       <Field label={uiText("Model")} hint={help.model}>
-        <NativeSelect
+        <SelectField
           aria-label={uiText("Model")}
           aria-busy={loadingModels || refreshingModels}
           value={enteringCustomModel ? customOption : value}
           required={required && !enteringCustomModel}
-          onChange={event => {
-            const next = event.target.value;
+          onValueChange={optionValue => {
+            const next = optionValue;
             setEnteringCustomModel(next === customOption);
             if (next !== customOption) onChange(next);
           }}
@@ -3854,7 +3855,7 @@ export function ModelDropdown({
             </optgroup>
           ) : entries.map(model => <option key={model.id} value={model.id}>{model.label}</option>))}
           {creatable && <option value={customOption}>{uiText("Enter custom model…")}</option>}
-        </NativeSelect>
+        </SelectField>
         {enteringCustomModel && (
           <label className="mt-3 block space-y-1 text-xs text-muted-foreground">{uiText("Model ID")}<Input aria-label={uiText("Model ID")} value={value} onChange={event => onChange(event.target.value)}
               placeholder={uiText("Enter model ID or alias")} autoFocus required={required} />

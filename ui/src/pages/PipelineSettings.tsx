@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useWorkspaceIsolationControls } from "@/hooks/useWorkspaceIsolationControls";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
@@ -1181,10 +1182,10 @@ function StageSubSidebar({
     <>
       <div className="md:hidden">
         <label className="sr-only" htmlFor="stage-section-picker">Stage section</label>
-        <select
+        <SelectField
           id="stage-section-picker"
           value={activeSection}
-          onChange={(event) => onSectionChange(event.target.value as StageSectionKey)}
+          onValueChange={(optionValue) => onSectionChange(optionValue as StageSectionKey)}
           className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
         >
           {groups.map((group) => (
@@ -1194,7 +1195,7 @@ function StageSubSidebar({
               ))}
             </optgroup>
           ))}
-        </select>
+        </SelectField>
       </div>
       <nav
         aria-label="Stage sections"
@@ -2331,11 +2332,11 @@ export function PipelineSettings() {
           <FieldRow label="Create each piece in">
             <div className="space-y-1">
               <div className="flex w-full max-w-sm items-center">
-                <select
+                <SelectField
                   aria-label="Create each piece in"
                   value={breakdownTargetPipelineId}
-                  onChange={(event) => {
-                    setBreakdownTargetPipelineId(event.target.value);
+                  onValueChange={(optionValue) => {
+                    setBreakdownTargetPipelineId(optionValue);
                     setBreakdownTargetStageKey("");
                   }}
                   className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm"
@@ -2344,7 +2345,7 @@ export function PipelineSettings() {
                   {breakdownTargetOptions.map((candidate) => (
                     <option key={candidate.id} value={candidate.id}>{candidate.name}</option>
                   ))}
-                </select>
+                </SelectField>
                 {breakdownTargetPipelineId ? (
                   <Link
                     to={`/pipelines/${breakdownTargetPipelineId}`}
@@ -2363,10 +2364,10 @@ export function PipelineSettings() {
           </FieldRow>
           <FieldRow label="starting at">
             <div className="space-y-1">
-              <select
+              <SelectField
                 aria-label="Starting stage for each piece"
                 value={breakdownTargetStageKey}
-                onChange={(event) => setBreakdownTargetStageKey(event.target.value)}
+                onValueChange={(optionValue) => setBreakdownTargetStageKey(optionValue)}
                 disabled={!breakdownTargetPipelineId}
                 className="h-10 w-full max-w-sm rounded-md border border-input bg-background px-3 text-sm disabled:opacity-50"
               >
@@ -2374,7 +2375,7 @@ export function PipelineSettings() {
                 {breakdownTargetStages.map((stage) => (
                   <option key={stage.id} value={stage.key}>{stage.name}</option>
                 ))}
-              </select>
+              </SelectField>
               <p className="text-xs text-muted-foreground">The stage every new piece starts in</p>
             </div>
           </FieldRow>
@@ -2491,17 +2492,17 @@ export function PipelineSettings() {
           </FieldRow>
           <FieldRow label="Then move this case to">
             <div className="space-y-1">
-              <select
+              <SelectField
                 aria-label="Then move this case to"
                 value={breakdownAdvanceTo}
-                onChange={(event) => setBreakdownAdvanceTo(event.target.value)}
+                onValueChange={(optionValue) => setBreakdownAdvanceTo(optionValue)}
                 className="h-10 w-full max-w-sm rounded-md border border-input bg-background px-3 text-sm"
               >
                 <option value="">Stay on this step</option>
                 {otherStages.map((stage) => (
                   <option key={stage.id} value={stage.key}>{stage.name}</option>
                 ))}
-              </select>
+              </SelectField>
               <p className="text-xs text-muted-foreground">As soon as the pieces are created</p>
             </div>
           </FieldRow>
@@ -2524,10 +2525,10 @@ export function PipelineSettings() {
                   Wait until all {breakdownPieceNounPlural} are finished, then move it to
                 </span>
               </label>
-              <select
+              <SelectField
                 aria-label="Move this case when all pieces finish"
                 value={breakdownWhenFinishedMoveTo}
-                onChange={(event) => setBreakdownWhenFinishedMoveTo(event.target.value)}
+                onValueChange={(optionValue) => setBreakdownWhenFinishedMoveTo(optionValue)}
                 disabled={!breakdownWaitForPieces}
                 className="h-10 w-full max-w-sm rounded-md border border-input bg-background px-3 text-sm disabled:opacity-50"
               >
@@ -2535,7 +2536,7 @@ export function PipelineSettings() {
                 {otherStages.map((stage) => (
                   <option key={stage.id} value={stage.key}>{stage.name}</option>
                 ))}
-              </select>
+              </SelectField>
               {breakdownAdvanceTo ? (
                 <p className="text-xs text-muted-foreground">
                   If nothing is worth splitting, this case still moves to {breakdownCopyNames.advanceToName}.
@@ -2861,17 +2862,17 @@ export function PipelineSettings() {
                                   className="grid grid-cols-1 items-center gap-2 sm:grid-cols-(--gtc-42)"
                                 >
                                   <span className="text-sm font-medium">{label}</span>
-                                  <select
+                                  <SelectField
                                     aria-label={label}
                                     value={value}
-                                    onChange={(event) => setValue(event.target.value)}
+                                    onValueChange={(optionValue) => setValue(optionValue)}
                                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                                   >
                                     <option value="">{emptyLabel}</option>
                                     {otherStages.map((stage) => (
                                       <option key={stage.id} value={stage.key}>{stage.name}</option>
                                     ))}
-                                  </select>
+                                  </SelectField>
                                 </div>
                               ))}
                               <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-(--gtc-42)">
@@ -2983,10 +2984,10 @@ export function PipelineSettings() {
                                   }}
                                 />
                                 {selectedAutomationProject ? (
-                                  <select
+                                  <SelectField
                                     aria-label="Project workspace"
                                     value={stageProjectWorkspaceId}
-                                    onChange={(event) => handleAutomationProjectWorkspaceChange(event.target.value)}
+                                    onValueChange={(optionValue) => handleAutomationProjectWorkspaceChange(optionValue)}
                                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                                   >
                                     <option value="">Project fallback</option>
@@ -2995,7 +2996,7 @@ export function PipelineSettings() {
                                         {workspace.name}{workspace.isPrimary ? " · primary" : ""}
                                       </option>
                                     ))}
-                                  </select>
+                                  </SelectField>
                                 ) : (
                                   <div className="flex h-10 items-center rounded-md border border-dashed border-border px-3 text-sm text-muted-foreground">
                                     Project workspace
@@ -3012,10 +3013,10 @@ export function PipelineSettings() {
                             {selectedAutomationProject && selectedProjectSupportsExecutionWorkspace ? (
                               <FieldRow label="Execution workspace">
                                 <div className="grid gap-2 sm:grid-cols-(--gtc-43)">
-                                  <select
+                                  <SelectField
                                     aria-label="Execution workspace mode"
                                     value={stageExecutionWorkspacePreference || "shared_workspace"}
-                                    onChange={(event) => handleAutomationExecutionWorkspacePreferenceChange(event.target.value)}
+                                    onValueChange={(optionValue) => handleAutomationExecutionWorkspacePreferenceChange(optionValue)}
                                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                                   >
                                     {STAGE_EXECUTION_WORKSPACE_OPTIONS.map((option) => (
@@ -3023,12 +3024,12 @@ export function PipelineSettings() {
                                         {option.label}
                                       </option>
                                     ))}
-                                  </select>
+                                  </SelectField>
                                   {stageExecutionWorkspacePreference === "reuse_existing" ? (
-                                    <select
+                                    <SelectField
                                       aria-label="Existing execution workspace"
                                       value={stageExecutionWorkspaceId}
-                                      onChange={(event) => handleAutomationExecutionWorkspaceIdChange(event.target.value)}
+                                      onValueChange={(optionValue) => handleAutomationExecutionWorkspaceIdChange(optionValue)}
                                       className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                                     >
                                       <option value="">Choose an existing workspace</option>
@@ -3037,7 +3038,7 @@ export function PipelineSettings() {
                                           {workspace.name} · {workspace.status} · {workspace.branchName ?? workspace.cwd ?? workspace.id.slice(0, 8)}
                                         </option>
                                       ))}
-                                    </select>
+                                    </SelectField>
                                   ) : (
                                     <div className="flex h-10 items-center rounded-md border border-dashed border-border px-3 text-sm text-muted-foreground">
                                       {stageExecutionWorkspacePreference === "isolated_workspace"
@@ -3235,10 +3236,10 @@ export function PipelineSettings() {
                               </div>
                               <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-(--gtc-44)">
                                 <span className="text-sm font-medium text-muted-foreground">Move to</span>
-                                <select
+                                <SelectField
                                   aria-label="Move to stage when children finish"
                                   value={autoAdvanceOnChildrenTerminal}
-                                  onChange={(event) => setAutoAdvanceOnChildrenTerminal(event.target.value)}
+                                  onValueChange={(optionValue) => setAutoAdvanceOnChildrenTerminal(optionValue)}
                                   disabled={!autoAdvanceOnChildrenTerminal}
                                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm disabled:opacity-50"
                                 >
@@ -3246,7 +3247,7 @@ export function PipelineSettings() {
                                   {otherStages.map((stage) => (
                                     <option key={stage.id} value={stage.key}>{stage.name}</option>
                                   ))}
-                                </select>
+                                </SelectField>
                               </div>
                               <p className="max-w-2xl text-sm text-muted-foreground">
                                 When on and every child is done, this step moves the item forward automatically. When off, someone has to move it.
@@ -3325,10 +3326,10 @@ export function PipelineSettings() {
             {stages.length > 1 ? (
               <label className="block space-y-1.5 text-sm font-medium">
                 <span>Move existing items to</span>
-                <select
+                <SelectField
                   aria-label="Move existing items to"
                   value={deleteMoveTargetStageId}
-                  onChange={(event) => setDeleteMoveTargetStageId(event.target.value)}
+                  onValueChange={(optionValue) => setDeleteMoveTargetStageId(optionValue)}
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 >
                   {stages
@@ -3336,7 +3337,7 @@ export function PipelineSettings() {
                     .map((stage) => (
                       <option key={stage.id} value={stage.id}>{stage.name}</option>
                     ))}
-                </select>
+                </SelectField>
               </label>
             ) : (
               <p className="text-sm text-muted-foreground">

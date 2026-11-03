@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useId, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -166,9 +167,9 @@ export function BrowserUseSettingsPanel({
       {eligible.length > 1 && (
         <Label className="flex flex-col gap-2">
           Credential
-          <select
+          <SelectField
             value={grantId}
-            onChange={(e) => setSelected(e.target.value)}
+            onValueChange={(optionValue) => setSelected(optionValue)}
             className="rounded-md border bg-background p-2"
           >
             {eligible.map((g, i) => (
@@ -176,7 +177,7 @@ export function BrowserUseSettingsPanel({
                 {g.kind === "user" ? "Personal" : "Shared"} credential {i + 1}
               </option>
             ))}
-          </select>
+          </SelectField>
         </Label>
       )}
       {grantId ? (

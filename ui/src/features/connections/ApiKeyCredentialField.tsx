@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useId } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,11 +24,11 @@ export function ApiKeyCredentialField({ options, connectionId, onConnectionChang
     ? [{ id: connectionId, label: loading ? "Checking saved API key…" : "Previously selected key · unavailable", disabled: true }, ...options] : options;
   return <div className="space-y-2">
     <Label htmlFor={id}>{label}</Label>
-    {choices.length > 0 && <select id={id} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-      value={connectionId ?? ""} disabled={disabled} onChange={event => onConnectionChange(event.target.value)}>
+    {choices.length > 0 && <SelectField id={id} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+      value={connectionId ?? ""} disabled={disabled} onValueChange={optionValue => onConnectionChange(optionValue)}>
       {choices.map(option => <option key={option.id} value={option.id} disabled={option.disabled}>{option.label}</option>)}
       <option value="">Enter a new API key</option>
-    </select>}
+    </SelectField>}
     {!connectionId && <Input id={choices.length ? `${id}-new` : id} aria-label={choices.length ? "New API key" : undefined}
       type="password" autoComplete="off" value={value} disabled={disabled}
       onChange={event => { onConnectionChange(""); onChange(event.target.value); }} placeholder={`Paste your ${providerName} API key`} />}

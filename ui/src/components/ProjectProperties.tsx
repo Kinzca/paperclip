@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { authApi } from "@/api/auth";
 import { accessApi } from "@/api/access";
 import { canManageProjectPrivacy } from "@/lib/issuePrivacy";
@@ -813,15 +814,15 @@ export function ProjectProperties({ project, repositories, onUpdate, onFieldUpda
                         </label>
                       </div>
                       {onUpdate || onFieldUpdate ? (
-                        <select
+                        <SelectField
                           className="w-full rounded border border-border bg-transparent px-2 py-1 text-xs outline-none"
                           aria-label="Shared workspace concurrency"
                           value={executionWorkspaceSharedConcurrency}
-                          onChange={(e) =>
+                          onValueChange={(optionValue) =>
                             commitField(
                               "execution_workspace_shared_concurrency",
                               updateExecutionWorkspacePolicy({
-                                sharedWorkspaceConcurrency: e.target.value as SharedWorkspaceConcurrency,
+                                sharedWorkspaceConcurrency: optionValue as SharedWorkspaceConcurrency,
                               })!,
                             )}
                         >
@@ -830,7 +831,7 @@ export function ProjectProperties({ project, repositories, onUpdate, onFieldUpda
                               {option.label}
                             </option>
                           ))}
-                        </select>
+                        </SelectField>
                       ) : (
                         <div className="text-xs">
                           {SHARED_WORKSPACE_CONCURRENCY_OPTIONS.find(
@@ -870,14 +871,14 @@ export function ProjectProperties({ project, repositories, onUpdate, onFieldUpda
                                 <SaveIndicator state={fieldState("execution_workspace_environment")} />
                               </label>
                             </div>
-                            <select
+                            <SelectField
                               className="w-full rounded border border-border bg-transparent px-2 py-1 text-xs outline-none"
                               value={executionWorkspaceEnvironmentId}
-                              onChange={(e) =>
+                              onValueChange={(optionValue) =>
                                 commitField(
                                   "execution_workspace_environment",
                                   updateExecutionWorkspacePolicy({
-                                    environmentId: e.target.value || null,
+                                    environmentId: optionValue || null,
                                   })!,
                                 )}
                             >
@@ -887,7 +888,7 @@ export function ProjectProperties({ project, repositories, onUpdate, onFieldUpda
                                   {environmentDisplayLabel(environment)}
                                 </option>
                               ))}
-                            </select>
+                            </SelectField>
                           </div>
                         ) : null}
                         <div>

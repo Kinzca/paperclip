@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
@@ -653,17 +654,17 @@ function AdapterPickerList({
                     {agent.name}
                   </span>
                   <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground" />
-                  <select
+                  <SelectField
                     className="min-w-0 flex-1 rounded-md border border-border bg-transparent px-2 py-1 text-xs outline-none focus:border-foreground"
                     value={selectedType}
-                    onChange={(e) => onChangeAdapter(agent.slug, e.target.value)}
+                    onValueChange={(optionValue) => onChangeAdapter(agent.slug, optionValue)}
                   >
                     {adapterOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}
                       </option>
                     ))}
-                  </select>
+                  </SelectField>
                   <button
                     type="button"
                     className={cn(
@@ -1984,12 +1985,12 @@ export function CompanyImport() {
         )}
 
         <Field label="Target" hint="Import into this organization or create a new one.">
-          <select
+          <SelectField
             className="w-full rounded-md border border-border bg-transparent px-2.5 py-1.5 text-sm outline-none"
             value={targetMode}
             disabled={importMutation.isPending}
-            onChange={(e) => {
-              setTargetMode(e.target.value as "existing" | "new");
+            onValueChange={(optionValue) => {
+              setTargetMode(optionValue as "existing" | "new");
               resetImportFlowState();
             }}
           >
@@ -1997,7 +1998,7 @@ export function CompanyImport() {
             <option value="existing">
               Existing company: {selectedCompany?.name}
             </option>
-          </select>
+          </SelectField>
         </Field>
 
         {targetMode === "new" && (
@@ -2022,19 +2023,19 @@ export function CompanyImport() {
           label="Collision strategy"
           hint="Board imports can rename, skip, or replace matching organization content."
         >
-          <select
+          <SelectField
             className="w-full rounded-md border border-border bg-transparent px-2.5 py-1.5 text-sm outline-none"
             value={collisionStrategy}
             disabled={importMutation.isPending}
-            onChange={(e) => {
-              setCollisionStrategy(e.target.value as CompanyPortabilityCollisionStrategy);
+            onValueChange={(optionValue) => {
+              setCollisionStrategy(optionValue as CompanyPortabilityCollisionStrategy);
               resetImportFlowState();
             }}
           >
             <option value="rename">Rename on conflict</option>
             <option value="skip">Skip on conflict</option>
             <option value="replace">Replace existing</option>
-          </select>
+          </SelectField>
         </Field>
 
         <div className="flex flex-wrap items-center gap-2">

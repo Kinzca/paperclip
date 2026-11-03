@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { isUuidLike } from "@paperclipai/shared";
 import { ApiError } from "@/api/client";
 import { AgentMailCredentialField } from "@/features/connections/AgentMailCredentialField";
@@ -372,21 +373,21 @@ function EmailEndpointSetupForm({ companyId }: { companyId: string }) {
             <Input id="email-name" className="min-w-0" value={username} maxLength={64} autoComplete="off" spellCheck={false} disabled={busy}
               aria-invalid={!!addressError} aria-describedby={addressError ? "email-address-error" : "email-address-status"}
               onChange={event => { setUsername(event.target.value.toLowerCase()); setup.reset(); }} />
-            <select id="email-domain" aria-label="Email domain" className={`${selectClass} max-w-1/2 shrink-0`} value={domain}
-              disabled={busy || !inspected.data} onChange={event => { setDomainSelected(true); setDomain(event.target.value); setup.reset(); }}>
+            <SelectField id="email-domain" aria-label="Email domain" className={`${selectClass} max-w-1/2 shrink-0`} value={domain}
+              disabled={busy || !inspected.data} onValueChange={optionValue => { setDomainSelected(true); setDomain(optionValue); setup.reset(); }}>
               {[...new Set([...customDomains, "agentmail.to", domain])]
                 .map(value => <option key={value} value={value}>@{value}</option>)}
-            </select>
+            </SelectField>
           </div>
-        </> : <select id="email-existing" className={selectClass} value={pendingAddress ?? inboxId} disabled={busy || scopedKey || !!pendingAddress}
+        </> : <SelectField id="email-existing" className={selectClass} value={pendingAddress ?? inboxId} disabled={busy || scopedKey || !!pendingAddress}
           aria-invalid={!!addressError} aria-describedby={addressError ? "email-address-error" : undefined}
-          onChange={event => { setInboxId(event.target.value); setup.reset(); }}>
+          onValueChange={optionValue => { setInboxId(optionValue); setup.reset(); }}>
           <option value="">Choose an inbox</option>
           {inspected.data?.inboxes.map(i => {
             const assigned = inboxes.data?.some(e => e.id !== requestId && e.address === i.inbox_id && e.status !== "archived");
             return <option key={i.inbox_id} value={i.inbox_id} disabled={assigned}>{i.inbox_id}{assigned ? " — already assigned" : ""}</option>;
           })}
-        </select>}
+        </SelectField>}
         {scopedKey && !pendingAddress && <Button type="button" variant="link" size="sm" className="h-auto p-0" disabled={busy}
           onClick={() => { setAllowInboxKey(false); setStep(0); }}>Choose a key for a new address</Button>}
         {addressError && <p id="email-address-error" role="alert" className="text-sm text-destructive">{addressError}</p>}
@@ -418,9 +419,9 @@ function EmailEndpointSetupForm({ companyId }: { companyId: string }) {
           </div>}
           <div className="space-y-2">
             <Label htmlFor="email-mode">Receiving</Label>
-            <select id="email-mode" value={mode} disabled={busy} className={selectClass} onChange={event => setMode(event.target.value as typeof mode)}>
+            <SelectField id="email-mode" value={mode} disabled={busy} className={selectClass} onValueChange={optionValue => setMode(optionValue as typeof mode)}>
               <option value="websocket">Live connection</option><option value="webhook">Webhook</option>
-            </select>
+            </SelectField>
           </div>
           <EmailSafetyNotice />
           <div className="space-y-2 text-sm">
@@ -712,12 +713,12 @@ export function EmailEndpointSettings({
           <AgentMailApiKeyField label="New API key" value={replacementKey} onChange={setReplacementKey} disabled={reconnect.isPending} />
           <div className="space-y-2">
             <Label htmlFor="email-reconnect-mode">Receiving mode</Label>
-            <select id="email-reconnect-mode" className={selectClass}
+            <SelectField id="email-reconnect-mode" className={selectClass}
               disabled={reconnect.isPending} value={receiveMode || inbox.receiveMode}
-              onChange={(e) => setReceiveMode(e.target.value as "websocket" | "webhook")}>
+              onValueChange={(optionValue) => setReceiveMode(optionValue as "websocket" | "webhook")}>
               <option value="websocket">Live connection</option>
               <option value="webhook">Webhook</option>
-            </select>
+            </SelectField>
           </div>
           {reconnect.error && <p role="alert" className="text-sm text-destructive">{reconnect.error.message}</p>}
           {reconnect.isSuccess && <p role="status" className="text-sm">Inbox reconnected.</p>}

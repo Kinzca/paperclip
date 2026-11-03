@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { StepHeader } from "./ConnectionSetupHeader";
 export { StepHeader } from "./ConnectionSetupHeader";
 import { ConnectionInstructionsEditor } from "./ConnectionInstructions";
@@ -4112,14 +4113,14 @@ function MethodConfigField({
           className="mt-2 min-h-24"
         />
       ) : field.type === "select" ? (
-        <select
+        <SelectField
           value={typeof value === "string" ? value : ""}
-          onChange={(event) => onChange(event.target.value)}
+          onValueChange={(optionValue) => onChange(optionValue)}
           className="mt-2 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
         >
           <option value="" disabled>Select an option</option>
           {(field.options ?? []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-        </select>
+        </SelectField>
       ) : (
         <Input
           value={typeof value === "string" ? value : ""}

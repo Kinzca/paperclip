@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { aiConnectionsApi } from "@/api/ai-connections";
 import type { AiProvider } from "@paperclipai/shared";
 import { useQuery } from "@tanstack/react-query";
@@ -92,11 +93,11 @@ export function SavedProviderKeySelect({
       {options.length > 0 && (
         <label className="block space-y-2 text-sm">
           <span>{kind === "api" ? "API key" : "Subscription"}</span>
-          <select
+          <SelectField
             aria-label={kind === "api" ? "Saved API key" : "Saved subscription"}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             value={value}
-            onChange={(event) => onChange(event.target.value)}
+            onValueChange={(optionValue) => onChange(optionValue)}
             disabled={disabled}
           >
             {options.map((option) => (
@@ -109,7 +110,7 @@ export function SavedProviderKeySelect({
                 ? "Enter a new API key"
                 : "Sign in to another account"}
             </option>
-          </select>
+          </SelectField>
         </label>
       )}
       {loading && (

@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useCopyAction } from "@/lib/use-copy-action";
@@ -181,10 +182,10 @@ export function TweakPanel() {
                         className="h-1.5 w-full"
                       />
                     ) : (
-                      <select
+                      <SelectField
                         aria-label={t.name}
                         value={values[t.name] ?? ""}
-                        onChange={(e) => setToken(t.name, e.target.value)}
+                        onValueChange={(optionValue) => setToken(t.name, optionValue)}
                         className="w-full rounded border border-border bg-background px-1 py-0.5 text-(length:--text-micro)"
                       >
                         {EASING_PRESETS.every((p) => p.value !== (values[t.name] ?? "")) && values[t.name] ? (
@@ -195,7 +196,7 @@ export function TweakPanel() {
                             {p.label}
                           </option>
                         ))}
-                      </select>
+                      </SelectField>
                     )}
                   </div>
                 ))}

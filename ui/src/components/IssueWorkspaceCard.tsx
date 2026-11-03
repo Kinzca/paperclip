@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useWorkspaceIsolationControls } from "@/hooks/useWorkspaceIsolationControls";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@/lib/router";
@@ -455,11 +456,11 @@ export function IssueWorkspaceCard({
       {/* Editing controls */}
       {editing && workspaceIsolationControlsVisible && (
         <div className="space-y-2 pt-1">
-          <select
+          <SelectField
             className="w-full rounded border border-border bg-transparent px-2 py-1.5 text-xs outline-none"
             value={draftSelection}
-            onChange={(e) => {
-              const nextMode = e.target.value as typeof draftSelection;
+            onValueChange={(optionValue) => {
+              const nextMode = optionValue as typeof draftSelection;
               setDraftSelection(nextMode);
               if (nextMode !== "reuse_existing") {
                 setDraftExecutionWorkspaceId("");
@@ -475,7 +476,7 @@ export function IssueWorkspaceCard({
                   : option.label}
               </option>
             ))}
-          </select>
+          </SelectField>
 
           {draftSelection === "reuse_existing" && (
             <ReusableExecutionWorkspaceSelect

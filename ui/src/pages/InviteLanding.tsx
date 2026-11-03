@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AGENT_ADAPTER_TYPES } from "@paperclipai/shared";
@@ -633,17 +634,17 @@ export function InviteLandingPage() {
                 </label>
                 <label className="block text-sm">
                   <span className="mb-1 block text-zinc-400">Adapter type</span>
-                  <select
+                  <SelectField
                     className={fieldClassName}
                     value={adapterType}
-                    onChange={(event) => setAdapterType(event.target.value as AgentAdapterType)}
+                    onValueChange={(optionValue) => setAdapterType(optionValue as AgentAdapterType)}
                   >
                     {joinAdapterOptions.map((type) => (
                       <option key={type} value={type} disabled={!ENABLED_INVITE_ADAPTERS.has(type)}>
                         {getAdapterLabel(type)}{!ENABLED_INVITE_ADAPTERS.has(type) ? " (Coming soon)" : ""}
                       </option>
                     ))}
-                  </select>
+                  </SelectField>
                 </label>
                 <label className="block text-sm">
                   <span className="mb-1 block text-zinc-400">Capabilities</span>

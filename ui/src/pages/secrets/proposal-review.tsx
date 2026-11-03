@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -463,11 +464,11 @@ function ApproveDialog({
                 {localConfigs.length > 0 ? (
                   <div className="space-y-1">
                     <Label htmlFor="approve-provider-config">Provider vault</Label>
-                    <select
+                    <SelectField
                       id="approve-provider-config"
                       value={draft.providerConfigId}
-                      onChange={(event) =>
-                        onChange({ ...draft, providerConfigId: event.target.value })
+                      onValueChange={(optionValue) =>
+                        onChange({ ...draft, providerConfigId: optionValue })
                       }
                       className="h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                     >
@@ -477,7 +478,7 @@ function ApproveDialog({
                           {config.displayName}
                         </option>
                       ))}
-                    </select>
+                    </SelectField>
                   </div>
                 ) : null}
 

@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { configFieldsForSection } from "../config-sections";
 import { useEffect, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
@@ -180,16 +181,16 @@ export function HermesGatewayConfigFields({
         label="Session key strategy"
         hint="Controls X-Hermes-Session-Key. Issue scoped prevents cross-task memory bleed by default."
       >
-        <select
+        <SelectField
           value={sessionKeyStrategy}
-          onChange={(event) => writeValue("sessionKeyStrategy", event.target.value)}
+          onValueChange={(optionValue) => writeValue("sessionKeyStrategy", optionValue)}
           className={inputClass}
         >
           <option value="issue">Issue scoped</option>
           <option value="agent">Agent scoped</option>
           <option value="run">Run scoped</option>
           <option value="none">None</option>
-        </select>
+        </SelectField>
       </Field>
 
       <Field configSection="runPolicy" label="Timeout seconds">

@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 // token-extraction: allowlisted — intentional one-off decoration (DECISION-SHEET.md B1
 // user ruling). The bg-[...gradient...] / shadow-[...] literals in this demo/UX-lab page
 // are deliberate one-off decoration, reverted from --gradient-extract-*/--shadow-extract-*
@@ -337,11 +338,11 @@ function AgentRequestPreview() {
       </label>
       <label className="block text-sm">
         <span className="mb-1 block text-zinc-400">Adapter type</span>
-        <select className={fieldClassName} defaultValue="codex_local" disabled>
+        <SelectField className={fieldClassName} defaultValue="codex_local" disabled>
           <option value="codex_local">Codex</option>
           <option value="claude_local">Claude Code</option>
           <option value="cursor">Cursor</option>
-        </select>
+        </SelectField>
       </label>
       <label className="block text-sm">
         <span className="mb-1 block text-zinc-400">Capabilities</span>

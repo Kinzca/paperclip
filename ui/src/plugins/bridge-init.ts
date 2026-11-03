@@ -1,4 +1,5 @@
 import { useUiLocale, uiText } from "@/i18n/ui";
+import { SelectField } from "@/components/ui/select-field";
 /**
  * Plugin bridge initialization.
  *
@@ -723,6 +724,7 @@ export function initPluginBridge(
       IssuesList: PluginSdkIssuesList,
       AssigneePicker: PluginSdkAssigneePicker,
       ProjectPicker: PluginSdkProjectPicker,
+      SelectField,
       ManagedRoutinesList: HostManagedRoutinesList,
     },
   };

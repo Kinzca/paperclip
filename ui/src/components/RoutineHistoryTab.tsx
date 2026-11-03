@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { History as HistoryIcon, RotateCcw, Search } from "lucide-react";
@@ -917,9 +918,9 @@ function RevisionPicker({
       >
         {label}
       </Badge>
-      <select
+      <SelectField
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onValueChange={(optionValue) => onChange(optionValue)}
         className="h-8 min-w-(--sz-12rem) rounded-md border border-border/60 bg-background px-2 text-xs"
       >
         {revisions.map((revision) => (
@@ -928,7 +929,7 @@ function RevisionPicker({
             {revision.changeSummary ? ` • ${revision.changeSummary}` : ""}
           </option>
         ))}
-      </select>
+      </SelectField>
     </div>
   );
 }

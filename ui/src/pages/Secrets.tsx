@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -2807,13 +2808,13 @@ export function Secrets() {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="text-xs font-medium" htmlFor="new-secret-provider">Provider</label>
-                  <select
+                  <SelectField
                     id="new-secret-provider"
                     className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm outline-none"
                     value={createForm.provider}
-                    onChange={(event) =>
+                    onValueChange={(optionValue) =>
                       setCreateForm((current) => {
-                        const provider = event.target.value as SecretProvider;
+                        const provider = optionValue as SecretProvider;
                         return {
                           ...current,
                           provider,
@@ -2844,7 +2845,7 @@ export function Secrets() {
                             : ""}
                       </option>
                     ))}
-                  </select>
+                  </SelectField>
                   {createProviderBlockReason ? (
                     <p className="mt-1 flex items-center gap-1 text-(length:--text-micro) text-destructive">
                       <AlertCircle className="h-3 w-3" />
@@ -2856,12 +2857,12 @@ export function Secrets() {
                 </div>
                 <div>
                   <label className="text-xs font-medium" htmlFor="new-secret-vault">Provider vault</label>
-                  <select
+                  <SelectField
                     id="new-secret-vault"
                     className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm outline-none"
                     value={createForm.providerConfigId}
-                    onChange={(event) =>
-                      setCreateForm((current) => ({ ...current, providerConfigId: event.target.value }))
+                    onValueChange={(optionValue) =>
+                      setCreateForm((current) => ({ ...current, providerConfigId: optionValue }))
                     }
                   >
                     <option value="">Deployment default</option>
@@ -2875,7 +2876,7 @@ export function Secrets() {
                         </option>
                       );
                     })}
-                  </select>
+                  </SelectField>
                   {selectedCreateProviderConfig ? (
                     <ProviderVaultInlineWarning config={selectedCreateProviderConfig} />
                   ) : null}
@@ -2948,13 +2949,13 @@ export function Secrets() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label className="text-xs font-medium" htmlFor="vault-provider">Provider</label>
-                <select
+                <SelectField
                   id="vault-provider"
                   className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm outline-none disabled:opacity-60"
                   value={vaultForm.provider}
                   disabled={Boolean(editingVault)}
-                  onChange={(event) => {
-                    const provider = event.target.value as SecretProvider;
+                  onValueChange={(optionValue) => {
+                    const provider = optionValue as SecretProvider;
                     setVaultForm(emptyProviderVaultForm(provider));
                     setVaultDiscovery(null);
                     setVaultDiscoveryError(null);
@@ -2965,7 +2966,7 @@ export function Secrets() {
                       {providerLabel(providers, provider)}
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
               <div>
                 <label className="text-xs font-medium" htmlFor="vault-name">Display name</label>
@@ -2980,12 +2981,12 @@ export function Secrets() {
               </div>
               <div>
                 <label className="text-xs font-medium" htmlFor="vault-status">Status</label>
-                <select
+                <SelectField
                   id="vault-status"
                   className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm outline-none"
                   value={vaultForm.status}
-                  onChange={(event) => {
-                    const status = event.target.value as SecretProviderConfigStatus;
+                  onValueChange={(optionValue) => {
+                    const status = optionValue as SecretProviderConfigStatus;
                     setVaultForm((current) => ({
                       ...current,
                       status,
@@ -3002,7 +3003,7 @@ export function Secrets() {
                   </option>
                   <option value="coming_soon">Coming soon</option>
                   <option value="disabled">Disabled</option>
-                </select>
+                </SelectField>
               </div>
               <label className="flex items-center gap-2 pt-6 text-sm">
                 <input
@@ -3091,11 +3092,11 @@ export function Secrets() {
           ) : null}
           <div>
             <label className="text-xs font-medium" htmlFor="rotate-secret-vault">Provider vault</label>
-            <select
+            <SelectField
               id="rotate-secret-vault"
               className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm outline-none"
               value={rotateProviderConfigId}
-              onChange={(event) => setRotateProviderConfigId(event.target.value)}
+              onValueChange={(optionValue) => setRotateProviderConfigId(optionValue)}
             >
               <option value="">Deployment default</option>
               {selectedRotateProviderConfigs.map((config) => {
@@ -3108,7 +3109,7 @@ export function Secrets() {
                   </option>
                 );
               })}
-            </select>
+            </SelectField>
             {selectedRotateProviderConfig ? (
               <ProviderVaultInlineWarning config={selectedRotateProviderConfig} />
             ) : (

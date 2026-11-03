@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, Loader2 } from "lucide-react";
@@ -482,12 +483,12 @@ export function GitHubChatSetup() {
                   <Label htmlFor="github-personal-account">
                     Existing GitHub connection
                   </Label>
-                  <select
+                  <SelectField
                     id="github-personal-account"
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={legacyAccount}
-                    onChange={(event) => {
-                      setLegacyAccount(event.target.value);
+                    onValueChange={(optionValue) => {
+                      setLegacyAccount(optionValue);
                       setLegacyIdentity(null);
                       setIdentityLinked(false);
                     }}
@@ -506,7 +507,7 @@ export function GitHubChatSetup() {
                           {account.login ?? account.name}
                         </option>
                       ))}
-                  </select>
+                  </SelectField>
                   {legacyIdentity && (
                     <p className="text-sm">
                       GitHub account: <strong>{legacyIdentity.login}</strong>
@@ -637,13 +638,13 @@ export function GitHubChatSetup() {
         <>
           <div className="space-y-2">
             <Label htmlFor="github-owner-type">GitHub account</Label>
-            <select
+            <SelectField
               id="github-owner-type"
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               value={accountChoice}
               disabled={busy || !!state?.registration}
-              onChange={(event) => {
-                const choice = event.target.value;
+              onValueChange={(optionValue) => {
+                const choice = optionValue;
                 setOwnerType(choice === "personal" ? "personal" : "organization");
                 setCustomOrganization(choice === "organization");
                 if (choice.startsWith("organization:")) setOwnerLogin(choice.slice("organization:".length));
@@ -655,7 +656,7 @@ export function GitHubChatSetup() {
                 <option key={login.toLowerCase()} value={`organization:${login}`}>{login}</option>
               ))}
               <option value="organization">Another organization</option>
-            </select>
+            </SelectField>
             {(repositories.isError || connectedBots.isError) && (
               <p role="alert" className="text-sm text-destructive">
                 Could not load some connected GitHub accounts. Choose Another organization to enter a name.

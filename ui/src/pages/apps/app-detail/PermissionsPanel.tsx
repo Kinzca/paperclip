@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Ban, Check, FlaskConical, Loader2, RefreshCw, Search, ShieldQuestion } from "lucide-react";
@@ -404,15 +405,15 @@ function ActionGroup({
           // per-row overrides stay underneath.
           <label className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="sr-only">{`Set every action in ${title}`}</span>
-            <select
+            <SelectField
               aria-label={`Set every action in ${title}`}
               value={groupValue}
               disabled={disabled}
-              onChange={(event) => {
+              onValueChange={(optionValue) => {
                 // One change for the whole group: each row's setter rebuilds the
                 // full permission set from the same render, so looping it lets
                 // the last call overwrite the others.
-                onSetPermission(actions.map((action) => action.id), event.target.value as ActionPermission);
+                onSetPermission(actions.map((action) => action.id), optionValue as ActionPermission);
               }}
               className="h-7 rounded-md border border-input bg-background px-2 text-xs text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
             >
@@ -420,7 +421,7 @@ function ActionGroup({
               {PERMISSION_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>{`Set all: ${option.label}`}</option>
               ))}
-            </select>
+            </SelectField>
           </label>
         ) : null}
       </div>

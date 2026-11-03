@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { createContext, useContext, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, KeyRound, Loader2, Plus, X } from "lucide-react";
@@ -177,14 +178,14 @@ export function SecretBindingPicker({
       <div className="flex items-center gap-1.5">
         <div className="relative flex-1">
           <KeyRound className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <select
+          <SelectField
             className={cn(
               "h-9 w-full rounded-md border border-border bg-background pl-7 pr-2 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-60",
               selectedMissing && !calmMissing && "border-destructive text-destructive",
             )}
             value={value?.secretId ?? ""}
-            onChange={(event) => {
-              const next = event.target.value;
+            onValueChange={(optionValue) => {
+              const next = optionValue;
               if (!next) {
                 onChange(null);
                 return;
@@ -208,15 +209,15 @@ export function SecretBindingPicker({
                 {secret.name} — {describeSecret(secret)}
               </option>
             ))}
-          </select>
+          </SelectField>
         </div>
         {allowVersionSelector ? (
-          <select
+          <SelectField
             className="h-9 rounded-md border border-border bg-background px-2 text-xs outline-none disabled:cursor-not-allowed disabled:opacity-60"
             value={value?.version === undefined ? VERSION_LATEST : String(value.version)}
-            onChange={(event) => {
+            onValueChange={(optionValue) => {
               if (!value) return;
-              const raw = event.target.value;
+              const raw = optionValue;
               const next: SecretVersionSelector = raw === VERSION_LATEST ? VERSION_LATEST : Number.parseInt(raw, 10);
               onChange({ ...value, version: next });
             }}
@@ -235,7 +236,7 @@ export function SecretBindingPicker({
                   );
                 })
               : null}
-          </select>
+          </SelectField>
         ) : null}
         <Button
           type="button"

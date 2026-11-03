@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { configFieldsForSection } from "../config-sections";
 import type { AdapterConfigFieldsProps } from "../types";
 import {
@@ -97,11 +98,11 @@ export function ClaudeLocalAdvancedFields({
         the same way `runnerManaged` hides them for the Paperclip Runner.
       */}
       {!managedSandboxOnly && <Field label="Execution engine" hint="Default uses ACP. If ACP is unavailable, the run fails with a setup error. Choose CLI explicitly to use it.">
-        <select
+        <SelectField
           className={inputClass}
           value={engine}
-          onChange={(e) => {
-            const value = e.target.value === "acp" ? "acp" : e.target.value === "cli" ? "cli" : "auto";
+          onValueChange={(optionValue) => {
+            const value = optionValue === "acp" ? "acp" : optionValue === "cli" ? "cli" : "auto";
             isCreate
               ? set!({ claudeEngine: value })
               : mark("adapterConfig", "engine", value === "auto" ? undefined : value);
@@ -110,7 +111,7 @@ export function ClaudeLocalAdvancedFields({
           <option value="auto">Default (ACP)</option>
           <option value="cli">Claude CLI</option>
           <option value="acp">ACP</option>
-        </select>
+        </SelectField>
       </Field>}
       {acpSelected && (
         <>
@@ -137,15 +138,15 @@ export function ClaudeLocalAdvancedFields({
             </Field>
           )}
           <Field configSection="runPolicy" label="ACP session mode" hint="Persistent keeps ACP session state between runs. One-shot starts fresh each run.">
-            <select
+            <SelectField
               className={inputClass}
               value={
                 isCreate
                   ? values!.claudeAcpMode ?? "persistent"
                   : eff("adapterConfig", "mode", String(config.mode ?? "persistent"))
               }
-              onChange={(e) => {
-                const value = e.target.value === "oneshot" ? "oneshot" : "persistent";
+              onValueChange={(optionValue) => {
+                const value = optionValue === "oneshot" ? "oneshot" : "persistent";
                 isCreate
                   ? set!({ claudeAcpMode: value })
                   : mark("adapterConfig", "mode", value);
@@ -153,21 +154,21 @@ export function ClaudeLocalAdvancedFields({
             >
               <option value="persistent">Persistent</option>
               <option value="oneshot">One-shot</option>
-            </select>
+            </SelectField>
           </Field>
           <Field
             label="ACP non-interactive permissions"
             hint="Fallback if the ACP agent asks for input outside an interactive session."
           >
-            <select
+            <SelectField
               className={inputClass}
               value={
                 isCreate
                   ? values!.claudeAcpNonInteractivePermissions ?? "deny"
                   : eff("adapterConfig", "nonInteractivePermissions", String(config.nonInteractivePermissions ?? "deny"))
               }
-              onChange={(e) => {
-                const value = e.target.value === "fail" ? "fail" : "deny";
+              onValueChange={(optionValue) => {
+                const value = optionValue === "fail" ? "fail" : "deny";
                 isCreate
                   ? set!({ claudeAcpNonInteractivePermissions: value })
                   : mark("adapterConfig", "nonInteractivePermissions", value);
@@ -175,7 +176,7 @@ export function ClaudeLocalAdvancedFields({
             >
               <option value="deny">Deny</option>
               <option value="fail">Fail</option>
-            </select>
+            </SelectField>
           </Field>
           {!managedSandboxOnly && (
             <Field

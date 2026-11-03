@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { type FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
@@ -295,10 +296,10 @@ export function GatewaysTab({ companyId }: { companyId: string }) {
             </label>
             <label className="space-y-1.5 text-sm">
               <span className="text-xs font-medium text-muted-foreground">Access profile</span>
-              <select
+              <SelectField
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={createDraft.profileId}
-                onChange={(event) => setCreateDraft((current) => ({ ...current, profileId: event.target.value }))}
+                onValueChange={(optionValue) => setCreateDraft((current) => ({ ...current, profileId: optionValue }))}
                 required
                 disabled={activeProfiles.length === 0}
               >
@@ -310,7 +311,7 @@ export function GatewaysTab({ companyId }: { companyId: string }) {
                     {profile.name} - {formatAllowedTools(profile)}
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </label>
           </div>
           <label className="space-y-1.5 text-sm">

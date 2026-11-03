@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useCallback, useEffect, useState } from "react";
 import {
   CalendarClock,
@@ -298,16 +299,16 @@ export function RoutineTriggerWizard({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="repeat">Repeat</Label>
-                <select
+                <SelectField
                   id="repeat"
                   className={selectClass}
                   value={draft.frequency}
-                  onChange={(event) => patch({ frequency: event.target.value })}
+                  onValueChange={(optionValue) => patch({ frequency: optionValue })}
                 >
                   <option value="daily">Every day</option>
                   <option value="weekdays">Weekdays (Monday–Friday)</option>
                   <option value="weekly">Every week</option>
-                </select>
+                </SelectField>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="run-time">Time</Label>
@@ -322,11 +323,11 @@ export function RoutineTriggerWizard({
             {draft.frequency === "weekly" && (
               <div className="space-y-2">
                 <Label htmlFor="run-day">Day</Label>
-                <select
+                <SelectField
                   id="run-day"
                   className={selectClass}
                   value={draft.weekday}
-                  onChange={(event) => patch({ weekday: event.target.value })}
+                  onValueChange={(optionValue) => patch({ weekday: optionValue })}
                 >
                   {[
                     "Monday",
@@ -339,16 +340,16 @@ export function RoutineTriggerWizard({
                   ].map((day) => (
                     <option key={day}>{day}</option>
                   ))}
-                </select>
+                </SelectField>
               </div>
             )}
             <div className="space-y-2">
               <Label htmlFor="timezone">Time zone</Label>
-              <select
+              <SelectField
                 id="timezone"
                 className={selectClass}
                 value={draft.timezone}
-                onChange={(event) => patch({ timezone: event.target.value })}
+                onValueChange={(optionValue) => patch({ timezone: optionValue })}
               >
                 {Array.from(
                   new Set([
@@ -362,7 +363,7 @@ export function RoutineTriggerWizard({
                 ).map((zone) => (
                   <option key={zone}>{zone}</option>
                 ))}
-              </select>
+              </SelectField>
               <p className="text-xs text-muted-foreground">
                 The time follows this zone, including daylight saving changes.
               </p>

@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Trash2, Users } from "lucide-react";
@@ -344,12 +345,12 @@ function AgentRow({
             —
           </span>
         ) : canManage ? (
-          <select
+          <SelectField
             aria-label={`${agent.name} skill version`}
             value={agent.versionId ?? LATEST_VALUE}
             disabled={busy}
-            onChange={(event) =>
-              onPin(event.target.value === LATEST_VALUE ? null : event.target.value)
+            onValueChange={(optionValue) =>
+              onPin(optionValue === LATEST_VALUE ? null : optionValue)
             }
             className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground disabled:opacity-60"
           >
@@ -362,7 +363,7 @@ function AgentRow({
                 {version.label ? ` · ${version.label}` : ""}
               </option>
             ))}
-          </select>
+          </SelectField>
         ) : (
           <span className="text-xs text-muted-foreground">
             {agent.versionId

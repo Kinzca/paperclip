@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useId, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ConfigureRailwaySsh, ConnectionGrantsResponse, RailwaySshSetup, ToolConnection } from "@paperclipai/shared";
@@ -41,9 +42,9 @@ export function RailwayAccessPanel({ connection, grants }: { connection: ToolCon
     {(canConfigure || canRemove) && grantId && <>
       {!setup && eligible.length > 1 && <div className="space-y-2">
         <Label htmlFor={`${id}-grant`}>Authorization</Label>
-        <select id={`${id}-grant`} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={grantId} onChange={(event) => setSelectedGrant(event.target.value)}>
+        <SelectField id={`${id}-grant`} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={grantId} onValueChange={(optionValue) => setSelectedGrant(optionValue)}>
           {eligible.map((grant) => <option key={grant.id} value={grant.id}>{grant.kind === "organization" ? "Shared account" : grant.kind === "user" ? "My account" : "Agent account"}</option>)}
-        </select>
+        </SelectField>
       </div>}
       {!setup && <Button variant="outline" disabled={mutation.isPending} onClick={() => mutation.mutate({ action: "prepare", grantId })}>Generate SSH key pair</Button>}
       {setup && <>

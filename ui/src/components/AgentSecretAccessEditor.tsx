@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { KeyRound, Plus, ServerCog, Trash2, Variable } from "lucide-react";
 import type {
@@ -440,11 +441,11 @@ export function AgentSecretAccessEditor({
                           ) : null}
                         </PopoverContent>
                       </Popover>
-                      <select
+                      <SelectField
                         className="h-9 shrink-0 rounded-md border border-border bg-background px-2 text-xs outline-none disabled:cursor-not-allowed disabled:opacity-60"
                         value={row.version === undefined ? "latest" : String(row.version)}
-                        onChange={(event) => {
-                          const raw = event.target.value;
+                        onValueChange={(optionValue) => {
+                          const raw = optionValue;
                           patchRow(row.id, {
                             version: raw === "latest" ? "latest" : Number.parseInt(raw, 10),
                           });
@@ -464,7 +465,7 @@ export function AgentSecretAccessEditor({
                               );
                             })
                           : null}
-                      </select>
+                      </SelectField>
                     </div>
                     <button
                       type="button"

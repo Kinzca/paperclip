@@ -1,3 +1,4 @@
+import { SelectField } from "@/components/ui/select-field";
 import {
   useCallback,
   useEffect,
@@ -1961,12 +1962,12 @@ export function CompanyEnvironments({ mode = "list" }: CompanyEnvironmentsProps)
           <label className="flex flex-wrap items-center gap-3 text-sm font-medium">
             <span>Default</span>
             <span>
-              <select
+              <SelectField
                 aria-label="Default environment"
                 className="min-w-(--sz-12rem) max-w-full rounded-md border border-border bg-transparent px-2.5 py-1.5 text-sm font-normal outline-none"
                 value={instanceDefaultEnvironmentId}
-                onChange={(event) =>
-                  defaultEnvironmentMutation.mutate(event.target.value || null)}
+                onValueChange={(optionValue) =>
+                  defaultEnvironmentMutation.mutate(optionValue || null)}
                 disabled={defaultEnvironmentMutation.isPending}
               >
                 {managedSandboxOnly ? (
@@ -1986,7 +1987,7 @@ export function CompanyEnvironments({ mode = "list" }: CompanyEnvironmentsProps)
                     {environmentDisplayLabel(environment)}
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </span>
           </label>
           <Button size="icon-sm" variant="ghost" asChild>
@@ -2232,18 +2233,18 @@ export function CompanyEnvironments({ mode = "list" }: CompanyEnvironmentsProps)
                 />
               </Field>
               <Field label="Driver" hint="Sandbox stores plugin-backed provider config on the shared environment seam. SSH stores a remote machine target.">
-                <select
+                <SelectField
                   className="w-full rounded-md border border-border bg-transparent px-2.5 py-1.5 text-sm outline-none"
                   value={environmentForm.driver}
-                  onChange={(e) =>
+                  onValueChange={(optionValue) =>
                     setEnvironmentForm((current) => ({
                       ...current,
                       sandboxProvider:
-                        e.target.value === "sandbox"
+                        optionValue === "sandbox"
                           ? current.sandboxProvider.trim() || discoveredPluginSandboxProviders[0]?.provider || ""
                           : current.sandboxProvider,
                       sandboxConfig:
-                        e.target.value === "sandbox"
+                        optionValue === "sandbox"
                           ? (
                               current.sandboxProvider.trim().length > 0 && current.driver === "sandbox"
                                 ? current.sandboxConfig
@@ -2252,7 +2253,7 @@ export function CompanyEnvironments({ mode = "list" }: CompanyEnvironmentsProps)
                                   : {}
                             )
                           : current.sandboxConfig,
-                      driver: e.target.value === "sandbox" ? "sandbox" : "ssh",
+                      driver: optionValue === "sandbox" ? "sandbox" : "ssh",
                     }))}
                 >
                   {sandboxCreationEnabled || environmentForm.driver === "sandbox" ? (
@@ -2262,7 +2263,7 @@ export function CompanyEnvironments({ mode = "list" }: CompanyEnvironmentsProps)
                   {environmentForm.driver === "local" ? (
                     <option value="local">Local</option>
                   ) : null}
-                </select>
+                </SelectField>
               </Field>
 
               {environmentForm.driver === "ssh" ? (
@@ -2312,21 +2313,21 @@ export function CompanyEnvironments({ mode = "list" }: CompanyEnvironmentsProps)
                   </Field>
                   <Field label="Private key" hint="Optional PEM private key. Leave blank to rely on the server's SSH agent or default keychain.">
                     <div className="space-y-2">
-                      <select
+                      <SelectField
                         className="w-full rounded-md border border-border bg-transparent px-2.5 py-1.5 text-sm outline-none"
                         value={environmentForm.sshPrivateKeySecretId}
-                        onChange={(e) =>
+                        onValueChange={(optionValue) =>
                           setEnvironmentForm((current) => ({
                             ...current,
-                            sshPrivateKeySecretId: e.target.value,
-                            sshPrivateKey: e.target.value ? "" : current.sshPrivateKey,
+                            sshPrivateKeySecretId: optionValue,
+                            sshPrivateKey: optionValue ? "" : current.sshPrivateKey,
                           }))}
                       >
                         <option value="">No saved secret</option>
                         {(secrets ?? []).map((secret) => (
                           <option key={secret.id} value={secret.id}>{secret.name}</option>
                         ))}
-                      </select>
+                      </SelectField>
                       <textarea
                         className="h-32 w-full rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs font-mono outline-none"
                         value={environmentForm.sshPrivateKey}
@@ -2357,11 +2358,11 @@ export function CompanyEnvironments({ mode = "list" }: CompanyEnvironmentsProps)
               {environmentForm.driver === "sandbox" ? (
                 <div className="space-y-3">
                   <Field label="Provider" hint="Installed run-capable sandbox provider plugins appear here.">
-                    <select
+                    <SelectField
                       className="w-full rounded-md border border-border bg-transparent px-2.5 py-1.5 text-sm outline-none"
                       value={environmentForm.sandboxProvider}
-                      onChange={(e) => {
-                        const nextProviderKey = e.target.value;
+                      onValueChange={(optionValue) => {
+                        const nextProviderKey = optionValue;
                         const nextProvider = pluginSandboxProviders.find((provider) => provider.provider === nextProviderKey) ?? null;
                         setEnvironmentForm((current) => ({
                           ...current,
@@ -2380,7 +2381,7 @@ export function CompanyEnvironments({ mode = "list" }: CompanyEnvironmentsProps)
                           {provider.displayName}
                         </option>
                       ))}
-                    </select>
+                    </SelectField>
                   </Field>
                   {selectedSandboxProvider?.description ? (
                     <div className="text-xs text-muted-foreground">
@@ -2561,12 +2562,12 @@ export function CompanyEnvironments({ mode = "list" }: CompanyEnvironmentsProps)
                         <span className="font-medium">
                           Reassign {agentsUsingEnvironment.length === 1 ? "agent" : "agents"} to
                         </span>
-                        <select
+                        <SelectField
                           aria-label="Reassign agents to environment"
                           data-testid="environment-delete-reassign-select"
                           className="w-full rounded-md border border-border bg-transparent px-2.5 py-1.5 text-sm font-normal outline-none"
                           value={reassignEnvironmentTargetId}
-                          onChange={(event) => setReassignEnvironmentTargetId(event.target.value)}
+                          onValueChange={(optionValue) => setReassignEnvironmentTargetId(optionValue)}
                         >
                           <option value="">
                             Default: {instanceDefaultEnvironment
@@ -2578,7 +2579,7 @@ export function CompanyEnvironments({ mode = "list" }: CompanyEnvironmentsProps)
                               {environment.name} · {environment.driver}
                             </option>
                           ))}
-                        </select>
+                        </SelectField>
                         <span className="block text-xs text-muted-foreground">
                           Affected: {agentsUsingEnvironment.map((agent) => agent.name).join(", ")}
                         </span>
