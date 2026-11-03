@@ -15,7 +15,13 @@ import { useBreadcrumbs } from "@/context/BreadcrumbContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { NativeSelect } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { WorkflowDiagram } from "@/components/WorkflowDiagram";
 import {
   WorkflowImprovements,
@@ -290,26 +296,30 @@ function CompanyWorkflows({
             )}
           </p>
         </div>
-        <label className="flex shrink-0 flex-col gap-1 text-sm">
-          <span className="sr-only">{uiText("Scope")}</span>
-          <NativeSelect
-            aria-label={uiText("Scope")}
-            value={projectId}
+        <div className="min-w-0 sm:w-64 sm:shrink-0">
+          <Select
+            value={projectId || "company"}
             disabled={save.isPending}
-            onChange={(event) =>
-              dirty
-                ? setPendingScope(event.target.value)
-                : changeScope(event.target.value)
-            }
+            onValueChange={(value) => {
+              const nextProjectId = value === "company" ? "" : value;
+              if (nextProjectId === projectId) return;
+              if (dirty) setPendingScope(nextProjectId);
+              else changeScope(nextProjectId);
+            }}
           >
-            <option value="">{uiText("Company defaults")}</option>
-            {projects.data?.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </NativeSelect>
-        </label>
+            <SelectTrigger className="w-full text-sm" aria-label={uiText("Scope")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper" align="end">
+              <SelectItem value="company">{uiText("Company defaults")}</SelectItem>
+              {projects.data?.map((project) => (
+                <SelectItem key={project.id} value={project.id}>
+                  {project.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </header>
       {projects.error && (
         <p role="alert" className="text-sm text-destructive">
@@ -469,52 +479,62 @@ function CompanyWorkflows({
             className="grid min-w-0 gap-4 sm:grid-cols-2"
           >
             <legend className="sr-only">{uiText("Change defaults")}</legend>
-            <label className="flex flex-col gap-1.5 text-sm">
-              {uiText("Template")}
-              <NativeSelect
-                aria-label={uiText("Template")}
-                value={draft.templateKey}
-                onChange={(event) =>
+            <div className="flex min-w-0 flex-col gap-1.5 text-sm">
+              <span>{uiText("Template")}</span>
+              <Select
+                disabled={save.isPending}
+                value={draft.templateKey ? `template:${draft.templateKey}` : "inherit"}
+                onValueChange={(value) =>
                   setDraft({
                     ...draft,
-                    templateKey: event.target.value,
+                    templateKey: value === "inherit" ? "" : value.slice("template:".length),
                     revision: undefined,
                   })
                 }
               >
-                <option value="">
-                  {uiText("Inherit")} ·{" "}
-                  {name(savedWorkflowChoice(data, inherited))}
-                </option>
-                {choices.map((choice) => (
-                  <option
-                    key={choice.definition.key}
-                    value={choice.definition.key}
-                  >
-                    {name(choice)}
-                  </option>
-                ))}
-              </NativeSelect>
-            </label>
-            <label className="flex flex-col gap-1.5 text-sm">
-              {uiText("Workflow activation")}
-              <NativeSelect
-                aria-label={uiText("Workflow activation")}
-                value={draft.enabled}
-                onChange={(event) =>
-                  setDraft({ ...draft, enabled: event.target.value })
+                <SelectTrigger className="w-full text-sm" aria-label={uiText("Template")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper" align="start">
+                  <SelectItem value="inherit">
+                    {uiText("Inherit")} ·{" "}
+                    {name(savedWorkflowChoice(data, inherited))}
+                  </SelectItem>
+                  {choices.map((choice) => (
+                    <SelectItem
+                      key={choice.definition.key}
+                      value={`template:${choice.definition.key}`}
+                    >
+                      {name(choice)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex min-w-0 flex-col gap-1.5 text-sm">
+              <span>{uiText("Workflow activation")}</span>
+              <Select
+                disabled={save.isPending}
+                value={draft.enabled || "inherit"}
+                onValueChange={(value) =>
+                  setDraft({ ...draft, enabled: value === "inherit" ? "" : value })
                 }
               >
-                <option value="">
-                  {uiText("Inherit")} ·{" "}
-                  {uiText(inherited.enabled ? "Enabled" : "Disabled")}
-                </option>
-                <option value="true" disabled={!inherited.enabled}>
-                  {uiText("Enabled")}
-                </option>
-                <option value="false">{uiText("Disabled")}</option>
-              </NativeSelect>
-            </label>
+                <SelectTrigger className="w-full text-sm" aria-label={uiText("Workflow activation")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper" align="start">
+                  <SelectItem value="inherit">
+                    {uiText("Inherit")} ·{" "}
+                    {uiText(inherited.enabled ? "Enabled" : "Disabled")}
+                  </SelectItem>
+                  <SelectItem value="true" disabled={!inherited.enabled}>
+                    {uiText("Enabled")}
+                  </SelectItem>
+                  <SelectItem value="false">{uiText("Disabled")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </fieldset>
           <fieldset
             disabled={save.isPending}
