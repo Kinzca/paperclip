@@ -4,7 +4,7 @@
 
 日常开发与两台电脑交接统一使用此主线，规则见 [分支协作约定](FORK.md#统一主线与跨电脑协作)。旧 `codex-local` 分支已退役，不再作为安装或推送目标。
 
-主线提供统一安装、升级和兼容回退入口，配套构建本提交的后端、UI、SDK、Office 和 Wiki。以 `release.json` 中的完整提交识别版本；拉取源码后仍需构建和切换。另一台电脑使用同一提交与工具链，具体见[版本发布操作说明](doc/LOCAL-RELEASES.zh-CN.md)。
+主线提供统一安装、升级和兼容回退入口，配套构建本提交的后端、UI、SDK、Office、Wiki 和 Workspace Diff Viewer。以 `release.json` 中的完整提交识别版本；拉取源码后仍需构建和切换。另一台电脑使用同一提交与工具链，具体见[版本发布操作说明](doc/LOCAL-RELEASES.zh-CN.md)。
 
 新电脑需要 Git、npm、Node.js **24.22.2**，然后：
 
@@ -17,20 +17,66 @@ node scripts/local/codex.mjs login
 node scripts/local/start.mjs
 ```
 
-保持服务终端运行，在第二个终端进入同一仓库，登记插件：
-
-```sh
-node scripts/local/install-office.mjs
-node scripts/local/install-wiki.mjs
-node scripts/local/install-workspace-diff.mjs
-```
+保持服务终端运行，在第二个终端进入同一仓库，按下方[推荐插件](#推荐插件)登记所需插件。
 
 - [完整安装、Codex 订阅登录、Wiki 初始化与更新说明](FORK.md)
 - [迁移现有公司、Agent、任务、附件及 Wiki 资料](doc/LOCAL-MIGRATION.zh-CN.md)
 
-`setup` 负责构建宿主、Office 和 Wiki，插件登记单独执行；安装不自动创建员工或启动任务。桌面应用的登录不会自动写入此独立 CLI 登录目录，新电脑需用自己的账号授权。Git 拉取只带代码，不带公司数据、知识库资料或登录信息。
+`setup` 负责构建宿主、Office、Wiki 和 Workspace Diff Viewer，插件登记单独执行；安装不自动创建员工或启动任务。桌面应用的登录不会自动写入此独立 CLI 登录目录，新电脑需用自己的账号授权。Git 拉取只带代码，不带公司数据、知识库资料或登录信息。
 
 运行版本查看 `node scripts/local/status.mjs`。已有实例升级、回退和旧安装接管统一遵循[发布流程](doc/LOCAL-RELEASES.zh-CN.md)；全新安装、跨电脑迁移和页面功能由用户验收。下方保留上游原始介绍；使用本定制版请优先遵循上述中文文档。
+
+
+## 推荐插件
+
+以下三项是本 Fork 当前已经接入的插件。推荐使用本仓库的配套构建和安装脚本，版本随确切提交及锁文件固定。Office 包含我们的兼容和界面改造，Wiki 包含主侧栏保留、内容区目录及双语适配；直接安装上游最新版不会自动带上这些改造。
+
+| 插件 | 当前固定版本与来源 | 用途 | 界面入口 |
+| --- | --- | --- | --- |
+| **Office** | **0.4.0**；[我们的 Agent Pixels Fork](https://github.com/Kinzca/Agent-Pixels)，固定提交 `a3fff4a71eeca595572decfdca7adffeadd26a85` | 像素办公室、自动刷新、任务执行／审查／返修／复审状态与核查记录 | 左侧「插件」→「办公室 / Office」 |
+| **LLM Wiki** | **0.1.3**；[本 Fork 中的 Wiki 源码](packages/plugins/plugin-llm-wiki) | 公司知识库、资料导入、检索、维护；保留 Paperclip 主侧栏，目录在内容区左侧 | 左侧「插件」→「知识库 / Wiki」 |
+| **Workspace Diff Viewer** | **0.1.0**；[本仓库中的官方插件源码](packages/plugins/plugin-workspace-diff) · [官方说明](https://docs.paperclip.ing/reference/plugins/workspace-diff/) | 只读展示 Git 文件和逐行差异、暂存／未暂存改动以及基准版本比较 | 具体项目工作区或执行工作区详情 → **Changes** 页签；没有独立侧栏菜单 |
+
+### 安装与必要配置
+
+先按上方中文入口，使用 **Node.js 24.22.2** 在完整、干净的主线检出中运行 `setup.mjs`，完成 Codex 登录并启动服务。`setup` 构建插件，登记需要在服务运行后单独执行。
+
+保持服务终端运行，第二个终端进入同一仓库。若自定义了 `PAPERCLIP_LOCAL_DIR`、`PAPERCLIP_PORT` 或 `CODEX_HOME`，保持与服务终端相同的值，再按需执行：
+
+```sh
+# Office：像素办公室和流程核查
+node scripts/local/install-office.mjs
+
+# Wiki：知识库
+node scripts/local/install-wiki.mjs
+
+# Changes：工作区代码差异
+node scripts/local/install-workspace-diff.mjs
+```
+
+这些入口使用本机正式插件管理接口，适用于 `local_trusted` 实例；认证实例需由实例管理员在插件管理界面安装对应发布包中的本地插件目录。已有同标识插件时默认保留，不重复创建。安装不会自动创建公司或启动业务任务。
+
+- **Office：**读取当前公司的 Agent 与任务。新电脑的空实例需要先创建公司和成员，或迁移原实例；插件不代替配置员工的工作目录和 Codex 授权。
+- **Wiki：**在 Wiki 设置中指定当前公司的资料根目录并执行所需初始化；旧资料目录应沿用或迁移。仅有 Codex 订阅时，将维护员适配器设为 `codex_local`，配置可用模型、工作目录及授权，再自行决定是否启用。上游默认维护员为 `claude_local` 且暂停，脚本不替你切换或唤醒。
+- **Changes：**安装脚本会启用实例的 `enableIsolatedWorkspaces`，否则宿主会把工作区详情重定向到 Dashboard；它不会修改「默认使用隔离工作区」或项目执行策略。刷新浏览器，进入绑定了本机可访问 Git 仓库的具体工作区再选 Changes。项目列表、项目任务列表和未配置工作区的项目都不是该插件入口。
+
+日常更新遵循[统一安装、升级与回退流程](doc/LOCAL-RELEASES.zh-CN.md)：先停服务、构建确切提交，再由 `upgrade.mjs` 备份并切换版本，启动后同步已安装且 ready 的托管插件。单独登记升级支持在上述安装命令后加 `--upgrade`，要求登记路径与该实例的托管路径一致。回退到不包含当前托管插件的旧发布包会被阻止，按发布文档选择兼容版本或独立恢复。
+
+Git 拉取包含源码与安装说明，不包含已登记的插件、公司数据、Wiki 正文、工作仓库或登录凭据。完整保留旧电脑资料需按[迁移文档](doc/LOCAL-MIGRATION.zh-CN.md)操作；不要复制其他平台的运行时和数据库程序。
+
+### 当前本机安装参考
+
+以下是 **2026-11-03** 从本机正式接口读取的安装记录，供定位历史目录和复现版本使用，不是新电脑必须照抄的路径。`ready` 表示插件登记／运行状态；文档更新没有进行页面或真实 Agent 工作流验收。
+
+| 插件 | 插件标识 | 已安装版本 | 接口状态 | 相对于本机数据根目录的包位置 |
+| --- | --- | --- | --- | --- |
+| Office | `agent-pixels.compat` | `0.4.0` | `ready` | `plugins/agent-pixels-compat` |
+| LLM Wiki | `paperclipai.plugin-llm-wiki` | `0.1.3` | `ready` | `plugins/llm-wiki-0.1.0` |
+| Workspace Diff Viewer | `paperclip.workspace-diff` | `0.1.0` | `ready` | `plugins/workspace-diff` |
+
+本机使用仓库外的 `paperclip-data` 数据目录，已接管早期安装路径。Wiki 的目录名仍含 `0.1.0`，实际安装版本为 `0.1.3`，以接口与发布清单为准。全新安装默认使用 `$PAPERCLIP_LOCAL_DIR/plugins/office`、`plugins/wiki`、`plugins/workspace-diff`，无需复制这些历史目录名。
+
+当前服务发布版本为 `e097b097fffe`；后续安装入口修正已包含在主线提交 `0339db291`，用于补齐工作区开关。当前开关为 `enableIsolatedWorkspaces: true`、`enableIsolatedWorkspacesByDefault: false`。主线 HEAD 和实际运行版本可以不同，用 `node scripts/local/status.mjs` 查看本机发布清单，再选择要在另一台电脑复现的提交；这些记录以后可能变化。
 
 ---
 
