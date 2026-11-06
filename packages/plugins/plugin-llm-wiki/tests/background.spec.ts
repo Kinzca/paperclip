@@ -71,6 +71,7 @@ function fixture() {
         if (input.status === "todo" && state.busy) return [{ id: "development", projectId: PID, status: "todo" }];
         return [];
       }),
+      requestWakeup: vi.fn(async () => ({ issueId: "background-0", queued: true, runId: "run-1" })),
       create, get: vi.fn(async (id: string) => id === root.id ? root : state.extraRoots.find(i => i.id === id) ?? state.created.find(i => i.id === id) ?? null),
       getSubtree: vi.fn(async (id: string) => ({ issues: [id === root.id ? root : state.extraRoots.find(i => i.id === id)!] })), listComments: vi.fn(async () => state.comments),
       documents: { list: vi.fn(async () => []) },
@@ -114,6 +115,17 @@ describe("pre-provider gates and durable completion", () => {
       profile: expect.objectContaining({ enabled: true, sourceScopes: [{ kind: "selected_projects", projectIds: [PID] }] }),
     }));
     expect(core.updateEventIngestionSettings).not.toHaveBeenCalled();
+  });
+  it("wakes the assigned operation and recovers a persisted todo with the same admission key", async () => {
+    const { ctx, create } = fixture();
+    expect((await processBackgroundCompany(ctx, CID, NOW)).status).toBe("dispatched");
+    const first = vi.mocked(ctx.issues.requestWakeup).mock.calls[0];
+    expect(first[0]).toBe("background-0");
+    expect(first[1]).toBe(CID);
+    expect(first[2]?.idempotencyKey).toMatch(/^wiki:background:.*:wakeup$/);
+    expect((await processBackgroundCompany(ctx, CID, NOW)).status).toBe("batch_active");
+    expect(ctx.issues.requestWakeup).toHaveBeenLastCalledWith(...first);
+    expect(create).toHaveBeenCalledTimes(1);
   });
   it("allocates no agent for an empty queue", async () => {
     const { state, root, ctx, create } = fixture(); state.pending = []; root.completedAt = new Date("2026-10-01");

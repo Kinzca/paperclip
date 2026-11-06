@@ -170,6 +170,13 @@ async function failBatch(ctx: PluginContext, companyId: string, batch: Batch, re
     ...(batch.kind === "maintenance" ? { maintenanceDay: clock(now, batch.timezone).day } : {}),
   }));
 }
+async function requestBatchWakeup(ctx: PluginContext, companyId: string, batch: Batch, issueId: string) {
+  await ctx.issues.requestWakeup(issueId, companyId, {
+    reason: "wiki_background_batch",
+    contextSource: "plugin.llm-wiki.background",
+    idempotencyKey: batch.originId + ":wakeup",
+  });
+}
 async function settleBatch(ctx: PluginContext, companyId: string, batch: Batch, now: Date) {
   let issue = batch.issueId ? await ctx.issues.get(batch.issueId, companyId) : null;
   if (!issue) issue = (await ctx.issues.list({ companyId, originKind: ORIGIN, originId: batch.originId, includePluginOperations: true, limit: 1 }))[0] ?? null;
@@ -191,7 +198,10 @@ async function settleBatch(ctx: PluginContext, companyId: string, batch: Batch, 
     await failBatch(ctx, companyId, batch, "Task ended without a validated background receipt", now); return true;
   }
   // A running/queued provider is never duplicated after restart or lease expiry.
-  if (issue) return false;
+  if (issue) {
+    if (issue.status === "todo") await requestBatchWakeup(ctx, companyId, batch, issue.id);
+    return false;
+  }
   if (now.getTime() - Date.parse(batch.startedAt) > 15 * 60000) {
     await failBatch(ctx, companyId, batch, "Dispatch requires inspection; no matching issue found", now); return true;
   }
@@ -225,6 +235,7 @@ async function launchBatch(ctx: PluginContext, companyId: string, batch: Batch, 
     if (r.active?.id !== batch.id) throw new Error("Background batch ownership changed");
     return { ...r, active: { ...r.active, issueId: issue.id } };
   });
+  await requestBatchWakeup(ctx, companyId, batch, issue.id);
 }
 
 export async function processBackgroundCompany(ctx: PluginContext, companyId: string, now = new Date()) {
