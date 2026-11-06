@@ -781,7 +781,14 @@ export function workflowStore(db: Db) {
         const [issue] = await tx
           .select({ originKind: issues.originKind, originId: issues.originId })
           .from(issues)
-          .where(and(eq(issues.companyId, companyId), eq(issues.id, issueId)));
+          .where(and(
+            eq(issues.companyId, companyId),
+            eq(issues.originKind, "workflow_node"),
+            sql`${issues.id} in (with recursive ancestry as (
+              select id, parent_id from ${issues} where id = ${issueId} and company_id = ${companyId}
+              union select parent.id, parent.parent_id from ${issues} parent join ancestry child on parent.id = child.parent_id where parent.company_id = ${companyId}
+            ) select id from ancestry)`,
+          )).limit(1);
         const predicate = and(
           eq(workflowRuns.companyId, companyId),
           issue?.originKind === "workflow_node" && issue.originId

@@ -47,6 +47,7 @@ import {
 import { redactSensitiveText } from "../../redaction.js";
 import { WORKFLOW_QUEUE } from "./admission.js";
 import { workflowStore } from "./store.js";
+import { workflowDependencyWait } from "./dependency-wait.js";
 import {
   workflowHandoffInstructions,
   workflowReviewFeedback,
@@ -803,14 +804,6 @@ export function workflowEngine(db: Db, effects: Effects) {
           await stop(context, run, `Node assignment changed: ${node.id}`);
           break;
         }
-        if (["blocked", "cancelled"].includes(task.status)) {
-          await stop(
-            context,
-            run,
-            `Node needs intervention: ${node.id} (${task.status})`,
-          );
-          break;
-        }
         const [latestRun] = await tx
           .select()
           .from(heartbeatRuns)
@@ -826,6 +819,23 @@ export function workflowEngine(db: Db, effects: Effects) {
           )
           .orderBy(sql`${heartbeatRuns.createdAt} desc`)
           .limit(1);
+        if (task.status === "blocked" && node.kind === "task") {
+          const dependencyWait = await workflowDependencyWait(tx as unknown as Db, run.companyId, task.id);
+          if (dependencyWait) {
+            current.result = "Waiting for delegated dependencies";
+            if (!dependencyWait.ready || (latestRun && ["running", "queued"].includes(latestRun.status))) continue;
+            // A dependency continuation retains the node, task and attempt. It is not repair.
+            current.resumeGeneration = (current.resumeGeneration ?? 0) + 1;
+            current.startedAt = new Date().toISOString();
+            current.result = "Delegated dependencies settled; resuming the same attempt";
+            await context.updateIssue(task.id, { status: "todo", companyGuard: run.companyId });
+            task.status = "todo";
+          }
+        }
+        if (["blocked", "cancelled"].includes(task.status)) {
+          await stop(context, run, `Node needs intervention: ${node.id} (${task.status})`);
+          break;
+        }
         const lastRun =
           current.resumeGeneration &&
           latestRun &&
@@ -936,9 +946,8 @@ export function workflowEngine(db: Db, effects: Effects) {
           ["failed", "timed_out", "cancelled"].includes(lastRun.status)
         ) {
           if (
-            /configuration|auth|permission|credential/i.test(
-              lastRun.errorCode ?? "",
-            )
+            lastRun.errorCode === "workspace_validation_failed" ||
+            /configuration|auth|permission|credential/i.test(lastRun.errorCode ?? "")
           )
             await stop(
               context,

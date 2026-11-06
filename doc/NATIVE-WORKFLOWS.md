@@ -166,3 +166,11 @@ pnpm check:token-gates
 Integration tests use isolated embedded PostgreSQL, real issue services/migrations
 and stubbed model wakeups. They prove orchestration and authorization, not a live
 paid model invocation or a real game-engine playtest.
+
+## Delegated dependency waits
+
+A task node may yield `blocked` with explicit `blockedByIssueIds` referring exclusively to agent-owned descendants of that node. The workflow remains running and delegated workers are not cancelled. Nested internal dependency waits are resolved from persisted relations, not from prose. Once the blockers are done and native workspace finalization is complete, the same node task and attempt resume with a new continuation generation. Waiting does not consume repair attempts or increase time/cost allowances.
+
+Unassigned/backlog/cancelled blockers, external dependencies, or a blocked leaf with no declared internal continuation remain intervention cases. Parent pause/cancel and agent permissions retain their existing behavior. Descendant changes notify the owning workflow; startup reconciliation can recover completion events missed during downtime. Workspace validation failures now require configuration repair on the first failed attempt rather than spending the retry ceiling.
+
+The current path does not require an employee to invent a review or repeatedly re-arm a monitor just to wait for delegated work. `in_review` still requires its normal review/approval/monitor action path.

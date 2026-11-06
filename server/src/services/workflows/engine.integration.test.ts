@@ -88,7 +88,7 @@ suite("native workflow execution", () => {
         adapterType: "codex_local",
       },
     ]);
-    const wakeup = vi.fn(async () => undefined);
+    const wakeup = vi.fn(async (_agentId: string, _options: { payload: Record<string, unknown>; idempotencyKey: string }) => undefined);
     const cancelRun = vi.fn(async (id: string) => {
       await db
         .update(heartbeatRuns)
@@ -452,6 +452,99 @@ suite("native workflow execution", () => {
     await completeExecution(context);
     expect((await context.read()).nodes.review.agentId).toBeNull();
     expect((await context.read()).nodes.review.userId).toBe(context.userId);
+  });
+
+  it("keeps delegated workers alive while a node waits and resumes the same attempt after restart", async () => {
+    const context = await setup();
+    await context.engine.sweepPending();
+    const before = await context.read();
+    const nodeId = before.nodes.execute.issueId!;
+    const service = issueService(db);
+    const child = await service.create(context.companyId, {
+      title: "Delegated implementation", parentId: nodeId, status: "in_progress",
+      assigneeAgentId: context.executor,
+    });
+    const delegatedRun = (await db.insert(heartbeatRuns).values({
+      companyId: context.companyId, agentId: context.executor, issueId: child.id, status: "running",
+    }).returning())[0];
+    await service.update(nodeId, { status: "blocked", blockedByIssueIds: [child.id] });
+    await context.store.markIssueChanged(context.companyId, nodeId);
+    await context.engine.sweepPending();
+    expect((await context.read()).status).toBe("running");
+    expect(context.cancelRun).not.toHaveBeenCalled();
+    expect((await db.select().from(heartbeatRuns).where(eq(heartbeatRuns.id, delegatedRun.id)))[0].status).toBe("running");
+    await assertWorkflowIssueExecutionAllowed(db, context.companyId, child.id);
+    await context.store.markIssueChanged(randomUUID(), child.id);
+    expect((await context.read()).needsReconcile).toBe(false);
+    await service.update(child.id, { status: "done" });
+    // Reconciliation must be signaled by the descendant, not by a manual parent update.
+    await context.store.markIssueChanged(context.companyId, child.id);
+    expect((await context.read()).needsReconcile).toBe(true);
+    const restarted = workflowEngine(db, { wakeup: context.wakeup, cancelRun: context.cancelRun });
+    await restarted.recover();
+    await restarted.sweepPending();
+    const after = await context.read();
+    expect(after.status).toBe("running");
+    expect(after.nodes.execute).toMatchObject({ issueId: nodeId, attempt: 1, resumeGeneration: 1 });
+    expect((await service.getById(nodeId))!.status).toBe("todo");
+    const ownWakes = () => context.wakeup.mock.calls.filter(([, options]) => options.payload.issueId === nodeId);
+    expect(ownWakes()).toHaveLength(2);
+    const count = (await db.select().from(workflowNodeAttempts).where(eq(workflowNodeAttempts.runId, after.id))).length;
+    expect(count).toBe(1);
+    await context.store.markIssueChanged(context.companyId, child.id);
+    await restarted.sweepPending();
+    expect(ownWakes().at(-1)).toEqual(ownWakes().at(-2));
+    expect((await context.read()).nodes.execute.resumeGeneration).toBe(1);
+  });
+
+  it("keeps a transitive QA dependency waiting but stops an external or cancelled blocker", async () => {
+    const context = await setup();
+    await context.engine.sweepPending();
+    const nodeId = (await context.read()).nodes.execute.issueId!;
+    const service = issueService(db);
+    const artwork = await service.create(context.companyId, { title: "Artwork", parentId: nodeId,
+      status: "in_progress", assigneeAgentId: context.executor });
+    const qa = await service.create(context.companyId, { title: "Independent QA", parentId: nodeId,
+      status: "blocked", assigneeAgentId: context.reviewer, blockedByIssueIds: [artwork.id] });
+    await service.update(nodeId, { status: "blocked", blockedByIssueIds: [qa.id] });
+    await context.store.markIssueChanged(context.companyId, qa.id);
+    await context.engine.sweepPending();
+    expect((await context.read()).status).toBe("running");
+    await service.update(artwork.id, { status: "cancelled" });
+    await context.store.markIssueChanged(context.companyId, artwork.id);
+    await context.engine.sweepPending();
+    expect((await context.read()).status).toBe("waiting_human");
+    expect((await context.read()).stopReason).toContain("blocked");
+  });
+
+  it("does not treat sibling or external work as delegated waiting", async () => {
+    const context = await setup();
+    await context.engine.sweepPending();
+    const nodeId = (await context.read()).nodes.execute.issueId!;
+    const service = issueService(db);
+    const external = await service.create(context.companyId, { title: "External dependency",
+      status: "in_progress", assigneeAgentId: context.executor, originKind: "manual" });
+    await service.update(nodeId, { status: "blocked", blockedByIssueIds: [external.id] });
+    await context.store.markIssueChanged(context.companyId, nodeId);
+    await context.engine.sweepPending();
+    expect((await context.read()).status).toBe("waiting_human");
+  });
+
+  it("stops deterministic workspace configuration failures without spending repair attempts", async () => {
+    const context = await setup();
+    await context.engine.sweepPending();
+    const before = await context.read();
+    await db.insert(heartbeatRuns).values({ companyId: context.companyId, agentId: context.executor,
+      issueId: before.nodes.execute.issueId, status: "failed", errorCode: "workspace_validation_failed",
+      error: "Configured directory is not a git workspace", finishedAt: new Date() });
+    await context.store.markIssueChanged(context.companyId, before.nodes.execute.issueId!);
+    await context.engine.sweepPending();
+    const after = await context.read();
+    expect(after.status).toBe("waiting_human");
+    expect(after.stopReason).toContain("configuration");
+    expect(after.nodes.execute.attempt).toBe(1);
+    expect(after.nodes.execute.issueId).toBe(before.nodes.execute.issueId);
+    expect(context.wakeup).toHaveBeenCalledTimes(1);
   });
 
   it("honors a blocked parent and externally paused backlog without spending a repair attempt", async () => {
