@@ -3,7 +3,7 @@ import type { Issue, PluginContext, PluginEvent } from "@paperclipai/plugin-sdk"
 import {
   captureWikiSource, getDistillationAutoApplyRestriction, getEventIngestionSettings, getPaperclipIngestionProfile,
   listPages, resolveWikiAgentResource, resolveWikiProjectResource,
-  spaceFolderStatus, updateEventIngestionSettings, updatePaperclipIngestionProfile,
+  spaceFolderStatus, updatePaperclipIngestionProfile,
 } from "./core.js";
 import {
   BACKGROUND_JOB_KEY, DEFAULT_BACKGROUND_POLICY, clock, hash, isBusinessRoot,
@@ -87,9 +87,6 @@ export async function configureBackground(ctx: PluginContext, companyId: string,
       sourceScopes: [{ kind: "selected_projects", projectIds: policy.projectIds }],
       sourceKinds: { issues: true, comments: true, documents: true, attachments: "metadata_only", workProducts: "metadata_only" },
     },
-  });
-  await updateEventIngestionSettings(ctx, {
-    companyId, settings: { enabled: policy.enabled, sources: { issues: true, comments: true, documents: true } },
   });
   return backgroundStatus(ctx, companyId);
 }

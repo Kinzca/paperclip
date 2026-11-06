@@ -107,6 +107,14 @@ describe("source and policy boundaries", () => {
   });
 });
 describe("pre-provider gates and durable completion", () => {
+  it("configures the scoped profile once without resetting it through the legacy settings writer", async () => {
+    const { ctx } = fixture();
+    await configureBackground(ctx, CID, { enabled: true, projectIds: [PID] }, NOW);
+    expect(core.updatePaperclipIngestionProfile).toHaveBeenCalledWith(ctx, expect.objectContaining({
+      profile: expect.objectContaining({ enabled: true, sourceScopes: [{ kind: "selected_projects", projectIds: [PID] }] }),
+    }));
+    expect(core.updateEventIngestionSettings).not.toHaveBeenCalled();
+  });
   it("allocates no agent for an empty queue", async () => {
     const { state, root, ctx, create } = fixture(); state.pending = []; root.completedAt = new Date("2026-10-01");
     expect(await processBackgroundCompany(ctx, CID, NOW)).toMatchObject({ status: "no_delta", dispatched: 0 }); expect(create).not.toHaveBeenCalled();
