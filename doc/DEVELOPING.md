@@ -91,6 +91,15 @@ pnpm dev:stop --data-dir ./tmp/paperclip-dev
 
 Issue execution may also use project execution workspace policies and workspace runtime services for per-project worktrees, preview servers, and managed dev commands. Configure those through the project workspace/runtime surfaces rather than starting long-running unmanaged processes when a task needs a reusable service.
 
+Local content/document projects can explicitly register a workspace with
+`sourceType: non_git_path` and use the `project_primary` strategy without a Git
+repository. Before launching a local adapter, the host still checks persisted
+workspace identity, cwd bindings, and directory read/write/traversal access.
+Only these explicit, repository-free primary directories are exempt from the
+Git metadata requirement; Git sources, worktrees, and branch-bound execution
+retain their existing checkout checks. Adapter-specific non-Git options (for
+example Codex CLI's `--skip-git-repo-check`) must also be configured where needed.
+
 ### Mobile-friendly preview (`pnpm dev:mobile`)
 
 The vite dev server serves an unbundled module graph. This is fast to reload on a local machine but too heavy for phones and tablets on slow links (airplane wifi, mobile data, distant tailnet peers). `pnpm dev:mobile` builds the UI once and serves the small production bundle on port `3101` via `vite preview`, proxying `/api` requests to the dev API on `3100`.

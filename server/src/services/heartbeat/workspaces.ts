@@ -16,6 +16,7 @@ import {
   mergeDirectoryWithBaseline,
 } from "@paperclipai/adapter-utils/workspace-restore-merge";
 import fs from "node:fs/promises";
+import { constants as fsConstants } from "node:fs";
 import path from "node:path";
 import { execFile as execFileCallback } from "node:child_process";
 import { promisify } from "node:util";
@@ -1260,6 +1261,7 @@ export async function assertGitSensitiveAdapterWorkspaceValid(input: {
         resolvedWorkspaceSource: input.resolvedWorkspace.source,
         resolvedProjectId: input.resolvedWorkspace.projectId,
         resolvedProjectWorkspaceId: input.resolvedWorkspace.workspaceId,
+        projectWorkspaceSourceType: input.resolvedWorkspace.projectWorkspaceSourceType ?? null,
         resolvedWorkspaceCwd: input.resolvedWorkspace.cwd,
         executionWorkspaceCwd: effectiveCwd,
         executionWorkspaceStrategy: input.executionWorkspace.strategy,
@@ -1369,9 +1371,41 @@ export async function assertGitSensitiveAdapterWorkspaceValid(input: {
     );
   }
 
+  // A plain local folder is an explicit project source, not a damaged checkout.
+  // Keep all binding checks above, and never use this exception for worktrees,
+  // repository-backed sources, or branch-specific execution.
+  const nonGitPrimaryWorkspace =
+    input.resolvedWorkspace.projectWorkspaceSourceType === "non_git_path" &&
+    Boolean(effectiveCwd && sameResolvedPath(effectiveCwd, input.resolvedWorkspace.cwd)) &&
+    input.executionWorkspace.strategy === "project_primary" &&
+    input.persistedExecutionWorkspace?.strategyType === "project_primary" &&
+    !input.resolvedWorkspace.repoUrl &&
+    !input.executionWorkspace.repoUrl &&
+    !input.persistedExecutionWorkspace.repoUrl &&
+    !input.executionWorkspace.branchName &&
+    !input.persistedExecutionWorkspace.branchName &&
+    !input.executionWorkspace.worktreePath;
+
+  if (nonGitPrimaryWorkspace && effectiveCwd) {
+    const accessible = await fs.stat(effectiveCwd)
+      .then(async (stats) => {
+        if (!stats.isDirectory()) return false;
+        await fs.access(effectiveCwd, fsConstants.R_OK | fsConstants.W_OK | fsConstants.X_OK);
+        return true;
+      })
+      .catch(() => false);
+    if (!accessible) {
+      fail(
+        "non_git_workspace_unavailable",
+        `Issue ${issue.identifier ?? issue.id} expected an accessible local directory at "${effectiveCwd}".`,
+      );
+    }
+  }
+
   if (
     workspaceExpectation &&
     effectiveCwd &&
+    !nonGitPrimaryWorkspace &&
     !(await hasGitMetadata(effectiveCwd))
   ) {
     fail(
@@ -1437,6 +1471,8 @@ export type ResolvedWorkspaceForRun = {
   source: "project_primary" | "task_session" | "agent_home";
   projectId: string | null;
   workspaceId: string | null;
+  /** Explicit source kind of the bound project workspace; never inferred from missing .git. */
+  projectWorkspaceSourceType?: string | null;
   repoUrl: string | null;
   repoRef: string | null;
   workspaceHints: Array<{
@@ -3434,6 +3470,7 @@ export function createHeartbeatWorkspaceResolver(db: Db) {
       source: "task_session",
       projectId: workspace.projectId,
       workspaceId: workspace.projectWorkspaceId,
+      projectWorkspaceSourceType: boundProjectWorkspace?.sourceType ?? null,
       repoUrl: workspace.repoUrl,
       repoRef: workspace.baseRef,
       // Freshness must still expose drift in current project configuration.
@@ -3571,6 +3608,7 @@ export function createHeartbeatWorkspaceResolver(db: Db) {
             source: "project_primary" as const,
             projectId: resolvedProjectId,
             workspaceId: workspace.id,
+            projectWorkspaceSourceType: workspace.sourceType,
             repoUrl: workspace.repoUrl,
             repoRef: workspace.repoRef,
             workspaceHints,

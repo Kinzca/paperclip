@@ -101,6 +101,21 @@ describe("heartbeat workspace module", () => {
     expect(second.select).toHaveBeenCalledTimes(1);
   });
 
+  it("carries explicit non-Git source identity into the run workspace", async () => {
+    const cwd = path.join(testRoot, "content");
+    await fs.mkdir(cwd);
+    const row = { ...workspace("workspace-one", "project-one", cwd), sourceType: "non_git_path" };
+    const database = databaseWithResults([row]);
+    const resolved = await createHeartbeatWorkspaceResolver(database.db)
+      .resolveWorkspaceForRun(agent(), { projectId: "project-one" }, null);
+    expect(resolved).toMatchObject({
+      cwd,
+      workspaceId: "workspace-one",
+      projectWorkspaceSourceType: "non_git_path",
+      baseCwdFallback: false,
+    });
+  });
+
   it("uses the current issue's project and selected workspace over stale context", async () => {
     const selectedCwd = path.join(testRoot, "selected");
     await fs.mkdir(selectedCwd);

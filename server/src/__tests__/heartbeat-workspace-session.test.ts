@@ -444,6 +444,74 @@ describe("assertGitSensitiveAdapterWorkspaceValid", () => {
     );
   });
 
+  it.each(["project_primary", "task_session"] as const)(
+    "accepts an explicit non-Git primary directory from %s without weakening path bindings",
+    async (source) => {
+      const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-non-git-"));
+      try {
+        const input = buildWorkspaceValidationInput();
+        const local = buildWorkspaceValidationInput({
+          resolvedWorkspace: buildResolvedWorkspace({ cwd, source, projectWorkspaceSourceType: "non_git_path" }),
+          executionWorkspace: { ...input.executionWorkspace, cwd, baseCwd: cwd },
+          persistedExecutionWorkspace: { ...input.persistedExecutionWorkspace!, cwd },
+        });
+        await expect(assertGitSensitiveAdapterWorkspaceValid(local)).resolves.toBeUndefined();
+        await expectWorkspaceValidationFailure({
+          ...local,
+          persistedExecutionWorkspace: { ...local.persistedExecutionWorkspace!, projectWorkspaceId: "other-workspace" },
+        }, "project_workspace_mismatch", "expected project workspace");
+        await expectWorkspaceValidationFailure({
+          ...local,
+          executionWorkspace: { ...local.executionWorkspace, cwd: path.join(cwd, "other") },
+        }, "persisted_cwd_mismatch", "persisted execution workspace cwd");
+      } finally {
+        await fs.rm(cwd, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it.each(["local_path", "git_repo", null])("still requires Git for source type %s", async (sourceType) => {
+    const input = buildWorkspaceValidationInput({
+      resolvedWorkspace: buildResolvedWorkspace({ projectWorkspaceSourceType: sourceType }),
+    });
+    await expectWorkspaceValidationFailure(input, "missing_git_metadata", "has no .git metadata");
+  });
+
+  it.each(["repository", "worktree", "branch", "different-root"])(
+    "does not exempt a non-Git label with %s execution",
+    async (kind) => {
+      const input = buildWorkspaceValidationInput();
+      input.resolvedWorkspace.projectWorkspaceSourceType = "non_git_path";
+      if (kind === "repository") input.executionWorkspace.repoUrl = "https://github.com/example/repo.git";
+      if (kind === "branch") input.executionWorkspace.branchName = "task-branch";
+      if (kind === "different-root") input.resolvedWorkspace.cwd = "/tmp/different-project";
+      if (kind === "worktree") {
+        input.executionWorkspace.strategy = "git_worktree";
+        input.persistedExecutionWorkspace!.strategyType = "git_worktree";
+      }
+      await expectWorkspaceValidationFailure(input, "missing_git_metadata", "has no .git metadata");
+    },
+  );
+
+  it("rejects missing and non-directory non-Git workspaces", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-non-git-unavailable-"));
+    try {
+      const file = path.join(root, "file");
+      await fs.writeFile(file, "not a directory");
+      for (const cwd of [file, path.join(root, "missing")]) {
+        const input = buildWorkspaceValidationInput();
+        await expectWorkspaceValidationFailure({
+          ...input,
+          resolvedWorkspace: buildResolvedWorkspace({ cwd, projectWorkspaceSourceType: "non_git_path" }),
+          executionWorkspace: { ...input.executionWorkspace, cwd, baseCwd: cwd },
+          persistedExecutionWorkspace: { ...input.persistedExecutionWorkspace!, cwd },
+        }, "non_git_workspace_unavailable", "accessible local directory");
+      }
+    } finally {
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("does not apply the git-sensitive workspace guard to non-local execution targets", async () => {
     const input = buildWorkspaceValidationInput();
 
