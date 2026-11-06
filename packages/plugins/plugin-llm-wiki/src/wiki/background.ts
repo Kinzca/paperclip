@@ -217,7 +217,7 @@ function batchPrompt(batch: Batch) {
     "Use .md Wiki links and sourceRefs; cite the raw source path. Keep verified facts distinct from unverified assertions; flag contradictions rather than silently changing accepted decisions.",
     "Update relevant project standup/index, Wiki index and log only when needed. Never modify raw sources or business code; no subtask delegation, external publishing or approval-policy changes.",
     "For mechanical maintenance, repair broken index/links; flag ambiguous semantic conflicts for the responsible specialist, do not invent answers.",
-    "Finish by calling wiki_background_complete with batchId, outcome changed|no_change, actual changed content page paths, and a concrete summary. A no_change result needs a reason; changed needs a real content change with this batch's provenance.",
+    "Finish with wiki_background_complete arguments {companyId, batchId, outcome: changed|no_change, pages: [actual changed content page paths], summary: concrete 20-2000 character summary}. The field is pages, not changedPagePaths; exclude wiki/index.md and wiki/log.md from pages. A no_change result uses pages: [] and needs a reason; changed needs a real content change with this batch's provenance.",
     "Only after the receipt is accepted, post a concise result and mark this BACKGROUND operation task done.",
   ].join("\n");
 }
