@@ -2053,10 +2053,9 @@ export function buildHostServices(
         // Push the non-member visibility predicate into the list query so private
         // issues are filtered at the SQL layer before they can reach a plugin.
         const readCondition = await issueReadSqlCondition(db, pluginIssuePrivacyActor);
-        return applyWindow(
-          (await issues.list(companyId, { ...(params as any), readCondition })) as Issue[],
-          params,
-        );
+        // The issue service owns SQL pagination; slicing its page again drops
+        // every result when a plugin requests a non-zero offset.
+        return (await issues.list(companyId, { ...(params as any), readCondition })) as Issue[];
       },
       async get(params) {
         const companyId = ensureCompanyId(params.companyId);
