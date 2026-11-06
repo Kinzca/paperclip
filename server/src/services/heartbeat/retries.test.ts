@@ -9,6 +9,7 @@ import { createRunDispatch, type PostCommitEffect } from "../../modules/run-disp
 import { evaluateAgentInvokabilityFromDb } from "../agent-invokability.js";
 import * as legacy from "../heartbeat.js";
 import { createHeartbeatRunState } from "./run-state.js";
+import * as legacyRecovery from "../legacy-execution-recovery.js";
 import * as extracted from "./retries.js";
 import type { HeartbeatRetryDependencies } from "./retries.js";
 
@@ -90,6 +91,27 @@ describe("heartbeat retry module callbacks", () => {
     expect(deps.getRun).toHaveBeenCalledWith("run", { unsafeFullResultJson: true });
     expect(deps.getAgent).toHaveBeenCalledTimes(outcome === "missing_agent" ? 1 : 0);
     expect(database.access).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [new HttpError(403, "Workflow is inactive", { code: "workflow_node_inactive" }), "workflow_node_inactive"],
+    [new HttpError(403, "Root is a coordinator", { code: "workflow_root_not_executable" }), "workflow_root_not_executable"],
+    [new HttpError(403, "Unrelated denial", { code: "unrelated_denial" }), null],
+    [new Error("Context lookup failed"), null],
+  ] as const)("handles only expected workflow retry denials: %s", async (failure, expectedCode) => {
+    const database = guardedDatabase();
+    const deps = callbacks();
+    deps.resolveResponsibleUserIdForRunContext.mockRejectedValue(failure);
+    const evidence = vi.spyOn(legacyRecovery, "legacyExecutionNeedsReconciliationWithEvidence").mockResolvedValue(false);
+    try {
+      const pending = extracted.createHeartbeatRetries(database.db, deps).scheduleBoundedRetryForRun(unitRun(), { adapterType: "codex_local" } as Agent);
+      if (expectedCode) await expect(pending).resolves.toMatchObject({ outcome: "not_scheduled", errorCode: expectedCode, issueId: "issue" });
+      else await expect(pending).rejects.toBe(failure);
+      expect(database.access).not.toHaveBeenCalled();
+      expect(deps.appendRunEvent).not.toHaveBeenCalled();
+    } finally {
+      evidence.mockRestore();
+    }
   });
 
   it("records exhaustion before escalating a plan-resume failure", async () => {

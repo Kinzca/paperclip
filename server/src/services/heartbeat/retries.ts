@@ -660,10 +660,18 @@ export function createHeartbeatRetries(db: Db, dependencies: HeartbeatRetryDepen
       },
       "normal_model",
     );
-    const responsibleUserId = await resolveResponsibleUserIdForRunContext(
-      run,
-      retryContextSnapshot,
-    );
+    let responsibleUserId: string | null;
+    try {
+      responsibleUserId = await resolveResponsibleUserIdForRunContext(run, retryContextSnapshot);
+    } catch (error) {
+      if (error instanceof HttpError) {
+        const code = parseObject(error.details).code;
+        if (code === "workflow_node_inactive" || code === "workflow_root_not_executable") {
+          return { outcome: "not_scheduled" as const, reason: error.message, errorCode: code, issueId };
+        }
+      }
+      throw error;
+    }
     const continuationRetryIdempotencyKey =
       retryReason === MAX_TURN_CONTINUATION_RETRY_REASON
         ? `max-turn-continuation:${run.companyId}:${issueId ?? "no-issue"}:${run.id}:${schedule.attempt}`
