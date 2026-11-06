@@ -1,3 +1,4 @@
+import { BACKGROUND_JOB_KEY } from "./wiki/background-policy.js";
 import { readFileSync } from "node:fs";
 import type { PaperclipPluginManifestV1 } from "@paperclipai/plugin-sdk";
 import { DEFAULT_AGENT_INSTRUCTION_FILES, DEFAULT_AGENT_INSTRUCTIONS } from "./templates.js";
@@ -81,13 +82,14 @@ Target space: default (slug: default). Paperclip-derived indexing currently writ
 const manifest: PaperclipPluginManifestV1 = {
   id: PLUGIN_ID,
   apiVersion: 1,
-  version: "0.1.3",
+  version: "0.1.4",
   displayName: "LLM Wiki",
   description: "Local-file LLM Wiki plugin for source ingestion, wiki browsing, query, lint, and maintenance workflows.",
   author: "Paperclip",
   categories: ["automation", "ui"],
   capabilities: [
     "events.subscribe",
+    "jobs.schedule",
     "api.routes.register",
     "database.namespace.migrate",
     "database.namespace.read",
@@ -233,6 +235,11 @@ const manifest: PaperclipPluginManifestV1 = {
       markdown: skillMarkdown(INDEX_REFRESH_SKILL_KEY)
     }
   ],
+  jobs: [{
+    jobKey: BACKGROUND_JOB_KEY, displayName: "Check pending Wiki background work",
+    description: "Program-only preflight; invokes an agent only for useful completed-root deltas while development is idle.",
+    schedule: "*/5 * * * *",
+  }],
   routines: [
     {
       routineKey: CURSOR_WINDOW_ROUTINE_KEY,
@@ -317,6 +324,22 @@ const manifest: PaperclipPluginManifestV1 = {
     }
   ],
   tools: [
+    {
+      name: "wiki_background_batch", displayName: "Read Background Batch",
+      description: "Read the current company-scoped background batch and its immutable raw source paths.",
+      parametersSchema: { type: "object", properties: { companyId: { type: "string" }, batchId: { type: "string" } },
+        required: ["companyId", "batchId"], additionalProperties: false },
+    },
+    {
+      name: "wiki_background_complete", displayName: "Complete Background Batch",
+      description: "Validate real Wiki content changes and source provenance, then save a receipt before completing the background task.",
+      parametersSchema: { type: "object", properties: {
+        companyId: { type: "string" }, batchId: { type: "string" },
+        outcome: { type: "string", enum: ["changed", "no_change"] },
+        pages: { type: "array", items: { type: "string" } }, summary: { type: "string", minLength: 20, maxLength: 2000 },
+      }, required: ["companyId", "batchId", "outcome", "pages", "summary"], additionalProperties: false },
+    },
+
     {
       name: "wiki_search",
       displayName: "Search Wiki",

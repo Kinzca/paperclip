@@ -708,6 +708,8 @@ describe("LLM Wiki plugin scaffold", () => {
       expect(routine.description).toContain("wiki/log.md");
     }
     expect(manifest.tools?.map((tool) => tool.name)).toEqual([
+      "wiki_background_batch",
+      "wiki_background_complete",
       "wiki_search",
       "wiki_read_page",
       "wiki_write_page",

@@ -210,3 +210,7 @@ node scripts/local/install-wiki.mjs
 ## Workspace Diff Viewer（2026-11-03）
 
 固定使用本仓库的 `@paperclipai/plugin-workspace-diff@0.1.0`，纳入统一发布清单。首次登记执行 `node scripts/local/install-workspace-diff.mjs`；入口在项目工作区或执行工作区的 Changes 页签，仅读取 Git 差异。该插件不增加独立侧栏入口。安装、升级和跨机路径说明见[发布流程](doc/LOCAL-RELEASES.zh-CN.md#workspace-diff-viewer)。页面和真实工作区内容由用户检查。
+
+## Wiki 后台批处理（2026-11-06）
+
+Wiki 插件 0.1.4 新增按公司选择项目的后台队列、程序去重和开发优先门槛。只有已完成业务总任务的新资料才可能唤醒维护员；空队列和未变化的夜间维护不调用模型。默认关闭，旧托管例程保持暂停；配置与检查入口见 [Wiki README](packages/plugins/plugin-llm-wiki/README.md#后台批处理014)。新增插件迁移 004，按统一升级流程备份、迁移及正式重载插件。公司启用状态和真实验收保存在本机公司资料中，不提交到源码仓库。

@@ -1,4 +1,9 @@
 import {
+  backgroundStatus, configureBackground, observeBackgroundEvent,
+  processBackgroundCompany, registerBackgroundTools, tickBackground,
+} from "./wiki/background.js";
+import { BACKGROUND_JOB_KEY } from "./wiki/background-policy.js";
+import {
   definePlugin,
   runWorker,
   type PluginApiRequestInput,
@@ -187,9 +192,17 @@ const plugin = definePlugin({
   async setup(ctx) {
     activeContext = ctx;
     await registerWikiTools(ctx);
+    registerBackgroundTools(ctx);
+    ctx.jobs.register(BACKGROUND_JOB_KEY, async () => { await tickBackground(ctx); });
+    ctx.data.register("background-status", async params => backgroundStatus(ctx, readCompanyIdFromParams(params)));
+    ctx.actions.register("configure-background", async params =>
+      configureBackground(ctx, readCompanyIdFromParams(params), params.policy));
+    ctx.actions.register("background-tick", async params =>
+      processBackgroundCompany(ctx, readCompanyIdFromParams(params)));
 
     for (const eventName of PAPERCLIP_EVENT_INGESTION_EVENTS) {
       ctx.events.on(eventName, async (event) => {
+        if (await observeBackgroundEvent(ctx, event)) return;
         const result = await handlePaperclipEventIngestion(ctx, event);
         if (result.status === "recorded") {
           ctx.logger.info("LLM Wiki recorded Paperclip event for cursor discovery", {
@@ -205,7 +218,7 @@ const plugin = definePlugin({
 
     ctx.data.register("overview", async (params) => {
       const companyId = readCompanyIdFromParams(params);
-      return getOverview(ctx, companyId);
+      return { ...await getOverview(ctx, companyId), background: await backgroundStatus(ctx, companyId) };
     });
 
     ctx.data.register("health", async (params) => {

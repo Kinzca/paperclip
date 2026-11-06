@@ -14,6 +14,30 @@ Wiki 保留 Paperclip 主侧栏，目录嵌在内容区左侧，文档和工具�
 插件升级后才会移除旧的 `routeSidebar` 注册。保留原插件 ID、配置和 Wiki 根目录，使用正式 upgrade 接口更新。
 按用户要求，此次只做必要构建和部署，没有运行测试、独立类型检查、界面验收或 Agent 执行流程。
 
+## 后台批处理（0.1.4）
+
+每家公司独立选择业务项目，通过 `configure-background` action 启用，默认关闭。
+`background-status` data 返回策略、持久队列、活动批次及最近回执；`background-tick` action 使用真实时钟执行同一门槛检查，不能绕过检查。
+
+- 只采集启用后完成的业务总任务；子任务不会单独派发，整棵子树结束后合并已完成任务的描述、评论及文档。插件自身操作不进入业务队列。
+- 插件宿主每 5 分钟执行程序检查；完成后先等待 5 分钟安静窗口，再合并最多 3 个总任务、24,000 字符。业务任务已完成，不等待 Wiki。
+- 本公司仍有 todo / in_progress 业务任务时延后派发。已启动的后台运行不抢占取消，最多 600 秒；单公司单批次、每日最多 6 次模型任务。
+- 先做长度/结论标志筛选、重复正文与时间戳归一化、SHA-256 去重。同公司已处理的相同内容不重复调用模型；语义相似但措辞不同的内容由维护员合并到已有页。
+- 凌晨 03:00（默认 Asia/Shanghai）以后，若知识内容哈希改变，最多执行一次增量维护；未变化只记录程序检查结果。旧托管例程继续暂停，避免双重触发。
+- 原始来源位于 `raw/background/<root>/<hash>.md`，不可覆盖。必须通过 `wiki_background_complete` 校验实际变更/来源或具体无需修改原因后，再完成后台任务并推进来源游标。
+- 单来源最多 50 项任务、每项 25 份文档；超限标记 needs_review，不调用模型、不跳过游标。失败最多两次尝试、间隔 30 分钟，之后人工检查。无新内容的程序检查不创建 Agent 任务。
+- 重启保留队列与批次，使用稳定 originId 找回已有任务，避免重复。若派发结果不明且 15 分钟仍找不到任务，记录失败并进入有界重试。
+
+`waitForBusinessIdle` 默认为 `true`，保留开发任务优先的行为。对于持续有内容待办的公司，可按公司显式设为 `false`：只要求目标总任务及其子树结束，不等待公司所有待办清空；仍保留维护员忙碌检查、单批次、安静窗口及预算上限。该选项不改变其他公司的策略。
+
+启用例（通过正式插件 action，外层必须携带相同 companyId）：
+
+```json
+{"policy":{"enabled":true,"projectIds":["业务项目UUID"],"quietMinutes":5,"maxRootsPerBatch":3,"maxCharacters":24000,"maxRunsPerDay":6,"maintenanceHour":3,"timezone":"Asia/Shanghai"}}
+```
+
+维护员需要现有 Wiki 工具权限和新增的 `wiki_background_batch` / `wiki_background_complete` 两项工具。沿用公司权限、预算、暂停及 public 部署自动写入限制。停用策略不会取消已经启动的批次。此队列存储在插件数据库迁移 004 中，升级前备份，不能仅回退代码。
+
 ## Scope
 
 This package is the standalone home for LLM Wiki behavior. Wiki-specific routes,
