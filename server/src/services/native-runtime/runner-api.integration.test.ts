@@ -5,6 +5,7 @@ import { join, dirname } from "node:path";
 import { eq } from "drizzle-orm";
 import { assets, documents, heartbeatRuns, issues, projects, routineDocuments, routines, runnerApiResponseReservations } from "@paperclipai/db";
 import { beforeAll, afterAll, beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import { nodeFixtureScript } from "../../__tests__/helpers/node-fixture.js";
 import { startRunnerApiTestServer } from "../../__tests__/helpers/runner-api-server.js";
 import { createRunnerdCodexTransport, defaultCapabilityRunnerdBinary } from "../../vendor/paperclip-runner/index.js";
 import { runnerApiCatalog } from "./runner-api-catalog.js";
@@ -34,7 +35,7 @@ describe("runner API against real HTTP routes", () => {
   it.skipIf(!process.env.PAPERCLIP_REQUIRE_RUNNER_API_INTEGRATION && !existsSync(defaultCapabilityRunnerdBinary())).each(["current", "legacy_http"])("runs runnerd → PRP → authority → actual authenticated HTTP (%s receipt)", async (receiptFormat) => {
     const fixture = await server.fixture();
     const provider = join(server.root, `scripted-api-provider-${receiptFormat}.mjs`);
-    await writeFile(provider, `#!${process.execPath}
+    await writeFile(provider, nodeFixtureScript(`#!${process.execPath}
 import { createInterface } from 'node:readline';
 const send = value => process.stdout.write(JSON.stringify(value)+'\\n');
 let step = 0;
@@ -57,7 +58,7 @@ else if(m.method==='thread/start') send({id:m.id,result:{thread:{id:'api-thread'
 else if(m.method==='turn/start') {send({id:m.id,result:{turn:{id:'api-turn',status:'inProgress'}}});send({method:'turn/started',params:{turn:{id:'api-turn'}}});next();}
 else if(m.id!==undefined) send({id:m.id,result:{}});
 }
-`);
+`));
     await chmod(provider, 0o700);
     const bundle = createRunnerdCodexTransport({
       runnerBinary: defaultCapabilityRunnerdBinary(), codexCommand: provider, codexArgs: [],

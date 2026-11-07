@@ -130,7 +130,7 @@ export function workflowDraftFromPolicy(
     templateKey: policy.templateKey ?? "",
     revision: policy.revision,
     maxAttempts: String(policy.limits?.maxAttempts ?? ""),
-    timeoutMinutes: String(policy.limits?.timeoutMinutes ?? ""),
+    timeoutMinutes: policy.limits?.timeoutMinutes === null ? "unlimited" : String(policy.limits?.timeoutMinutes ?? ""),
     maxParallelism: String(policy.limits?.maxParallelism ?? ""),
     maxCostCents:
       policy.limits?.maxCostCents == null
@@ -144,7 +144,7 @@ export function parseWorkflowDraft(draft: WorkflowDraft) {
   const errors: Partial<Record<keyof WorkflowDraft, string>> = {};
   for (const field of workflowLimitFields) {
     const raw = draft[field.key].trim();
-    if (!raw) continue;
+    if (!raw || (field.key === "timeoutMinutes" && raw === "unlimited")) continue;
     const number = Number(raw);
     const cost = field.key === "maxCostCents";
     if (
@@ -174,7 +174,9 @@ export function parseWorkflowDraft(draft: WorkflowDraft) {
         .filter(({ key }) => draft[key].trim())
         .map(({ key }) => [
           key,
-          key === "maxCostCents"
+          key === "timeoutMinutes" && draft[key].trim() === "unlimited"
+            ? null
+            : key === "maxCostCents"
             ? Math.round(Number(draft[key]) * 100)
             : Number(draft[key]),
         ]),

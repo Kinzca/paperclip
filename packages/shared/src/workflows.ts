@@ -5,7 +5,7 @@ const keySchema = z.string().regex(/^[a-z][a-z0-9_-]{0,63}$/);
 export const workflowLimitsSchema = z
   .object({
     maxAttempts: z.number().int().min(1).max(10),
-    timeoutMinutes: z.number().int().min(1).max(1440),
+    timeoutMinutes: z.number().int().min(1).max(1440).nullable(),
     maxParallelism: z.number().int().min(1).max(10),
     maxCostCents: z.number().int().positive().max(1_000_000).nullable(),
   })
@@ -477,7 +477,9 @@ export function effectiveWorkflowLimits(
     (limits, grant) => ({
       ...limits,
       maxAttempts: limits.maxAttempts + grant.additionalAttempts,
-      timeoutMinutes: limits.timeoutMinutes + grant.additionalMinutes,
+      timeoutMinutes: limits.timeoutMinutes === null
+        ? null
+        : limits.timeoutMinutes + grant.additionalMinutes,
       maxCostCents:
         limits.maxCostCents == null
           ? null
@@ -496,7 +498,7 @@ export interface WorkflowRun {
   runtime?: WorkflowRuntimeState;
   nodes: Record<string, WorkflowNodeState>;
   stopReason: string | null;
-  deadlineAt: string;
+  deadlineAt: string | null;
   startedAt: string | null;
   finishedAt: string | null;
   createdAt: string;
@@ -569,7 +571,7 @@ export interface WorkflowPolicyRecord {
 
 export const DEFAULT_WORKFLOW_LIMITS: Readonly<WorkflowLimits> = {
   maxAttempts: 5,
-  timeoutMinutes: 180,
+  timeoutMinutes: null,
   maxParallelism: 2,
   maxCostCents: null,
 };
@@ -766,11 +768,16 @@ export function resolveWorkflowPolicy(
     if (!policy.limits) continue;
     for (const key of [
       "maxAttempts",
-      "timeoutMinutes",
       "maxParallelism",
     ] as const) {
       if (policy.limits[key] !== undefined)
         limits[key] = Math.min(limits[key], policy.limits[key]);
+    }
+    if (policy.limits.timeoutMinutes != null) {
+      limits.timeoutMinutes = Math.min(
+        limits.timeoutMinutes ?? Infinity,
+        policy.limits.timeoutMinutes,
+      );
     }
     if (policy.limits.maxCostCents != null) {
       limits.maxCostCents = Math.min(

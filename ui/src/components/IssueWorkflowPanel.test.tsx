@@ -76,7 +76,7 @@ beforeEach(async () => {
       revisionId: null,
       revision: 1,
       definition,
-      limits: { ...DEFAULT_WORKFLOW_LIMITS },
+      limits: { ...DEFAULT_WORKFLOW_LIMITS, timeoutMinutes: 180 },
       executorAgentId: "agent-1",
       responsibleUserId: "user-1",
       objective: {

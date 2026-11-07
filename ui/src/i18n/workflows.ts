@@ -2,6 +2,8 @@ import { i18n } from "./index";
 
 // Keep this surface's copy together without changing the global UI catalog.
 const messages = {
+  "Active execution minutes (blank means no time limit)": "累计执行时长（分钟，留空不设上限）",
+  "No time limit": "不设时长上限",
   "Platform limits": "平台上限",
   "Applies to new workflows in every company. Company and project rules may lower these limits. Existing tasks keep their original allowance.":
     "适用于所有公司的新工作流。公司和项目可以收紧额度，已有任务保留原额度。",
@@ -11,7 +13,7 @@ const messages = {
   "Human-only acceptance waits do not consume execution time. Manual grants apply to one stopped task and remain subject to company budgets.":
     "仅等待人工审查或验收时不消耗执行时长。人工追加仅作用于单个暂停的任务，仍受公司预算约束。",
   "Check the limit values.":
-    "请检查额度：次数 1–10，分钟 1–1440，并发 1–10，费用留空或 1–1000000 美分。",
+    "请检查额度：次数 1–10，分钟留空不限时或 1–1440，并发 1–10，费用留空或 1–1000000 美分。",
   "Save platform limits": "保存平台上限",
   "Waiting for human acceptance — execution clock stopped.":
     "正在等待人工审查或验收，执行计时已暂停。",

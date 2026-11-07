@@ -139,3 +139,11 @@ describe("工作流停表与重复失败", () => {
     ).toBe(false);
   });
 });
+
+it("settles human waits without creating a deadline for unlimited runs", () => {
+  const run = { ...timedRun(), deadlineAt: null };
+  updateHumanWait(run, 1000);
+  settleHumanWait(run, 86400_000);
+  expect(run.deadlineAt).toBeNull();
+  expect(run.runtime.humanWaitStartedAt).toBeUndefined();
+});

@@ -15,7 +15,7 @@ Open **Task workflows** in the sidebar. Company/project defaults apply automatic
 to newly assigned standard root tasks, including initially unassigned tasks at
 first assignment. Existing assigned tasks are not retrofitted. Platform defaults
 enable `standard`: execute → retain a successful run receipt → independently
-review, with five attempts per node, 180 active minutes and two concurrent stages.
+review, with five attempts per node, no total execution time limit and two concurrent stages.
 Native company budgets remain enforced; an additional workflow cost cap is optional.
 
 The board page is `/:companyPrefix/workflows` (for example, `/AIG/workflows`).
@@ -226,3 +226,7 @@ A task node may yield `blocked` with explicit `blockedByIssueIds` referring excl
 Unassigned/backlog/cancelled blockers, external dependencies, or a blocked leaf with no declared internal continuation remain intervention cases. Parent pause/cancel and agent permissions retain their existing behavior. Descendant changes notify the owning workflow; startup reconciliation can recover completion events missed during downtime. Workspace validation failures now require configuration repair on the first failed attempt rather than spending the retry ceiling.
 
 The current path does not require an employee to invent a review or repeatedly re-arm a monitor just to wait for delegated work. `in_review` still requires its normal review/approval/monitor action path.
+
+
+### Workflows without a total time limit (2026-11-07)
+New workflows default to `timeoutMinutes: null` and a null persisted deadline. Explicit 1–1440 minute ceilings remain supported and inherited ceilings cannot be widened by null overrides. Existing policies, frozen snapshots, and stopped tasks retain their decisions. Runtime/tool timeouts, command-check leases, attempts, repeated-failure protection, budgets and cancellation remain independent. Apply the nullable-deadline migration before deploying this code.

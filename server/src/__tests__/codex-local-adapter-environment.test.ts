@@ -1,3 +1,4 @@
+import { nodeFixtureScript } from "./helpers/node-fixture.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -16,7 +17,7 @@ async function runProbeFixture(options: { failCleanup?: boolean; error?: string;
     await fs.mkdir(managedHome);
     await fs.writeFile(path.join(managedHome, "config.toml"), 'model_provider = "paperclip"\n');
   }
-  await fs.writeFile(command, `#!${process.execPath}
+  await fs.writeFile(command, nodeFixtureScript(`#!${process.execPath}
 const fs = require('node:fs');
 fs.writeFileSync(process.env.PROBE_CAPTURE, JSON.stringify({ args: process.argv.slice(2), home: process.env.CODEX_HOME, nativeKey: process.env.OPENAI_API_KEY, providerKey: process.env.PAPERCLIP_AI_PROVIDER_KEY, config: fs.existsSync(process.env.CODEX_HOME + "/config.toml") ? fs.readFileSync(process.env.CODEX_HOME + "/config.toml", "utf8") : null }));
 console.error('WARN codex_core_plugins::manager: remote installed plugin bundle sync failed error=chatgpt authentication required for remote plugin catalog');
@@ -24,7 +25,7 @@ const error = process.env.PROBE_ERROR;
 if (error) { console.error(error); process.exit(1); }
 console.log(JSON.stringify({type:'item.completed',item:{type:'agent_message',text:'hello'}}));
 console.log(JSON.stringify({type:'turn.completed',usage:{input_tokens:1,output_tokens:1}}));
-`, { mode: 0o755 });
+`), { mode: 0o755 });
   if (options.failCleanup) {
     // Deterministic equivalent of rm observing a concurrent plugin writer.
     await fs.writeFile(path.join(root, "rm"), '#!/bin/sh\nif [ "$1" = "-rf" ]; then echo "rm: Directory not empty" >&2; exit 1; fi\nexec /bin/rm "$@"\n', { mode: 0o755 });

@@ -54,7 +54,7 @@ async function runAcpxFixtureSession(
     sessionStore: createRuntimeStore({ stateDir: path.join(root, `acpx-${sessionName}`) }),
     agentRegistry: createAgentRegistry({
       overrides: {
-        isolation_fixture: `${process.execPath} ${acpFixturePath}`,
+        isolation_fixture: `${JSON.stringify(process.execPath)} ${JSON.stringify(acpFixturePath)}`,
       },
     }),
     mcpServers,

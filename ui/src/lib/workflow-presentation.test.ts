@@ -109,3 +109,10 @@ describe("workflow presentation", () => {
     ).toBeUndefined();
   });
 });
+
+it("round trips explicit unlimited time separately from omitted inheritance", () => {
+  const draft = workflowDraftFromPolicy({ limits: { timeoutMinutes: null } });
+  expect(draft.timeoutMinutes).toBe("unlimited");
+  expect(parseWorkflowDraft(draft).policy?.limits?.timeoutMinutes).toBeNull();
+  expect(parseWorkflowDraft(workflowDraftFromPolicy()).policy?.limits).toEqual({});
+});

@@ -294,7 +294,7 @@ export async function persistWorkflowAdmission(
     issueId: issue.id,
     snapshot: admission.snapshot,
     nodes: admission.nodes,
-    deadlineAt: new Date(
+    deadlineAt: admission.snapshot.limits.timeoutMinutes === null ? null : new Date(
       Date.now() + admission.snapshot.limits.timeoutMinutes * 60_000,
     ),
   });

@@ -1,3 +1,4 @@
+import { nodeFixtureScript } from "./helpers/node-fixture.js";
 import * as conversationContinuation from "../services/conversation-continuation.js";
 import { environmentRuntimeService } from "../services/environment-runtime.js";
 import * as workspaceRuntime from "../services/workspace-runtime.js";
@@ -6010,7 +6011,7 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
     await fs.mkdir(bin);
     // A real child process supplies execFile's numeric exit/stderr evidence.
     // Every command is intercepted, so no fixture can reach a remote Git host.
-    await fs.writeFile(path.join(bin, "git"), `#!${process.execPath}\n` +
+    await fs.writeFile(path.join(bin, "git"), nodeFixtureScript(`#!${process.execPath}\n` +
       `const fs = require('node:fs');\n` +
       `const args = process.argv.slice(2);\n` +
       `fs.appendFileSync(${JSON.stringify(callsPath)}, JSON.stringify(args) + '\\n');\n` +
@@ -6018,7 +6019,7 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       `const diagnostics = ${JSON.stringify(diagnostics)};\n` +
       `const index = remotes.indexOf(args.at(-2));\n` +
       `if (!args.includes('clone') || index < 0) { process.stderr.write('Unexpected fixture Git command\\n'); process.exit(2); }\n` +
-      `process.stderr.write(diagnostics[index] + '\\n'); process.exitCode = 128;\n`, { mode: 0o755 });
+      `process.stderr.write(diagnostics[index] + '\\n'); process.exitCode = 128;\n`), { mode: 0o755 });
     const heartbeat = heartbeatService(db);
     const previousSettings = await instanceSettingsService(db).getExperimental();
     const previousPath = process.env.PATH;
@@ -6101,7 +6102,7 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
     await fs.writeFile(path.join(cwd, "README.md"), "Keep this local repository intact.\n");
     execFileSync("git", ["add", "README.md"], { cwd, stdio: "ignore" });
     execFileSync("git", ["-c", "user.name=Test", "-c", "user.email=test@example.test", "commit", "-m", "Fixture"], { cwd, stdio: "ignore" });
-    await fs.writeFile(path.join(bin, "git"), `#!${process.execPath}\n` +
+    await fs.writeFile(path.join(bin, "git"), nodeFixtureScript(`#!${process.execPath}\n` +
       `const fs = require('node:fs'); const { spawnSync } = require('node:child_process');\n` +
       `const args = process.argv.slice(2);\n` +
       `if (args.includes('clone')) {\n` +
@@ -6111,7 +6112,7 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       `}\n` +
       `if (args.some(arg => ['fetch', 'pull', 'push', 'ls-remote', 'submodule'].includes(arg))) process.exit(2);\n` +
       `const result = spawnSync('git', args, { stdio: 'inherit', env: { ...process.env, PATH: ${JSON.stringify(previousPath)} } });\n` +
-      `process.exit(result.status ?? 2);\n`, { mode: 0o755 });
+      `process.exit(result.status ?? 2);\n`), { mode: 0o755 });
     try {
       process.env.PATH = `${bin}${path.delimiter}${previousPath ?? ""}`;
       process.env.PAPERCLIP_HOME = home;

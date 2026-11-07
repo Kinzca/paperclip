@@ -8,7 +8,7 @@ import type {
 
 type TimedRun = {
   status: string;
-  deadlineAt: Date;
+  deadlineAt: Date | null;
   runtime: WorkflowRuntimeState;
   snapshot: WorkflowSnapshot;
   nodes: Record<string, WorkflowNodeState>;
@@ -18,7 +18,7 @@ type TimedRun = {
 export function settleHumanWait(run: TimedRun, now = Date.now()) {
   if (!run.runtime.humanWaitStartedAt) return;
   const started = Date.parse(run.runtime.humanWaitStartedAt);
-  if (Number.isFinite(started))
+  if (run.deadlineAt && Number.isFinite(started))
     run.deadlineAt = new Date(
       run.deadlineAt.getTime() + Math.max(0, now - started),
     );

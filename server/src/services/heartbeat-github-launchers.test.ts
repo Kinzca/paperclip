@@ -1,3 +1,4 @@
+import { nodeFixtureScript } from "../__tests__/helpers/node-fixture.js";
 import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -85,9 +86,9 @@ it("keeps anonymous wrappers usable after run cleanup and excludes sandbox image
     await mkdir(bin);
     await mkdir(path.join(root, ".config", "gh"), { recursive: true });
     await writeFile(path.join(root, ".config", "gh", "hosts.yml"), "ambient-image-secret");
-    await writeFile(path.join(bin, "gh"), `#!${process.execPath}
+    await writeFile(path.join(bin, "gh"), nodeFixtureScript(`#!${process.execPath}
 const fs = require('node:fs');
-process.stdout.write(JSON.stringify({token:process.env.GH_TOKEN || '', githubToken:process.env.GITHUB_TOKEN || '', ssh:process.env.SSH_AUTH_SOCK, global:process.env.GIT_CONFIG_GLOBAL, imageConfig:fs.existsSync(process.env.GH_CONFIG_DIR + '/hosts.yml')}));`, { mode: 0o700 });
+process.stdout.write(JSON.stringify({token:process.env.GH_TOKEN || '', githubToken:process.env.GITHUB_TOKEN || '', ssh:process.env.SSH_AUTH_SOCK, global:process.env.GIT_CONFIG_GLOBAL, imageConfig:fs.existsSync(process.env.GH_CONFIG_DIR + '/hosts.yml')}));`), { mode: 0o700 });
     const imageEnv = { HOME: root, PATH: `${bin}:${path.dirname(process.execPath)}:/usr/bin:/bin`, GH_TOKEN: "ambient-token", GITHUB_TOKEN: "ambient-other-token", SSH_AUTH_SOCK: "/ambient/socket" };
     const execute: CommandManagedRuntimeRunner["execute"] = async (input) => {
       const startedAt = new Date().toISOString();

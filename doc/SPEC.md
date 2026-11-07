@@ -774,3 +774,7 @@ A company may configure a shared decision model for optional Paperclip features.
 ### Fast responses
 
 A company may use a shared API model to acknowledge accepted human messages across tasks, agent chat and external channels while normal work starts. Acknowledgements retain their platform provenance and cannot satisfy execution or completion requirements. The bounded inference, authorization, sponsorship and independent accounting contract is defined in [fast-responses.md](fast-responses.md).
+
+
+### Workflows without a total time limit (2026-11-07)
+New workflows default to `timeoutMinutes: null` and a null persisted deadline. Explicit 1–1440 minute ceilings remain supported and inherited ceilings cannot be widened by null overrides. Existing policies, frozen snapshots, and stopped tasks retain their decisions. Runtime/tool timeouts, command-check leases, attempts, repeated-failure protection, budgets and cancellation remain independent. Apply the nullable-deadline migration before deploying this code.

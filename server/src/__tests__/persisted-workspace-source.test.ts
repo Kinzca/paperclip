@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { nodeFixtureScript } from "./helpers/node-fixture.js";
 import { resolvePersistedGitWorkspaceSource } from "../services/persisted-workspace-source.js";
 
 const exec = promisify(execFile);
@@ -232,7 +233,7 @@ describe("persisted Git workspace source", () => {
     const realGit = (await exec("/bin/sh", ["-c", "command -v git"])).stdout.trim();
     const bin = path.join(root, "bin");
     await fs.mkdir(bin);
-    await fs.writeFile(path.join(bin, "git"), `#!${process.execPath}\nconst args=process.argv.slice(2);\nif(args[0]==="worktree"&&args[1]==="list"){process.stderr.write("private-provider-output /private/path");process.exitCode=128;}else{const r=require("node:child_process").spawnSync(${JSON.stringify(realGit)},args,{stdio:"inherit"});process.exitCode=r.status??1;}\n`, { mode: 0o755 });
+    await fs.writeFile(path.join(bin, "git"), nodeFixtureScript(`#!${process.execPath}\nconst args=process.argv.slice(2);\nif(args[0]==="worktree"&&args[1]==="list"){process.stderr.write("private-provider-output /private/path");process.exitCode=128;}else{const r=require("node:child_process").spawnSync(${JSON.stringify(realGit)},args,{stdio:"inherit"});process.exitCode=r.status??1;}\n`), { mode: 0o755 });
     vi.stubEnv("PATH", `${bin}${path.delimiter}${process.env.PATH ?? ""}`);
     const materializeOriginalRepository = vi.fn();
     const failure = await resolvePersistedGitWorkspaceSource({ ...input, materializeOriginalRepository }).catch(error => error);

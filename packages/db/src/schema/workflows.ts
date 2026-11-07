@@ -119,7 +119,7 @@ export const workflowRuns = pgTable(
       .$type<string[]>()
       .notNull()
       .default([]),
-    deadlineAt: timestamp("deadline_at", { withTimezone: true }).notNull(),
+    deadlineAt: timestamp("deadline_at", { withTimezone: true }),
     startedAt: timestamp("started_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })

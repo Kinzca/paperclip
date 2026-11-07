@@ -114,3 +114,10 @@ it("超出技术边界时禁用保存，避免无效请求", async () => {
   expect(button("Save platform limits").disabled).toBe(true);
   expect(mocks.savePlatform).not.toHaveBeenCalled();
 });
+
+it("saves blank execution minutes as an explicit unlimited ceiling", async () => {
+  await open();
+  input(1, "");
+  flushSync(() => button("Save platform limits").click());
+  await vi.waitFor(() => expect(mocks.savePlatform).toHaveBeenCalledWith(expect.objectContaining({ policy: expect.objectContaining({ limits: expect.objectContaining({ timeoutMinutes: null }) }) })));
+});

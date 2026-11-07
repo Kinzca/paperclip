@@ -319,10 +319,10 @@ describe("通用工作流交接契约", () => {
 });
 
 describe("人工追加额度契约", () => {
-  it("默认使用 5 次、180 分钟、并发 2", () => {
+  it("默认使用 5 次、不限总时长、并发 2", () => {
     expect(DEFAULT_WORKFLOW_LIMITS).toEqual({
       maxAttempts: 5,
-      timeoutMinutes: 180,
+      timeoutMinutes: null,
       maxParallelism: 2,
       maxCostCents: null,
     });
@@ -365,7 +365,7 @@ describe("人工追加额度契约", () => {
     });
   });
   it("增量不修改快照、并发或无额外费用上限的含义", () => {
-    const snapshot = { limits: { ...DEFAULT_WORKFLOW_LIMITS } };
+    const snapshot = { limits: { ...DEFAULT_WORKFLOW_LIMITS, timeoutMinutes: 180 } };
     const before = structuredClone(snapshot);
     const grant = {
       id: "g1",
@@ -382,5 +382,18 @@ describe("人工追加额度契约", () => {
       timeoutMinutes: 210,
     });
     expect(snapshot).toEqual(before);
+  });
+});
+
+
+describe("unlimited workflow time", () => {
+  it("defaults to unlimited but preserves explicit ancestor time ceilings", () => {
+    expect(resolveWorkflowPolicy([]).limits.timeoutMinutes).toBeNull();
+    expect(resolveWorkflowPolicy([{ limits: { timeoutMinutes: 45 } }]).limits.timeoutMinutes).toBe(45);
+    expect(resolveWorkflowPolicy([{ limits: { timeoutMinutes: null } }], { limits: { timeoutMinutes: 30 } }).limits.timeoutMinutes).toBe(30);
+    expect(resolveWorkflowPolicy([{ limits: { timeoutMinutes: 15 } }], { limits: { timeoutMinutes: 30 } }).limits.timeoutMinutes).toBe(15);
+  });
+  it("does not convert an unlimited snapshot into a finite one through grants", () => {
+    expect(effectiveWorkflowLimits({ limits: { ...DEFAULT_WORKFLOW_LIMITS, timeoutMinutes: null } }, { grants: [{ id: "grant", userId: "operator", reason: "retry", grantedAt: new Date().toISOString(), additionalAttempts: 1, additionalMinutes: 0, additionalCostCents: 0 }] }).timeoutMinutes).toBeNull();
   });
 });

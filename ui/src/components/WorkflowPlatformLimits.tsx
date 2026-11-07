@@ -67,7 +67,7 @@ function PlatformLimitsForm({ close }: { close: () => void }) {
     );
   const parsed = workflowLimitsSchema.safeParse({
     maxAttempts: Number(values.maxAttempts),
-    timeoutMinutes: Number(values.timeoutMinutes),
+    timeoutMinutes: values.timeoutMinutes.trim() === "" ? null : Number(values.timeoutMinutes),
     maxParallelism: Number(values.maxParallelism),
     maxCostCents:
       values.maxCostCents === "" ? null : Number(values.maxCostCents),
@@ -102,7 +102,7 @@ function PlatformLimitsForm({ close }: { close: () => void }) {
     { key: "maxAttempts", label: "Attempts per stage", max: 10, min: 1 },
     {
       key: "timeoutMinutes",
-      label: "Active execution minutes",
+      label: "Active execution minutes (blank means no time limit)",
       max: 1440,
       min: 1,
     },
@@ -130,7 +130,8 @@ function PlatformLimitsForm({ close }: { close: () => void }) {
             min={field.min}
             max={field.max}
             step={1}
-            required={field.key !== "maxCostCents"}
+            required={field.key !== "maxCostCents" && field.key !== "timeoutMinutes"}
+            placeholder={field.key === "timeoutMinutes" ? uiText("No time limit") : undefined}
             value={values[field.key]}
             disabled={save.isPending}
             onChange={(event) => {

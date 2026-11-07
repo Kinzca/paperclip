@@ -485,7 +485,7 @@ export function workflowEngine(db: Db, effects: Effects) {
             executionWorkspaceId: task.executionWorkspaceId,
             check: node.check!,
             remainingSeconds: Math.floor(
-              (run.deadlineAt.getTime() - Date.now()) / 1000,
+              ((run.deadlineAt?.getTime() ?? Infinity) - Date.now()) / 1000,
             ),
             signal: checkSignal,
           }).catch((error: unknown) => ({
@@ -636,9 +636,10 @@ export function workflowEngine(db: Db, effects: Effects) {
             .where(eq(workflowRuns.id, run.id));
           return;
         }
-        run.deadlineAt = new Date(
-          run.deadlineAt.getTime() + Date.now() - run.updatedAt.getTime(),
-        );
+        if (run.deadlineAt)
+          run.deadlineAt = new Date(
+            run.deadlineAt.getTime() + Date.now() - run.updatedAt.getTime(),
+          );
         run.status = run.startedAt ? "running" : "pending";
         run.stopReason = null;
       }
@@ -654,11 +655,13 @@ export function workflowEngine(db: Db, effects: Effects) {
       }
       if (!run.startedAt) {
         run.startedAt = new Date();
-        run.deadlineAt = new Date(
-          Date.now() +
-            effectiveWorkflowLimits(run.snapshot, run.runtime).timeoutMinutes *
-              60_000,
-        );
+        const minutes = effectiveWorkflowLimits(
+          run.snapshot,
+          run.runtime,
+        ).timeoutMinutes;
+        run.deadlineAt = minutes === null
+          ? null
+          : new Date(Date.now() + minutes * 60_000);
         run.status = "running";
         await context.updateIssue(parent.id, {
           status: "in_progress",
@@ -666,7 +669,7 @@ export function workflowEngine(db: Db, effects: Effects) {
         });
       }
       settleHumanWait(run);
-      if (run.deadlineAt.getTime() <= Date.now()) {
+      if (run.deadlineAt && run.deadlineAt.getTime() <= Date.now()) {
         await stop(context, run, "Workflow deadline reached");
         await save(tx, run);
         return;
@@ -1163,7 +1166,7 @@ export function workflowEngine(db: Db, effects: Effects) {
             {
               id: childId,
               title: `${parent.title} — ${node.title}`,
-              description: `# Authorized objective\n${run.snapshot.objective.description ?? run.snapshot.objective.title}\n\n# Workflow node\n${node.instructions}${verdictGuidance}\n\n${workflowHandoffInstructions(run.snapshot, node)}\n\n# Execution allowance at dispatch\nDeadline: ${run.deadlineAt.toISOString()}. Attempt ${current.attempt} of ${effectiveLimits.maxAttempts}. Workflow cost ceiling: ${effectiveLimits.maxCostCents === null ? "no workflow-specific ceiling; company and agent budgets still apply" : `${effectiveLimits.maxCostCents} cents`}. Read the current workflow state before reporting remaining allowance. Save durable handoff evidence before exiting; do not extend limits or request broader access on your own.\n\n# Inputs\n${dependencyTasks.map((id) => `- /api/issues/${id}`).join("\n")}\n\n# Previous feedback\n${current.result ?? "None"}\n\nStay inside the approved scope. Do not change acceptance criteria or workflow configuration. Escalate unavailable tools or access.`,
+              description: `# Authorized objective\n${run.snapshot.objective.description ?? run.snapshot.objective.title}\n\n# Workflow node\n${node.instructions}${verdictGuidance}\n\n${workflowHandoffInstructions(run.snapshot, node)}\n\n# Execution allowance at dispatch\nDeadline: ${run.deadlineAt?.toISOString() ?? "none (no workflow time limit)"}. Attempt ${current.attempt} of ${effectiveLimits.maxAttempts}. Workflow cost ceiling: ${effectiveLimits.maxCostCents === null ? "no workflow-specific ceiling; company and agent budgets still apply" : `${effectiveLimits.maxCostCents} cents`}. Read the current workflow state before reporting remaining allowance. Save durable handoff evidence before exiting; do not extend limits or request broader access on your own.\n\n# Inputs\n${dependencyTasks.map((id) => `- /api/issues/${id}`).join("\n")}\n\n# Previous feedback\n${current.result ?? "None"}\n\nStay inside the approved scope. Do not change acceptance criteria or workflow configuration. Escalate unavailable tools or access.`,
               initialPlan: run.snapshot.objective.plan,
               parentId: parent.id,
               projectId: parent.projectId,
@@ -1213,7 +1216,7 @@ export function workflowEngine(db: Db, effects: Effects) {
           node.kind === "check"
             ? new Date(
                 Math.min(
-                  run.deadlineAt.getTime(),
+                  run.deadlineAt?.getTime() ?? Infinity,
                   Date.now() +
                     ((node.check?.kind === "command"
                       ? node.check.timeoutSeconds
@@ -1279,7 +1282,7 @@ export function workflowEngine(db: Db, effects: Effects) {
             tasks: inputs,
             remainingSeconds: Math.max(
               1,
-              Math.floor((run.deadlineAt.getTime() - Date.now()) / 1000),
+              Math.floor(((run.deadlineAt?.getTime() ?? Infinity) - Date.now()) / 1000),
             ),
           });
         }
@@ -1632,7 +1635,7 @@ export function workflowEngine(db: Db, effects: Effects) {
         const reportError = workflowReviewError(input.outcome, input.report, node.acceptanceCriteria);
         if (reportError) throw unprocessable(reportError);
         settleHumanWait(run);
-        if (run.deadlineAt.getTime() <= Date.now())
+        if (run.deadlineAt && run.deadlineAt.getTime() <= Date.now())
           throw conflict(
             "Workflow time allowance is exhausted; ask an operator to add time",
           );
@@ -1765,7 +1768,9 @@ export function workflowEngine(db: Db, effects: Effects) {
               throw unprocessable(
                 "Total allowances must stay within 10 attempts, 1440 minutes and $10000",
               );
-            if (grant.additionalMinutes > 0)
+            if (before.timeoutMinutes === null && grant.additionalMinutes > 0)
+              throw unprocessable("This workflow has no time ceiling to extend");
+            if (grant.additionalMinutes > 0 && run.deadlineAt)
               run.deadlineAt = new Date(
                 Math.max(run.deadlineAt.getTime(), run.updatedAt.getTime()) +
                   grant.additionalMinutes * 60_000,
@@ -1781,15 +1786,16 @@ export function workflowEngine(db: Db, effects: Effects) {
             });
           }
           if (
-            run.startedAt &&
+            run.startedAt && run.deadlineAt &&
             run.deadlineAt.getTime() <= run.updatedAt.getTime()
           )
             throw conflict(
               "The time allowance is exhausted; add time to continue this task",
             );
-          run.deadlineAt = new Date(
-            run.deadlineAt.getTime() + Date.now() - run.updatedAt.getTime(),
-          );
+          if (run.deadlineAt)
+            run.deadlineAt = new Date(
+              run.deadlineAt.getTime() + Date.now() - run.updatedAt.getTime(),
+            );
           if (run.pauseHoldId) {
             const treeControl = issueTreeControlService(tx as unknown as Db);
             const hold = await treeControl.getHold(

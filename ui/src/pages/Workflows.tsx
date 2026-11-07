@@ -294,6 +294,7 @@ function CompanyWorkflows({
     key: (typeof workflowLimitFields)[number]["key"],
     value: number | null,
   ) {
+    if (key === "timeoutMinutes" && value === null) return uiText("No time limit");
     if (key === "maxCostCents")
       return value == null ? uiText("No additional limit") : formatCents(value);
     return uiText(
@@ -730,6 +731,12 @@ function CompanyWorkflows({
                 <label htmlFor={`workflow-${field.key}`} className="text-sm">
                   {uiText(field.label)}
                 </label>
+                {field.key === "timeoutMinutes" && (
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={draft.timeoutMinutes === "unlimited"} onChange={(event) => setDraft({ ...draft, timeoutMinutes: event.target.checked ? "unlimited" : "" })} />
+                    {uiText("No time limit")}
+                  </label>
+                )}
                 <Input
                   id={`workflow-${field.key}`}
                   type="number"
@@ -739,13 +746,14 @@ function CompanyWorkflows({
                   inputMode={
                     field.key === "maxCostCents" ? "decimal" : "numeric"
                   }
-                  value={draft[field.key]}
+                  value={draft[field.key] === "unlimited" ? "" : draft[field.key]}
+                  disabled={field.key === "timeoutMinutes" && draft.timeoutMinutes === "unlimited"}
                   placeholder={
                     field.key === "maxCostCents"
                       ? inherited.limits.maxCostCents == null
                         ? uiText("No additional limit")
                         : String(inherited.limits.maxCostCents / 100)
-                      : String(inherited.limits[field.key])
+                      : inherited.limits[field.key] === null ? uiText("No time limit") : String(inherited.limits[field.key])
                   }
                   aria-invalid={showValidation && !!parsed.errors[field.key]}
                   aria-describedby={`workflow-${field.key}-help`}

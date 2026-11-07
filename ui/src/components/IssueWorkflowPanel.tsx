@@ -104,7 +104,7 @@ export function IssueWorkflowPanel({ issueId }: { issueId: string }) {
     workflowLimitsSchema.safeParse({
       ...limits,
       maxAttempts: limits.maxAttempts + grant.data.additionalAttempts,
-      timeoutMinutes: limits.timeoutMinutes + grant.data.additionalMinutes,
+      timeoutMinutes: limits.timeoutMinutes === null ? null : limits.timeoutMinutes + grant.data.additionalMinutes,
       maxCostCents:
         limits.maxCostCents == null
           ? null
@@ -131,7 +131,7 @@ export function IssueWorkflowPanel({ issueId }: { issueId: string }) {
             {workflowTemplateText(choice, "name")} · {uiText("Revision")}{" "}
             {run.snapshot.revision} · {uiText("Attempt ceiling")}{" "}
             {limits.maxAttempts} · {uiText("Active execution minutes")}{" "}
-            {limits.timeoutMinutes}
+            {limits.timeoutMinutes ?? uiText("No time limit")}
           </p>
           <p className="text-xs font-mono text-muted-foreground">{run.id}</p>
           {run.runtime?.humanWaitStartedAt && (
@@ -313,11 +313,11 @@ export function IssueWorkflowPanel({ issueId }: { issueId: string }) {
                           label: "Additional attempts per stage",
                           max: 10 - limits.maxAttempts,
                         },
-                        {
+                        ...(limits.timeoutMinutes === null ? [] : [{
                           key: "additionalMinutes" as const,
                           label: "Additional execution minutes",
                           max: 1440 - limits.timeoutMinutes,
-                        },
+                        }]),
                         ...(limits.maxCostCents == null
                           ? []
                           : [

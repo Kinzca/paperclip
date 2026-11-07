@@ -3,6 +3,7 @@ import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { nodeFixtureScript } from "../../__tests__/helpers/node-fixture.js";
 import { createNativeSshCommandRunner } from "./native-ssh-command-runner.js";
 import { MAX_REMOTE_DELIVERABLE_BYTES, readVerifiedRemoteWorkspaceFile } from "./remote-deliverable-file.js";
 
@@ -13,7 +14,7 @@ describe("native SSH deliverable output budget", () => {
     // Exercise the real SSH command adapter and its execFile output limit,
     // replacing only the network executable with a deterministic byte source.
     const executable = join(root, "ssh");
-    await writeFile(executable, `#!${process.execPath}\nprocess.stdout.write(require('node:fs').readFileSync(${JSON.stringify(join(root, "response"))}));\n`);
+    await writeFile(executable, nodeFixtureScript(`#!${process.execPath}\nprocess.stdout.write(require('node:fs').readFileSync(${JSON.stringify(join(root, "response"))}));\n`));
     await chmod(executable, 0o700);
     vi.stubEnv("PATH", `${root}:${process.env.PATH}`);
   });

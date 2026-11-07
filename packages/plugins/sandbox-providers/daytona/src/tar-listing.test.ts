@@ -67,8 +67,11 @@ it.each([false, true])("validates every member beyond 32 MiB of real tar names (
 async function fakeTar(script: string) {
   const directory = await temporaryDirectory();
   const pidFile = path.join(directory, "pid");
-  await fs.writeFile(path.join(directory, "tar"), `#!${process.execPath}\n` +
-    `require("node:fs").appendFileSync(${JSON.stringify(pidFile)}, String(process.pid) + "\\n");\n${script}\n`, { mode: 0o755 });
+  const source = `require("node:fs").appendFileSync(${JSON.stringify(pidFile)}, String(process.pid) + "\\n");\n${script}\n`;
+  const invocation = [process.execPath, "-e", source]
+    .map(value => "'" + value.replaceAll("'", "'\\''") + "'")
+    .join(" ");
+  await fs.writeFile(path.join(directory, "tar"), `#!/bin/sh\nexec ${invocation} "$0" "$@"\n`, { mode: 0o755 });
   vi.stubEnv("PATH", `${directory}${path.delimiter}${process.env.PATH}`);
   return async () => {
     const pids = (await fs.readFile(pidFile, "utf8")).trim().split("\n").map(Number);

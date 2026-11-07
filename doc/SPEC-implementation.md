@@ -2160,3 +2160,7 @@ The internal service provides local-only availability and bounded, reauthorized 
 ## Company fast-response service
 
 Companies may configure an optional shared API connection and model for short acknowledgements of accepted human turns. Fast responses use direct SDK inference alongside normal agent work, with a three-second admission deadline, bounded prompts/output, current authorization and independent `fast_response` accounting. They are server-marked platform receipts attributed to the agent, never completion, interaction or recovery evidence. Company-sponsored unlinked external senders are explicit; linked-user permission denials are never bypassed. See [fast-responses.md](fast-responses.md) for provider, delivery, history and endpoint contracts.
+
+
+### Workflows without a total time limit (2026-11-07)
+New workflows default to `timeoutMinutes: null` and a null persisted deadline. Explicit 1–1440 minute ceilings remain supported and inherited ceilings cannot be widened by null overrides. Existing policies, frozen snapshots, and stopped tasks retain their decisions. Runtime/tool timeouts, command-check leases, attempts, repeated-failure protection, budgets and cancellation remain independent. Apply the nullable-deadline migration before deploying this code.

@@ -61,7 +61,7 @@ export async function assertWorkflowIssueExecutionAllowed(
   if (
     !run ||
     run.status !== "running" ||
-    (!run.runtime.humanWaitStartedAt &&
+    (run.deadlineAt && !run.runtime.humanWaitStartedAt &&
       run.deadlineAt.getTime() <= Date.now()) ||
     !Object.values(run.nodes).some(
       (state) => state.issueId === node.id && state.status === "running",

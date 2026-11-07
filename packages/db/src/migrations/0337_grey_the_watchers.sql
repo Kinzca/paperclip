@@ -1,0 +1,1 @@
+ALTER TABLE "workflow_runs" ALTER COLUMN "deadline_at" DROP NOT NULL;

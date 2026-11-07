@@ -54,7 +54,7 @@ suite("native workflow execution", () => {
     await database?.cleanup();
   }, 30_000);
 
-  async function setup() {
+  async function setup(timeoutMinutes: number | null = 60) {
     const companyId = randomUUID();
     const executor = randomUUID();
     const reviewer = randomUUID();
@@ -101,6 +101,7 @@ suite("native workflow execution", () => {
     const store = workflowStore(db);
     const parent = await issueService(db).create(companyId, {
       title: "Deliver a verified change",
+      workflow: { limits: { timeoutMinutes } },
       description: "Keep the objective and acceptance criteria fixed.",
       status: "todo",
       assigneeAgentId: executor,
@@ -126,6 +127,30 @@ suite("native workflow execution", () => {
       cancelRun,
     };
   }
+
+  it("keeps an unlimited workflow executable across days and pause/resume without time grants", async () => {
+    const context = await setup(null);
+    await context.engine.sweepPending();
+    const run = await context.read();
+    expect(run.deadlineAt).toBeNull();
+    const taskId = run.nodes.execute.issueId!;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 7 * 86400_000);
+    try {
+      await context.store.markIssueChanged(context.companyId, taskId);
+      await context.engine.sweepPending();
+      expect((await context.read()).status).toBe("running");
+      await assertWorkflowIssueExecutionAllowed(db, context.companyId, taskId);
+      await context.engine.control(context.companyId, context.parent.id, {
+        action: "pause", expectedVersion: (await context.read()).version, reason: "Operator pause",
+      }, context.userId);
+      await context.engine.control(context.companyId, context.parent.id, {
+        action: "resume", expectedVersion: (await context.read()).version, reason: "Continue without a deadline",
+      }, context.userId);
+      await context.engine.sweepPending();
+      expect((await context.read()).deadlineAt).toBeNull();
+      expect((await context.read()).status).toBe("running");
+    } finally { clock.mockRestore(); }
+  });
 
   it("holds missing tool configuration before spending an attempt and resumes the same snapshot", async () => {
     const context = await setup();
@@ -237,8 +262,8 @@ suite("native workflow execution", () => {
     await context.engine.sweepPending();
   }
 
-  it("automatically admits a task, verifies its receipt and completes only after an independent verdict", async () => {
-    const context = await setup();
+  it.each([60, null])("admits, verifies and independently reviews a workflow with time ceiling %s", async (minutes) => {
+    const context = await setup(minutes);
     expect(context.parent.assigneeAgentId).toBeNull();
     expect((await context.read()).snapshot.executorAgentId).toBe(
       context.executor,
@@ -1425,7 +1450,7 @@ suite("native workflow execution", () => {
     const completed = await context.read();
     expect(completed.status).toBe("succeeded");
     expect(completed.runtime.humanWaitStartedAt).toBeUndefined();
-    expect(completed.deadlineAt.getTime()).toBeGreaterThan(Date.now());
+    expect(completed.deadlineAt!.getTime()).toBeGreaterThan(Date.now());
   });
 
   it("超时后追加时间续跑原任务，保留快照并拒绝重复版本与超额授权", async () => {
@@ -1468,7 +1493,7 @@ suite("native workflow execution", () => {
     expect(resumed.snapshot).toEqual(original.snapshot);
     expect(resumed.nodes.execute.issueId).toBe(original.nodes.execute.issueId);
     expect(resumed.status).toBe("running");
-    expect(resumed.deadlineAt.getTime() - Date.now()).toBeGreaterThan(
+    expect(resumed.deadlineAt!.getTime() - Date.now()).toBeGreaterThan(
       29 * 60_000,
     );
     expect(resumed.runtime.grants).toHaveLength(1);

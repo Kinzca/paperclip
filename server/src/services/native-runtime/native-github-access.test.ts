@@ -6,6 +6,7 @@ import type { CommandManagedRuntimeRunner } from "@paperclipai/adapter-utils/com
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createInterface } from "node:readline";
+import { nodeFixtureScript } from "../../__tests__/helpers/node-fixture.js";
 import { createNativeGitHubAccess, type NativeGitHubAccess } from "./native-github-access.js";
 const scope = { companyId: "company-a", agentId: "agent-a", issueId: "task-a" };
 const run = (runId: string) => ({ ...scope, runId });
@@ -18,7 +19,7 @@ async function broker(resolveCredentials = vi.fn(async (binding: ReturnType<type
   cleanups.push(() => rm(root, { recursive: true, force: true }));
   const bin = path.join(root, "real-bin");
   await mkdir(bin);
-  await writeFile(path.join(bin, "gh"), `#!${process.execPath}\nprocess.stdout.write(process.env.GH_TOKEN || 'anonymous');`, { mode: 0o700 });
+  await writeFile(path.join(bin, "gh"), nodeFixtureScript("process.stdout.write(process.env.GH_TOKEN || 'anonymous');"), { mode: 0o700 });
   const execute: CommandManagedRuntimeRunner["execute"] = async (input) => {
     const startedAt = new Date().toISOString();
     const child = promisify(execFile)(input.command, input.args ?? [], {
