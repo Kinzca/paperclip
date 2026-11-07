@@ -2,6 +2,7 @@ import { i18n } from "./index";
 
 // Keep this surface's copy together without changing the global UI catalog.
 const messages = {
+  "Resume without a time limit": "取消时长上限并续跑",
   "Active execution minutes (blank means no time limit)": "累计执行时长（分钟，留空不设上限）",
   "No time limit": "不设时长上限",
   "Platform limits": "平台上限",

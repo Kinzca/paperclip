@@ -1620,6 +1620,31 @@ suite("native workflow execution", () => {
     expect(resumed.runtime.repeatedFailures?.execute.consecutive).toBe(0);
   });
 
+  it("removes an expired task time limit with operator audit while preserving its frozen snapshot", async () => {
+    const context = await setup(60);
+    await context.engine.sweepPending();
+    const original = await context.read();
+    await db.update(workflowRuns).set({ deadlineAt: new Date(Date.now() - 1000), needsReconcile: true }).where(eq(workflowRuns.id, original.id));
+    await context.engine.sweepPending();
+    const stopped = await context.read();
+    expect(stopped.status).toBe("waiting_human");
+    await context.engine.control(context.companyId, context.parent.id, {
+      action: "resume_unlimited", expectedVersion: stopped.version, reason: "Operator authorizes ongoing execution",
+    }, context.userId);
+    await context.engine.sweepPending();
+    const resumed = await context.read();
+    expect(resumed.deadlineAt).toBeNull();
+    expect(resumed.snapshot).toEqual(original.snapshot);
+    expect(resumed.runtime.timeLimitRemoval).toMatchObject({ userId: context.userId, reason: "Operator authorizes ongoing execution" });
+    expect(resumed.runtime.grants ?? []).toEqual([]);
+    expect(resumed.nodes.execute.attempt).toBe(original.nodes.execute.attempt);
+    expect(resumed.status).toBe("running");
+    await assertWorkflowIssueExecutionAllowed(db, context.companyId, resumed.nodes.execute.issueId!);
+    await expect(context.engine.control(context.companyId, context.parent.id, {
+      action: "resume_unlimited", expectedVersion: stopped.version, reason: "stale authorization",
+    }, context.userId)).rejects.toThrow("changed");
+  });
+
   it("Agent 不能修改平台上限或自行追加额度", async () => {
     const context = await setup();
     const app = express();
@@ -1658,5 +1683,8 @@ suite("native workflow execution", () => {
           })
       ).status,
     ).toBe(403);
+    expect((await request(app).post(`/api/issues/${context.parent.id}/workflow/control`).send({
+      action: "resume_unlimited", expectedVersion: run.version, reason: "Agent cannot remove time limits",
+    })).status).toBe(403);
   });
 });

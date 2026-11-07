@@ -1742,6 +1742,24 @@ export function workflowEngine(db: Db, effects: Effects) {
         } else {
           if (!["paused", "waiting_human"].includes(run.status))
             throw conflict("Only stopped workflows may be resumed");
+          if (input.action === "resume_unlimited") {
+            const before = effectiveWorkflowLimits(run.snapshot, run.runtime);
+            run.runtime.timeLimitRemoval = {
+              userId,
+              reason: input.reason,
+              grantedAt: new Date().toISOString(),
+            };
+            run.deadlineAt = null;
+            await context.activity({
+              companyId,
+              actorType: "user",
+              actorId: userId,
+              action: "workflow.time_limit_removed",
+              entityType: "issue",
+              entityId: issueId,
+              details: { workflowRunId: run.id, before, after: effectiveWorkflowLimits(run.snapshot, run.runtime) },
+            });
+          }
           if (input.action === "extend") {
             const parsed = workflowBudgetExtensionSchema.safeParse(
               input.extension,

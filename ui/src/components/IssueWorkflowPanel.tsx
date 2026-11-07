@@ -283,6 +283,16 @@ export function IssueWorkflowPanel({ issueId }: { issueId: string }) {
                   >
                     {uiText(stopped ? "Resume workflow" : "Pause workflow")}
                   </Button>
+                  {stopped && limits.timeoutMinutes !== null && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={!reason.trim() || control.isPending}
+                      onClick={() => control.mutate("resume_unlimited")}
+                    >
+                      {uiText("Resume without a time limit")}
+                    </Button>
+                  )}
                   {stopped && (
                     <Button
                       size="sm"

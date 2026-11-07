@@ -282,7 +282,7 @@ export type WorkflowBudgetExtension = z.infer<
 >;
 export const workflowControlSchema = z
   .object({
-    action: z.enum(["pause", "resume", "cancel", "retry", "extend"]),
+    action: z.enum(["pause", "resume", "resume_unlimited", "cancel", "retry", "extend"]),
     expectedVersion: z.number().int().positive(),
     reason: z.string().trim().min(1).max(2000),
     extension: workflowBudgetExtensionSchema.optional(),
@@ -456,6 +456,7 @@ export interface WorkflowBudgetGrant extends WorkflowBudgetExtension {
   grantedAt: string;
 }
 export interface WorkflowRuntimeState {
+  timeLimitRemoval?: { userId: string; reason: string; grantedAt: string };
   humanWaitStartedAt?: string;
   grants?: WorkflowBudgetGrant[];
   repeatedFailures?: Record<
@@ -485,7 +486,7 @@ export function effectiveWorkflowLimits(
           ? null
           : limits.maxCostCents + grant.additionalCostCents,
     }),
-    { ...snapshot.limits },
+    { ...snapshot.limits, ...(runtime.timeLimitRemoval ? { timeoutMinutes: null } : {}) },
   );
 }
 export interface WorkflowRun {

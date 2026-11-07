@@ -170,3 +170,21 @@ it.each(["cancelled", "succeeded", "running", "waiting_human"] as const)(
     expect(mocks.control).not.toHaveBeenCalled();
   },
 );
+
+it("requests unlimited resumption only with an operator reason and current version", async () => {
+  await render();
+  const button = [...container.querySelectorAll("button")].find(b => b.textContent === "Resume without a time limit")!;
+  expect(button.disabled).toBe(true);
+  input(container.querySelector("textarea")!, "Continue the original task without a deadline");
+  flushSync(() => button.click());
+  await vi.waitFor(() => expect(mocks.control).toHaveBeenCalledWith("task-1", {
+    action: "resume_unlimited", expectedVersion: 8, reason: "Continue the original task without a deadline",
+  }));
+});
+it("displays an audited removed time limit without offering duplicate removal", async () => {
+  run.runtime = { timeLimitRemoval: { userId: "operator", reason: "continue", grantedAt: new Date().toISOString() } };
+  run.deadlineAt = null;
+  await render();
+  expect(container.textContent).toContain("No time limit");
+  expect(container.textContent).not.toContain("Resume without a time limit");
+});

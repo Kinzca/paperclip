@@ -397,3 +397,12 @@ describe("unlimited workflow time", () => {
     expect(effectiveWorkflowLimits({ limits: { ...DEFAULT_WORKFLOW_LIMITS, timeoutMinutes: null } }, { grants: [{ id: "grant", userId: "operator", reason: "retry", grantedAt: new Date().toISOString(), additionalAttempts: 1, additionalMinutes: 0, additionalCostCents: 0 }] }).timeoutMinutes).toBeNull();
   });
 });
+
+it("keeps explicit operator time removal separate from immutable limits and other grants", () => {
+  const snapshot = { limits: { ...DEFAULT_WORKFLOW_LIMITS, timeoutMinutes: 60 } };
+  const limits = effectiveWorkflowLimits(snapshot, { timeLimitRemoval: { userId: "operator", reason: "continue", grantedAt: new Date().toISOString() } });
+  expect(limits).toEqual({ ...snapshot.limits, timeoutMinutes: null });
+  expect(snapshot.limits.timeoutMinutes).toBe(60);
+  expect(workflowControlSchema.safeParse({ action: "resume_unlimited", expectedVersion: 1, reason: "continue" }).success).toBe(true);
+  expect(workflowControlSchema.safeParse({ action: "resume_unlimited", expectedVersion: 1, reason: "continue", extension: { additionalAttempts: 1 } }).success).toBe(false);
+});
