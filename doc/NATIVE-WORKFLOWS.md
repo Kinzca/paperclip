@@ -58,6 +58,13 @@ retain their existing lifecycle. Board-authored explicit native execution polici
 retain the existing stages/monitors engine. An agent cannot supply a separate root
 policy to bypass inherited workflows. Experimental Pipelines continues coordinating
 business cases and routines; it is not replaced or recursively wrapped.
+Authenticated Dot broker intake uses the `dot_intake` origin and keeps its native
+Runner assignment lifecycle. It is not a manual root for this second orchestrator;
+ordinary manual tasks assigned to Dot still follow inherited workflow admission.
+Status-card compilation and refresh jobs use `status_card` and retain their own
+generation ledger and Summarizer assignment instead of becoming manual roots.
+Summary-slot generation likewise uses `summary_slot` and keeps its existing slot
+ownership, revision and cancellation checks.
 
 ## Execution and evidence
 
@@ -97,6 +104,51 @@ A successful process receipt is **not** proof that tests passed. Evidence gates
 inspect server-owned heartbeat, attachment and work-product records. Independent
 review must exercise the objective with real tools. Task details retain results
 and attempt evidence. The game template additionally gates on retained deliverables.
+
+### Declared tool requirements and frozen acceptance criteria
+
+Template task/review nodes may declare `requiredTools`, using stable application
+keys and exact upstream tool names rather than company-specific connection IDs:
+
+```json
+{
+  "requiredTools": [{ "applicationKey": "example-editor", "toolName": "inspect_scene" }],
+  "acceptanceCriteria": [{ "id": "ac-1", "requirement": "Exercise the delivered scene's interaction" }]
+}
+```
+
+`acceptanceCriteria` applies only to review nodes. These fields are optional and
+remain part of the immutable template snapshot; existing runs are not retrofitted.
+Before creating a node task or consuming an attempt, the engine checks declared
+tools against that company's active catalog, the assigned agent's effective tool
+profiles, installed connections, enablement and recorded health. A missing agent
+or unavailable requirement retains a configuration hold with the exact missing
+tool. Repair the configuration and resume the same run through the existing
+operator control; neither permissions nor execution allowance are raised.
+Per-user connections defer credential health to the existing runtime grant checks;
+another identity's shared health failure cannot prove that user's grant is broken.
+
+These requirements cover the Paperclip-managed catalog and connections; tools
+configured privately inside an external adapter are not discovered by this check.
+This is configuration admission, not a live application probe: it does not invoke
+tools, reveal credentials, resolve per-user identity, approve writes, or prove an
+editor is running. The gateway still enforces runtime identity, policies and
+approvals. Declare each required operation explicitly; permission to inspect does
+not establish permission to launch, control or modify an application.
+
+When criteria are declared, every verdict (including an operator verdict) must
+submit a structured report with the exact criterion IDs and unchanged requirements,
+an artifact location, revision and evidence. A passing report must verify all
+criteria and leave no findings. An execution receipt, completed child task or
+completed report alone does not pass the review. Revision/evidence are reviewer
+assertions, not automatic proof of their contents; the reviewer must inspect that
+actual build. Candidate optimization cannot remove or rewrite baseline criteria
+or verification tools. Nodes without declared criteria keep the existing contract.
+
+Node descriptions also show the absolute dispatch deadline, attempt ceiling and
+workflow cost ceiling. These are dispatch-time information; current workflow state
+and independent company/agent budgets remain authoritative. A configuration hold
+does not spend a node attempt and does not extend active execution time by itself.
 
 Operator-authored command checks declare executable, argv, timeout and `retrySafe`.
 Host commands are off by default. They require platform `allowHostCommands: true`,

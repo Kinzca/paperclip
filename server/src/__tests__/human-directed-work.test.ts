@@ -37,6 +37,8 @@ const support = await getEmbeddedPostgresTestSupport();
   async function task(f: Awaited<ReturnType<typeof seed>>) {
     return issueService(db).create(f.companyId, {
       title: `Direct task ${randomUUID()}`, assigneeAgentId: f.agent.id,
+      // Exercise native direct-run trust here; workflow admission has its own suite.
+      workflow: { enabled: false },
       createdByUserId: "owner", responsibleUserId: "owner",
     });
   }

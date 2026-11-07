@@ -340,7 +340,9 @@ function createBroker(db: Db) {
         const issue = await issueService(tx as unknown as Db).create(b.companyId, {
           title: `Dot request: ${prompt.trim().split("\n")[0]!.slice(0, 120)}`, description: prompt,
           status: "todo", assigneeAgentId: b.agentId, responsibleUserId: b.operatorId, trustExplicitResponsibleUserId: true,
-          createdByAgentId: b.agentId, originKind: "manual", originId, originFingerprint: fingerprint,
+          // This authenticated broker owns native intake admission; it is not
+          // a manual root for the separate inherited workflow orchestrator.
+          createdByAgentId: b.agentId, originKind: "dot_intake", originId, originFingerprint: fingerprint,
         });
         await logActivity(tx as unknown as Db, { companyId: b.companyId, actorType: "agent", actorId: b.agentId,
           action: "dot.intake_created", entityType: "issue", entityId: issue.id, details: { bindingId: b.id, requestId } });

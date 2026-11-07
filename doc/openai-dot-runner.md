@@ -329,6 +329,12 @@ responses. These screenshots show preview data, not a qualified Dot account:
 
 ## Starting work from a Dot conversation
 
+Broker-created intake tasks record the `dot_intake` origin and retain the native
+Runner assignment lifecycle. Inherited manual-root workflows do not take over
+these already governed intakes; ordinary manually created tasks still follow
+their inherited workflow policy. This does not change Dot permissions, budgets,
+revocation or completion authority.
+
 Call `paperclip_dot_capabilities` to discover the bound agent, responsible person, permissions, prerequisites and active assignment. An idle Dot can call `paperclip_dot_request_turn` with a prompt and stable UUID. Paperclip creates one visible, agent-authored intake task and admits it through the ordinary heartbeat/Runner path. Retries reuse the task and wake receipt; the same UUID with a different prompt is rejected. Company and agent pause, grants, budgets, task assignment permissions and single-assignment ownership apply. The intake is work attributed to the Dot, not a fabricated operator message or an OAuth permission expansion.
 
 Read and accept the resulting assignment, then call its catalog through `paperclip_dot_tool`. Use `get_identity` and paginated `list_people` to identify the owner. `create_task` accepts either `assigneeActorId` for an agent or `assigneeUserId` for an active company person. `reassign_task` also accepts a person and checks the previous agent/person and status version before the ownership change. Human tasks do not wake agents.

@@ -19,6 +19,7 @@ import {
   issueRelations,
   issueWatchdogs,
   issues,
+  workflowRuns,
   principalPermissionGrants,
 } from "@paperclipai/db";
 import {
@@ -396,15 +397,17 @@ describeEmbeddedPostgres("issue watchdog routes", () => {
       });
 
     expect(res.status, JSON.stringify(res.body)).toBe(201);
-    await waitForAssignmentWakeup(companyId);
     expect(res.body).toMatchObject({
-      assigneeAgentId: workerAgentId,
+      assigneeAgentId: null,
       watchdog: {
         issueId: res.body.id,
         watchdogAgentId,
         status: "active",
       },
     });
+
+    const [workflow] = await db.select().from(workflowRuns).where(eq(workflowRuns.issueId, res.body.id));
+    expect(workflow.snapshot.executorAgentId).toBe(workerAgentId);
 
     const watchdogReviewIssues = await db
       .select()

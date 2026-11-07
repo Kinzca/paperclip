@@ -23,6 +23,7 @@ import {
 import type { Db } from "@paperclipai/db";
 import {
   CHAT_PROVIDERS,
+  ISSUE_DISPOSITION_REPAIR_RETRY_REASON,
   CONNECTION_INTENT_AGENT_GUIDANCE,
   CONNECTION_RUNTIME_TOOL_NAMES,
   envBindingSchema,
@@ -2240,6 +2241,7 @@ export async function buildPaperclipWakePayload(input: {
     workMode: string;
     projectId?: string | null;
     executionPolicy?: unknown;
+    assigneeAgentId?: string | null;
   } | null;
   exposeLowTrustRaw?: boolean;
   // Experimental: agents write user-interaction content in ASD-STE100
@@ -2270,6 +2272,7 @@ export async function buildPaperclipWakePayload(input: {
             status: issues.status,
             priority: issues.priority,
             workMode: issues.workMode,
+            assigneeAgentId: issues.assigneeAgentId,
           })
           .from(issues)
           .where(
@@ -2581,7 +2584,7 @@ export async function buildPaperclipWakePayload(input: {
     input.contextSnapshot.recoveryActionId,
   );
   const recoveryCause = readNonEmptyString(input.contextSnapshot.recoveryCause);
-  const recoveryAction = recoveryActionId
+  const recoveryAction = recoveryActionId && issueId
     ? await input.db
         .select()
         .from(issueRecoveryActions)
@@ -2589,15 +2592,27 @@ export async function buildPaperclipWakePayload(input: {
           and(
             eq(issueRecoveryActions.id, recoveryActionId),
             eq(issueRecoveryActions.companyId, input.companyId),
+            eq(issueRecoveryActions.sourceIssueId, issueId),
           ),
         )
         .then((rows) => rows[0] ?? null)
     : null;
   const recoveryEvidence = parseObject(recoveryAction?.evidence);
+  // The bounded original-owner lane is normal task continuation, not a
+  // repair-only handoff. Derive it from durable ownership, never a context flag.
+  const ownerDispositionContinuation =
+    input.contextSnapshot.wakeReason === ISSUE_DISPOSITION_REPAIR_RETRY_REASON &&
+    recoveryAction?.status === "active" &&
+    recoveryAction.kind === "deliberate_wait_without_target" &&
+    recoveryAction.ownerType === "agent" &&
+    recoveryAction.ownerAgentId === input.agentId &&
+    recoveryAction.returnOwnerAgentId === input.agentId &&
+    recoveryAction.ownerAgentId === issueSummary?.assigneeAgentId &&
+    parseObject(recoveryAction.wakePolicy).type === "bounded_owner_disposition_repair";
   // A restored task resumes its deliverable, not the completed repair. A
   // referenced settled/missing action must not fall back to a stale cause.
   const recoveryStillActive = recoveryAction
-    ? ["active", "escalated"].includes(recoveryAction.status)
+    ? !ownerDispositionContinuation && ["active", "escalated"].includes(recoveryAction.status)
     : !recoveryActionId && Boolean(recoveryCause);
   const originalAssigneeId =
     recoveryAction?.returnOwnerAgentId ??

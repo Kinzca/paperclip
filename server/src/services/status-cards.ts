@@ -393,6 +393,7 @@ export function statusCardService(
     const createdAt = new Date();
     const created = await issuesSvc.create(card.companyId, {
       title: `Compile status card: ${card.title ?? card.interestPrompt.slice(0, 80)}`,
+      originKind: "status_card",
       description: compileDescription(card, null, hash),
       status: "todo",
       priority: "medium",
@@ -709,6 +710,7 @@ export function statusCardService(
     let deduplicated = false;
     const created = await issuesSvc.create(card.companyId, {
       title: `${kind === "full" ? "Rebuild" : "Update"} status card: ${card.title ?? card.interestPrompt.slice(0, 80)}`,
+      originKind: "status_card",
       description: updateDescription({ card, generationIssueId: null, fingerprint, changes, kind, trigger, previousSummary, snapshot }),
       status: "todo",
       priority: "medium",

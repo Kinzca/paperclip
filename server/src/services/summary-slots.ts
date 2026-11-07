@@ -503,6 +503,7 @@ export function summarySlotService(db: Db) {
     const generationVersion = existing?.generatingIssueId ?? existing?.updatedAt.toISOString() ?? "initial";
     let issueDeduplicated = false;
     const created = await issuesSvc.create(sel.companyId, {
+      originKind: "summary_slot",
       projectId,
       projectWorkspaceId,
       executionWorkspaceId,

@@ -938,7 +938,7 @@ describeEmbeddedPostgres(
         .where(eq(agents.id, fixture.agents.lowTrust.id));
       const board = createApp(db, boardActor(fixture));
       const created = await request(board).post(`/api/companies/${fixture.company.id}/issues`)
-        .send({ title: "Human assigned outside intake", status: "todo", assigneeAgentId: fixture.agents.lowTrust.id });
+        .send({ title: "Human assigned outside intake", status: "todo", assigneeAgentId: fixture.agents.lowTrust.id, workflow: { enabled: false } });
       expect(created.status, JSON.stringify(created.body)).toBe(201);
       const queued = () => db.select().from(agentWakeupRequests).where(and(
         eq(agentWakeupRequests.companyId, fixture.company.id),
@@ -996,7 +996,7 @@ describeEmbeddedPostgres(
         .where(eq(agents.id, fixture.agents.lowTrust.id));
       const board = createApp(db, boardActor(fixture));
       const created = await request(board).post(`/api/companies/${fixture.company.id}/issues`)
-        .send({ title: "Human backlog assignment", status: "backlog", assigneeAgentId: fixture.agents.lowTrust.id });
+        .send({ title: "Human backlog assignment", status: "backlog", assigneeAgentId: fixture.agents.lowTrust.id, workflow: { enabled: false } });
       expect(created.status, JSON.stringify(created.body)).toBe(201);
       const receipts = await db.select().from(agentWakeupRequests).where(eq(agentWakeupRequests.companyId, fixture.company.id));
       expect(receipts.filter(w => w.payload?.issueId === created.body.id)).toEqual([expect.objectContaining({

@@ -20,7 +20,7 @@ import { emitConnectionInvoked } from "./connector-telemetry.js";
 import { resolveManagedGitHubIdentitySelection } from "./git-credentials.js";
 import { extractRemoteMcpPending } from "./remote-mcp-pending.js";
 import { logger } from "../middleware/logger.js";
-import { spawn } from "node:child_process";
+import { callLocalStdioMcpProcess, LocalStdioMcpError } from "./local-stdio-mcp.js";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
   and,
@@ -5087,164 +5087,26 @@ export function createToolGatewayService(
         },
       );
     }
-    const child = spawn(input.template.command, input.template.args, {
-      env: input.env,
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    let stdout = "";
-    let stderr = "";
-    let nextId = 1;
-    const pending = new Map<
-      number,
-      {
-        resolve: (value: unknown) => void;
-        reject: (error: Error) => void;
-      }
-    >();
-    const timer = setTimeout(() => {
-      child.kill("SIGTERM");
-      for (const { reject } of pending.values()) {
-        reject(
-          new ToolGatewayHttpError(
-            504,
-            "Local stdio MCP tool call timed out",
-            "tool_timeout",
-            {
-              connectionId: input.connection.id,
-              catalogEntryId: input.entry?.id ?? null,
-            },
-          ),
-        );
-      }
-      pending.clear();
-    }, input.timeoutMs);
-    timer.unref?.();
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-    child.stdout.on("data", (chunk: string) => {
-      stdout += chunk;
-      let newline = stdout.indexOf("\n");
-      while (newline >= 0) {
-        const line = stdout.slice(0, newline).trim();
-        stdout = stdout.slice(newline + 1);
-        if (line) {
-          try {
-            const message = JSON.parse(line) as Record<string, unknown>;
-            const id = typeof message.id === "number" ? message.id : null;
-            if (id !== null && pending.has(id)) {
-              const waiter = pending.get(id)!;
-              pending.delete(id);
-              if (message.error !== undefined) {
-                waiter.reject(
-                  stdioProtocolError(
-                    "Local stdio MCP server returned a JSON-RPC error",
-                    {
-                      connectionId: input.connection.id,
-                      catalogEntryId: input.entry?.id ?? null,
-                      error: message.error,
-                    },
-                  ),
-                );
-              } else {
-                waiter.resolve(message.result);
-              }
-            }
-          } catch {
-            for (const { reject } of pending.values()) {
-              reject(
-                stdioProtocolError(
-                  "Local stdio MCP server returned invalid JSON",
-                  {
-                    connectionId: input.connection.id,
-                    catalogEntryId: input.entry?.id ?? null,
-                  },
-                ),
-              );
-            }
-            pending.clear();
-          }
-        }
-        newline = stdout.indexOf("\n");
-      }
-    });
-    child.stderr.on("data", (chunk: string) => {
-      stderr = `${stderr}${chunk}`.slice(-4_000);
-    });
-    const exitPromise = new Promise<void>((resolve, reject) => {
-      child.on("error", (error) => {
-        const gatewayError = new ToolGatewayHttpError(
-          502,
-          "Local stdio MCP command failed to start",
-          "local_stdio_spawn_failed",
-          {
-            connectionId: input.connection.id,
-            templateId: input.template.templateId,
-            message: error.message,
-          },
-        );
-        for (const { reject: rejectPending } of pending.values()) {
-          rejectPending(gatewayError);
-        }
-        pending.clear();
-        reject(gatewayError);
-      });
-      child.on("exit", (code, signal) => {
-        if (pending.size === 0) {
-          resolve();
-          return;
-        }
-        for (const { reject: rejectPending } of pending.values()) {
-          rejectPending(
-            new ToolGatewayHttpError(
-              502,
-              "Local stdio MCP command exited before responding",
-              "local_stdio_process_exited",
-              {
-                connectionId: input.connection.id,
-                catalogEntryId: input.entry?.id ?? null,
-                code,
-                signal,
-                stderr,
-              },
-            ),
-          );
-        }
-        pending.clear();
-        resolve();
-      });
-    });
-    const request = (method: string, params: Record<string, unknown>) => {
-      const id = nextId;
-      nextId += 1;
-      const promise = new Promise<unknown>((resolve, reject) => {
-        pending.set(id, { resolve, reject });
-      });
-      child.stdin.write(
-        `${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`,
-      );
-      return promise;
-    };
     try {
-      await request("initialize", {
-        protocolVersion: "2024-11-05",
-        capabilities: {},
-        clientInfo: { name: "paperclip-tool-gateway", version: "0.3.1" },
-      });
-      child.stdin.write(
-        `${JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized", params: {} })}\n`,
-      );
-      return await request(
-        input.protocolMethod ?? "tools/call",
-        input.protocolParams ?? {
+      return await callLocalStdioMcpProcess({
+        command: input.template.command,
+        args: input.template.args,
+        env: input.env,
+        method: input.protocolMethod ?? "tools/call",
+        params: input.protocolParams ?? {
           name: input.entry?.toolName,
           arguments: input.parameters ?? {},
         },
-      );
-    } finally {
-      clearTimeout(timer);
-      child.stdin.end();
-      child.kill("SIGTERM");
-      await exitPromise.catch(() => undefined);
+        timeoutMs: input.timeoutMs,
+      });
+    } catch (error) {
+      if (!(error instanceof LocalStdioMcpError)) throw error;
+      throw new ToolGatewayHttpError(error.status, error.message, error.code, {
+        ...error.details,
+        connectionId: input.connection.id,
+        catalogEntryId: input.entry?.id ?? null,
+        templateId: input.template.templateId,
+      });
     }
   }
 

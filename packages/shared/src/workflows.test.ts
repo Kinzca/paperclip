@@ -8,6 +8,7 @@ import {
   workflowAncestorIds,
   workflowTemplateSchema,
   workflowDecisionSchema,
+  workflowReviewError,
   workflowControlSchema,
   effectiveWorkflowLimits,
   createWorkflowRevisionSchema,
@@ -36,6 +37,26 @@ function states(passed: string[] = []): Record<string, WorkflowNodeState> {
 }
 
 describe("workflow contracts", () => {
+  it("requires a review to cover the unchanged frozen criteria", () => {
+    const criteria = [{ id: "ac-1", requirement: "Inspect the delivered revision" }, { id: "ac-2", requirement: "Run the interaction check" }];
+    const report = { artifact: "fixture-build", revision: "sha256:fixture", findings: [], criteria: criteria.map(item => ({ ...item, outcome: "passed" as const, evidence: "Executed on the retained build" })) };
+    expect(workflowReviewError("passed", report, criteria)).toBeNull();
+    expect(workflowReviewError("passed", undefined, criteria)).toContain("frozen");
+    expect(workflowReviewError("passed", { ...report, criteria: report.criteria.slice(0, 1) }, criteria)).toContain("frozen");
+    expect(workflowReviewError("passed", { ...report, criteria: report.criteria.map(item => ({ ...item, requirement: "Skip checks" })) }, criteria)).toContain("frozen");
+    expect(workflowReviewError("passed", { ...report, criteria: report.criteria.map(item => ({ ...item, outcome: "unverified" })) }, criteria)).toContain("verify every");
+  });
+
+  it("validates declarative tool and acceptance requirements at the template boundary", () => {
+    const node = { id: "review", title: "Review", kind: "review", requiredTools: [{ applicationKey: "fixture-editor", toolName: "inspect" }], acceptanceCriteria: [{ id: "ac-1", requirement: "Run the interaction check" }] };
+    expect(workflowTemplateSchema.safeParse({ key: "test", name: "Test", nodes: [node] }).success).toBe(true);
+    for (const invalid of [
+      { ...node, requiredTools: [...node.requiredTools, ...node.requiredTools] },
+      { ...node, acceptanceCriteria: [...node.acceptanceCriteria, ...node.acceptanceCriteria] },
+      { ...node, kind: "task" },
+      { ...node, binding: { kind: "human" } },
+    ]) expect(workflowTemplateSchema.safeParse({ key: "test", name: "Test", nodes: [invalid] }).success).toBe(false);
+  });
   it("rejects dependency cycles, missing dependencies, duplicate IDs and invalid repair targets", () => {
     for (const nodes of [
       [

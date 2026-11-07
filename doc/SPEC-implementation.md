@@ -10,6 +10,14 @@ task workflows. See [NATIVE-WORKFLOWS.md](NATIVE-WORKFLOWS.md) for admission,
 bounded DAG execution, explicit review, recovery and governed template improvement.
 Single-assignee, checkout, budget and native execution-policy invariants remain.
 
+Execution reliability (2026-11-07): optional frozen node tool requirements gate
+dispatch on installed, permitted connection configuration without invoking tools
+or expanding access. Optional frozen review criteria require complete structured
+assessment; task/process completion alone does not establish acceptance. Owner
+disposition continuations retain normal work context. Local stdio MCP exchanges
+bound both RPC output and process cleanup. See the workflow contract and
+[reliability upgrade](plans/2026-11-07-execution-reliability.md) for limits.
+
 Status: Implementation contract for first release (V1)
 Date: 2026-04-28
 Audience: Product, engineering, and agent-integration authors

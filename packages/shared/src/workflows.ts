@@ -67,9 +67,33 @@ export const workflowNodeSchema = z
     dependsOn: z.array(keySchema).max(32).default([]),
     onFailure: keySchema.optional(),
     check: workflowCheckSchema.optional(),
+    requiredTools: z
+      .array(z.object({
+        applicationKey: z.string().trim().min(1).max(200),
+        toolName: z.string().trim().min(1).max(200),
+      }).strict())
+      .max(32)
+      .optional(),
+    acceptanceCriteria: z
+      .array(z.object({
+        id: keySchema,
+        requirement: z.string().trim().min(1).max(2000),
+      }).strict())
+      .min(1)
+      .max(50)
+      .optional(),
   })
   .strict()
   .superRefine((node, ctx) => {
+    if (node.requiredTools?.length && (node.binding.kind === "human" || !["task", "review"].includes(node.kind))) {
+      ctx.addIssue({ code: "custom", path: ["requiredTools"], message: "Tool requirements apply to agent task and review nodes" });
+    }
+    if (node.requiredTools && new Set(node.requiredTools.map(tool => JSON.stringify([tool.applicationKey, tool.toolName]))).size !== node.requiredTools.length) {
+      ctx.addIssue({ code: "custom", path: ["requiredTools"], message: "Tool requirements must be unique" });
+    }
+    if (node.acceptanceCriteria && (node.kind !== "review" || new Set(node.acceptanceCriteria.map(item => item.id)).size !== node.acceptanceCriteria.length)) {
+      ctx.addIssue({ code: "custom", path: ["acceptanceCriteria"], message: "Only review nodes may declare unique acceptance criteria" });
+    }
     if ((node.kind === "check") !== Boolean(node.check)) {
       ctx.addIssue({
         code: "custom",
@@ -306,7 +330,15 @@ export type WorkflowReviewReport = z.infer<typeof workflowReviewReportSchema>;
 export function workflowReviewError(
   outcome: "passed" | "failed",
   report?: WorkflowReviewReport,
+  criteria?: WorkflowNode["acceptanceCriteria"],
 ): string | null {
+  if (
+    criteria &&
+    (!report || report.criteria.length !== criteria.length || criteria.some(expected =>
+      !report.criteria.some(actual => actual.id === expected.id && actual.requirement === expected.requirement)
+    ))
+  )
+    return "The review must assess every frozen acceptance criterion without changing its requirement";
   if (!report) return null;
   if (
     outcome === "passed" &&

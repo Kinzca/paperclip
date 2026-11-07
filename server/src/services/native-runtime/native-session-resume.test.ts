@@ -744,6 +744,10 @@ const recoveryFakeCodex = resolve(
       if (runnerDiagnostics.length > 32) runnerDiagnostics.shift();
     };
     process.env.PAPERCLIP_RUNNER_STATE_DIR = stateBase;
+    const codexCommandRuntime = await vi.importActual<
+      Pick<typeof import("@paperclipai/paperclip-runner"), "resolveCodexCommand">
+    >("../../../../packages/paperclip-runner/src/drivers/codex/codex-command.js");
+    const codexCommandOverride = vi.spyOn(codexCommandRuntime, "resolveCodexCommand");
     try {
       await Promise.all(
         [bin, workspace, sourceHome].map((path) =>
@@ -759,6 +763,9 @@ const recoveryFakeCodex = resolve(
         `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(recoveryFakeCodex)} "$CODEX_HOME/fake-state.json" 16\n`,
       );
       await chmod(command, 0o700);
+      // Installed production dependencies take precedence over PATH. Pin this
+      // disposable fixture to its synthetic provider on every test host.
+      codexCommandOverride.mockReturnValue(command);
       await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
       const address = server.address();
       if (!address || typeof address === "string")
@@ -1220,6 +1227,7 @@ const recoveryFakeCodex = resolve(
         .where(eq(issues.id, issueId));
       expect(task).toEqual({ id: issueId, assigneeAgentId: agentId });
     } finally {
+      codexCommandOverride.mockRestore();
       // onSession(null) quarantines the runtime owner before close finishes;
       // keep every published handle so an assertion/error cannot lose cleanup.
       if (firstSession) ownedSessions.add(firstSession);

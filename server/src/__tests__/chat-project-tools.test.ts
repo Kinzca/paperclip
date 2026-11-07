@@ -4,7 +4,8 @@ import { createLocalAgentJwt } from "../agent-auth-jwt.js";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { agents, issues, heartbeatRuns, projects, companyMemberships, executionWorkspaces } from "@paperclipai/db";
+import { agents, issues, heartbeatRuns, projects, companyMemberships, executionWorkspaces, workflowRuns } from "@paperclipai/db";
+import { workflowStore } from "../services/workflows/store.js";
 import { startRunnerApiTestServer } from "./helpers/runner-api-server.js";
 import { issueService } from "../services/issues.js";
 import { documentService } from "../services/documents.js";
@@ -90,7 +91,9 @@ const support = await getEmbeddedPostgresTestSupport();
     expect(again.task.id).toBe(first.task.id);
     expect(first.task.parentId).toBeNull();
     const [task] = await server.db.select().from(issues).where(eq(issues.id, first.task.id));
-    expect(task).toMatchObject({ projectId: f.projectId, assigneeAgentId: f.agentId, status: "todo" });
+    expect(task).toMatchObject({ projectId: f.projectId, assigneeAgentId: null, assigneeUserId: f.responsibleUserId, status: "todo" });
+    const [workflow] = await server.db.select().from(workflowRuns).where(eq(workflowRuns.issueId, task.id));
+    expect(workflow.snapshot.executorAgentId).toBe(f.agentId);
     expect((await documentService(server.db).getIssueDocumentByKey(task.id, "plan"))?.body).toBe(input.initialPlan);
     expect((await documentService(server.db).getIssueDocumentByKey(f.issueId, "plan"))?.body).toBe("Full discussion plan");
     await expect(call(f, "create_task", { ...input, title: "Different" })).rejects.toThrow(/idempotency/);
@@ -119,12 +122,32 @@ const support = await getEmbeddedPostgresTestSupport();
     const result = await callProjectTool({ name: "create_task", arguments: { title: "MCP handoff", projectId: f.projectId, initialPlan: "# Plan\nImplement in the execution task.", idempotencyKey: "mcp" },
       apiUrl: server.apiUrl, token: createLocalAgentJwt(f.agentId, f.companyId, "paperclip_runner", f.runId, f.responsibleUserId)!,
       companyId: f.companyId, issueId: f.issueId, agentId: f.agentId, conversation: true });
-    expect(result).toMatchObject({ parentId: null, projectId: f.projectId, assigneeAgentId: f.agentId });
+    expect(result).toMatchObject({ parentId: null, projectId: f.projectId, assigneeAgentId: null, assigneeUserId: f.responsibleUserId });
+    const [workflow] = await server.db.select().from(workflowRuns).where(eq(workflowRuns.issueId, result.id));
+    expect(workflow.snapshot.executorAgentId).toBe(f.agentId);
     expect((await documentService(server.db).getIssueDocumentByKey(result.id, "plan"))?.body).toContain("Implement in the execution task");
   });
 
-  it("allows low-trust chat handoffs and self-assigned subtasks through both creation endpoints", async () => {
+  it("does not let a chat tool bypass inherited workflow admission with a native trust policy", async () => {
     const f = await server.fixture({ conversation: true, disableWakeOnDemand: true });
+    await server.db.update(agents).set({ permissions: {
+      trustPreset: "low_trust_review",
+      authorizationPolicy: { trustBoundary: { mode: "low_trust_review", companyId: f.companyId, projectIds: [f.projectId] } },
+    } }).where(eq(agents.id, f.agentId));
+    const before = await server.db.select({ id: issues.id }).from(issues).where(eq(issues.companyId, f.companyId));
+    await expect(callProjectTool({
+      name: "create_task", arguments: { title: "Guarded handoff", projectId: f.projectId, initialPlan: "Retain inherited governance", idempotencyKey: "guarded-handoff" },
+      apiUrl: server.apiUrl, token: createLocalAgentJwt(f.agentId, f.companyId, "paperclip_runner", f.runId, f.responsibleUserId)!,
+      companyId: f.companyId, issueId: f.issueId, agentId: f.agentId, conversation: true,
+    })).rejects.toThrow("cannot bypass the inherited workflow");
+    expect(await server.db.select({ id: issues.id }).from(issues).where(eq(issues.companyId, f.companyId))).toEqual(before);
+  });
+
+  it("allows low-trust legacy chat handoffs and self-assigned subtasks through both creation endpoints", async () => {
+    const f = await server.fixture({ conversation: true, disableWakeOnDemand: true });
+    await workflowStore(server.db).savePolicy(f.companyId, {
+      scope: "company", projectId: null, expectedVersion: 0, policy: { enabled: false },
+    }, f.responsibleUserId);
     const policy = { trustPreset: "low_trust_review", authorizationPolicy: { trustBoundary: { mode: "low_trust_review", companyId: f.companyId, projectIds: [f.projectId] } } };
     await server.db.update(agents).set({ permissions: policy }).where(eq(agents.id, f.agentId));
     const token = createLocalAgentJwt(f.agentId, f.companyId, "paperclip_runner", f.runId, f.responsibleUserId)!;
@@ -151,8 +174,11 @@ const support = await getEmbeddedPostgresTestSupport();
     }
   });
 
-  it("retains a run-only low-trust boundary on a new task even when standard policy is requested", async () => {
+  it("retains a run-only low-trust boundary on a legacy task even when standard policy is requested", async () => {
     const f = await server.fixture({ conversation: true, disableWakeOnDemand: true });
+    await workflowStore(server.db).savePolicy(f.companyId, {
+      scope: "company", projectId: null, expectedVersion: 0, policy: { enabled: false },
+    }, f.responsibleUserId);
     const executionPolicy = { authorizationPolicy: { trustPreset: "low_trust_review", trustBoundary: { mode: "low_trust_review", companyId: f.companyId, projectIds: [f.projectId] } } };
     const [run] = await server.db.select().from(heartbeatRuns).where(eq(heartbeatRuns.id, f.runId));
     await server.db.update(heartbeatRuns).set({ contextSnapshot: { ...run.contextSnapshot, executionPolicy } }).where(eq(heartbeatRuns.id, f.runId));

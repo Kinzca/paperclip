@@ -44,6 +44,12 @@ const {
   const completionSweepMock = vi.fn(async () => undefined);
   const createAppMock = vi.fn(async () => Object.assign((_: unknown, __: unknown) => {}, {
     locals: {
+      nativeWorkflows: {
+        recover: vi.fn(async () => {}),
+        sweepPending: vi.fn(async () => {}),
+        hasPending: vi.fn(async () => false),
+        nextRunAt: vi.fn(() => null),
+      },
       fastResponses: { hasPending: vi.fn(async () => false), sweepPending: vi.fn(async () => undefined) },
       deliveryWork: {
         register: (_queue: string, task: { run: () => Promise<unknown> }) => ({
@@ -249,6 +255,13 @@ vi.mock("@paperclipai/db", () => ({
 
 vi.mock("../app.js", () => ({
   createApp: createAppMock,
+}));
+
+vi.mock("../services/workflows/store.js", () => ({
+  workflowStore: () => ({
+    markIssueChanged: vi.fn(async () => {}),
+    markCompanyChanged: vi.fn(async () => {}),
+  }),
 }));
 
 vi.mock("../services/native-runtime/native-session-executor.js", () => ({

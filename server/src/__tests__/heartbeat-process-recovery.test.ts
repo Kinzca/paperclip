@@ -21,6 +21,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { recordLegacyWorkspaceRestoreFailure, terminalizeLegacyExecution } from "../services/legacy-execution-recovery.js";
 import { issueService } from "../services/issues.js";
 import { getExecutionBlocker } from "../services/execution-blocker.js";
+import { workflowStore } from "../services/workflows/store.js";
 import { adapterExecutionControls, createAdapterExecutionControl } from "../services/adapter-execution-control.js";
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs/promises";
@@ -86,6 +87,7 @@ import {
   issueTreeHolds,
   issueWorkProducts,
   issues,
+  workflowRuns,
   nativeRunFinalizations,
   nativeRunResults,
   plugins,
@@ -11833,7 +11835,7 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
     expect(comments[0]?.metadata).toMatchObject({ version: 1 });
   });
 
-  it("assigns open unassigned blockers back to their creator agent", async () => {
+  it.each([true, false])("assigns open orphan blockers through their current execution owner (workflow=%s)", async (workflowEnabled) => {
     const companyId = randomUUID();
     const creatorAgentId = randomUUID();
     const blockedAssigneeAgentId = randomUUID();
@@ -11904,6 +11906,9 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
     });
     const heartbeat = heartbeatService(db);
 
+    if (!workflowEnabled) await workflowStore(db).savePolicy(companyId, {
+      scope: "company", projectId: null, expectedVersion: 0, policy: { enabled: false },
+    }, "responsible-user");
     const result = await heartbeat.reconcileStrandedAssignedIssues();
 
     expect(result.orphanBlockersAssigned).toBe(1);
@@ -11914,7 +11919,7 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       .from(issues)
       .where(eq(issues.id, blockerIssueId))
       .then((rows) => rows[0] ?? null);
-    expect(blocker?.assigneeAgentId).toBe(creatorAgentId);
+    expect(blocker?.assigneeAgentId).toBe(workflowEnabled ? null : creatorAgentId);
 
     const comments = await db
       .select()
@@ -11929,6 +11934,13 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       .select()
       .from(agentWakeupRequests)
       .where(eq(agentWakeupRequests.agentId, creatorAgentId));
+    if (workflowEnabled) {
+      const [workflow] = await db.select().from(workflowRuns).where(eq(workflowRuns.issueId, blockerIssueId));
+      expect(workflow.snapshot.executorAgentId).toBe(creatorAgentId);
+      expect(workflow.needsReconcile).toBe(true);
+      expect(wakeups).toEqual([]);
+      return;
+    }
     expect(wakeups).toEqual([
       expect.objectContaining({
         reason: "issue_assigned",

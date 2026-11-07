@@ -67,6 +67,7 @@ import {
   statusDecisions,
   routines,
   workAssessments,
+  workflowRuns,
 } from "@paperclipai/db";
 import { parseObject, asBoolean, asNumber } from "../../adapters/utils.js";
 import { runningProcesses } from "../../adapters/index.js";
@@ -2189,6 +2190,21 @@ export function recoveryService(
         continue;
       }
 
+      // Assignment can admit a manual root into a workflow. Its executor is
+      // retained in the snapshot; only the workflow worker may wake node work.
+      const [workflow] = updated.assigneeAgentId !== creatorAgent.id
+        ? await db.select({ id: workflowRuns.id, snapshot: workflowRuns.snapshot })
+            .from(workflowRuns).where(and(
+              eq(workflowRuns.companyId, candidate.companyId),
+              eq(workflowRuns.issueId, candidate.id),
+            ))
+        : [];
+      const workflowOwned = workflow?.snapshot.executorAgentId === creatorAgent.id;
+      if (updated.assigneeAgentId !== creatorAgent.id && !workflowOwned) {
+        skipped += 1;
+        continue;
+      }
+
       await issuesSvc.addComment(
         candidate.id,
         [
@@ -2196,7 +2212,9 @@ export function recoveryService(
           "",
           `Paperclip found this issue is blocking ${blockingLinks} but had no assignee, so no heartbeat could pick it up.`,
           "",
-          "- Assigned it back to the agent that created the blocker.",
+          workflowOwned
+            ? "- Assigned workflow execution back to the creator; the workflow worker owns node dispatch."
+            : "- Assigned it back to the agent that created the blocker.",
           "- Next action: resolve this blocker or reassign it to the right owner.",
         ].join("\n"),
         {},
@@ -2213,10 +2231,19 @@ export function recoveryService(
         entityId: candidate.id,
         details: {
           identifier: candidate.identifier,
-          assigneeAgentId: creatorAgent.id,
+          assigneeAgentId: updated.assigneeAgentId,
+          assigneeUserId: updated.assigneeUserId,
+          executionAgentId: creatorAgent.id,
+          workflowRunId: workflow?.id ?? null,
           source: "recovery.reconcile_unassigned_blocking_issue",
         },
       });
+
+      if (workflowOwned) {
+        assigned += 1;
+        issueIds.push(candidate.id);
+        continue;
+      }
 
       const queued = await deps.enqueueWakeup(creatorAgent.id, {
         source: "automation",

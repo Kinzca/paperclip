@@ -355,6 +355,9 @@ export const ONBOARDING_FIRST_TASK_ORIGIN_KIND = "onboarding_first_task";
 
 export const ISSUE_ORIGIN_KINDS = [
   "manual",
+  "dot_intake",
+  "status_card",
+  "summary_slot",
   "routine_execution",
   "stale_active_run_evaluation",
   "harness_liveness_escalation",

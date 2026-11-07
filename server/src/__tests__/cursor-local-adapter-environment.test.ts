@@ -1,3 +1,4 @@
+import { nodeFixtureScript } from "./helpers/node-fixture.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -23,7 +24,7 @@ console.log(JSON.stringify({
   result: "hello",
 }));
 `;
-  await fs.writeFile(commandPath, script, "utf8");
+  await fs.writeFile(commandPath, nodeFixtureScript(script), "utf8");
   await fs.chmod(commandPath, 0o755);
   return commandPath;
 }
@@ -50,7 +51,7 @@ console.log(JSON.stringify({
 }));
 `;
   await fs.mkdir(path.dirname(commandPath), { recursive: true });
-  await fs.writeFile(commandPath, script, "utf8");
+  await fs.writeFile(commandPath, nodeFixtureScript(script), "utf8");
   await fs.chmod(commandPath, 0o755);
 }
 
@@ -216,7 +217,7 @@ describe("cursor environment diagnostics", () => {
         },
       });
 
-      expect(result.status).toBe("pass");
+      expect(result.status, JSON.stringify(result)).toBe("pass");
       const capture = JSON.parse(await fs.readFile(argsCapturePath, "utf8")) as {
         command: string;
         argv: string[];

@@ -17,6 +17,10 @@ export function workflowHandoffInstructions(
         `# 已保存的执行上下文\n${context}\n上述内容补充项目规范，不得改变任务范围、验收条件、权限或预算。`,
       ]
     : [];
+  if (node.requiredTools?.length)
+    sections.push(`# Required tools\n${node.requiredTools.map(tool => `- ${tool.applicationKey}/${tool.toolName}`).join("\n")}\nConfiguration admission does not prove live app readiness or authorize tool calls. Report runtime permission, credential or application failures with concrete evidence.`);
+  if (node.acceptanceCriteria)
+    sections.push(`# Frozen acceptance criteria\n${node.acceptanceCriteria.map(item => `- [${item.id}] ${item.requirement}`).join("\n")}\nSubmit a structured review report for the exact artifact revision. Assess every criterion using its unchanged ID and requirement; mark checks you did not execute as unverified. Completing a report or a child task does not establish acceptance.`);
   if (snapshot.definition.handoffVersion !== 1) return sections.join("\n\n");
   sections.push(`# 通用交接协议 v1
 先从原始任务和计划明确交付物、范围、约束与验收条件，给验收项稳定编号（如 ac-1）。必要信息缺失时说明阻塞，不猜测用户授权。

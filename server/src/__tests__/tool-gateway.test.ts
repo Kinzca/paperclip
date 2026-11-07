@@ -48,6 +48,7 @@ import { resolveNativeRuntimeMcpSnapshot } from "../services/native-runtime/runt
 import type { PluginToolDispatcher } from "../services/plugin-tool-dispatcher.js";
 import { mcpGatewayProtocolRoutes, toolGatewayRoutes } from "../routes/tool-gateway.js";
 import { toolAccessService } from "../services/tool-access.js";
+import { workflowToolReadiness } from "../services/workflows/tool-readiness.js";
 import {
   canonicalToolArguments,
   readSignedToolArgumentsPayload,
@@ -1631,6 +1632,35 @@ describeEmbeddedPostgres("tool gateway acceptance", () => {
       commandTemplateKey: localTool.templateKey,
       healthStatus: "ok",
     });
+  });
+
+  it("preflights required tools without invoking them or expanding access", async () => {
+    const company = await createCompany(db);
+    const agent = await createAgent(db, company.id);
+    const local = await createLocalStdioMcpTool(db, company.id, { applicationKey: "fixture-editor", toolName: "inspect" });
+    const requirements = [{ applicationKey: "fixture-editor", toolName: "inspect" }];
+    expect(await workflowToolReadiness(db, company.id, agent.id, requirements)).toEqual(["fixture-editor/inspect"]);
+    await allowToolsForAgent(db, company.id, agent.id, ["inspect"]);
+    expect(await workflowToolReadiness(db, company.id, agent.id, requirements)).toEqual(["fixture-editor/inspect"]);
+    await db.insert(toolConnectionInstalls).values({ companyId: company.id, connectionId: local.connection.id, targetType: "agent", targetId: agent.id });
+    expect(await workflowToolReadiness(db, company.id, agent.id, requirements)).toEqual([]);
+    expect(await workflowToolReadiness(db, company.id, agent.id, [{ applicationKey: "fixture-editor", toolName: "modify" }]))
+      .toEqual(["fixture-editor/modify"]);
+    await db.update(toolCatalogEntries).set({ status: "quarantined" }).where(eq(toolCatalogEntries.id, local.catalogEntry.id));
+    expect(await workflowToolReadiness(db, company.id, agent.id, requirements)).toEqual(["fixture-editor/inspect"]);
+    await db.update(toolCatalogEntries).set({ status: "active" }).where(eq(toolCatalogEntries.id, local.catalogEntry.id));
+    await db.update(toolConnections).set({ healthStatus: "error" }).where(eq(toolConnections.id, local.connection.id));
+    expect(await workflowToolReadiness(db, company.id, agent.id, requirements)).toEqual(["fixture-editor/inspect"]);
+    // Shared connection health cannot establish the selected user's grant health.
+    await db.update(toolConnections).set({ credentialPolicy: "per_user" }).where(eq(toolConnections.id, local.connection.id));
+    expect(await workflowToolReadiness(db, company.id, agent.id, requirements)).toEqual([]);
+    await db.update(toolConnections).set({ healthStatus: "ok", enabled: false }).where(eq(toolConnections.id, local.connection.id));
+    expect(await workflowToolReadiness(db, company.id, agent.id, requirements)).toEqual(["fixture-editor/inspect"]);
+    const other = await createCompany(db);
+    const otherAgent = await createAgent(db, other.id);
+    expect(await workflowToolReadiness(db, other.id, otherAgent.id, requirements)).toEqual(["fixture-editor/inspect"]);
+    const calls = await db.select().from(toolCallEvents).where(eq(toolCallEvents.companyId, company.id));
+    expect(calls).toEqual([]);
   });
 
   it("passes only approved env values to local stdio MCP processes", async () => {

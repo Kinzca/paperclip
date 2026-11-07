@@ -1817,6 +1817,52 @@ describeEmbeddedPostgres("issue recovery actions", () => {
     expect(prompt).not.toContain("Do not produce the deliverable");
   });
 
+  it("keeps a bounded owner disposition continuation on the normal work path", async () => {
+    const { companyId, coderId, sourceIssueId } = await seedCompany();
+    const action = await issueRecoveryActionService(db).upsertSourceScoped({
+      companyId, sourceIssueId, kind: "deliberate_wait_without_target", ownerType: "agent",
+      ownerAgentId: coderId, returnOwnerAgentId: coderId,
+      cause: "deliberate_wait_without_target", fingerprint: "owner-continuation",
+      evidence: {}, nextAction: "Continue authorized work or record a durable disposition.",
+      wakePolicy: { type: "bounded_owner_disposition_repair" }, maxAttempts: 2,
+    });
+    const contextSnapshot = {
+      issueId: sourceIssueId, wakeReason: "issue_disposition_repair", recoveryActionId: action.id,
+      legacyDispositionEpisode: true, dispositionRepairAttempt: 1, dispositionRepairMaxAttempts: 2,
+      dispositionRepairInstruction: "Continue authorized work or record a durable disposition.",
+    };
+    const payload = await buildPaperclipWakePayload({ db, companyId, agentId: coderId, contextSnapshot });
+    expect(payload?.recovery).toBeNull();
+    expect(payload?.dispositionRepair).toMatchObject({ attempt: 1, maxAttempts: 2 });
+    const prompt = renderPaperclipWakePrompt(payload);
+    expect(prompt).toContain("Implement backend recovery");
+    expect(prompt).not.toContain("Recovery contract:");
+    expect(prompt).not.toContain("You DO NOT do the work");
+    const otherOwner = await buildPaperclipWakePayload({ db, companyId, agentId: randomUUID(), contextSnapshot });
+    expect(otherOwner?.recovery?.cause).toBe("deliberate_wait_without_target");
+
+    // A context hint cannot turn an escalated board repair into normal work.
+    await db.update(issueRecoveryActions).set({ status: "escalated", ownerType: "board", ownerAgentId: null })
+      .where(eq(issueRecoveryActions.id, action.id));
+    const escalated = await buildPaperclipWakePayload({ db, companyId, agentId: coderId, contextSnapshot });
+    expect(escalated?.recovery?.cause).toBe("deliberate_wait_without_target");
+  });
+
+  it("does not attach another issue's recovery action to a wake", async () => {
+    const { companyId, coderId, sourceIssueId, prefix } = await seedCompany();
+    const otherIssueId = randomUUID();
+    await db.insert(issues).values({ id: otherIssueId, companyId, title: "Other task", status: "blocked", issueNumber: 2, identifier: `${prefix}-2`, assigneeAgentId: coderId });
+    const action = await issueRecoveryActionService(db).upsertSourceScoped({
+      companyId, sourceIssueId: otherIssueId, kind: "workspace_validation", ownerType: "agent", ownerAgentId: coderId,
+      cause: "workspace_validation_failed", fingerprint: "other-issue", evidence: {}, nextAction: "Repair the other issue", wakePolicy: null,
+    });
+    const payload = await buildPaperclipWakePayload({ db, companyId, agentId: coderId, contextSnapshot: {
+      issueId: sourceIssueId, recoveryActionId: action.id, recoveryCause: action.cause,
+    } });
+    expect(payload?.recovery).toBeNull();
+    expect(renderPaperclipWakePrompt(payload)).not.toContain("Repair the other issue");
+  });
+
   it("accepts new verified evidence after an automatic no-replay disposition without reopening on duplicate requests", async () => {
     const { companyId, coderId, sourceIssueId } = await seedCompany();
     const runId = randomUUID();

@@ -48,6 +48,7 @@ import { redactSensitiveText } from "../../redaction.js";
 import { WORKFLOW_QUEUE } from "./admission.js";
 import { workflowStore } from "./store.js";
 import { workflowDependencyWait } from "./dependency-wait.js";
+import { workflowToolReadiness } from "./tool-readiness.js";
 import {
   workflowHandoffInstructions,
   workflowReviewFeedback,
@@ -1095,6 +1096,17 @@ export function workflowEngine(db: Db, effects: Effects) {
             break;
           }
         }
+        if (node.requiredTools?.length) {
+          if (!current.agentId) {
+            await stop(context, run, `Required tools need an assigned agent for ${node.id}; configure its binding, then resume.`);
+            break;
+          }
+          const unavailable = await workflowToolReadiness(tx as unknown as Db, run.companyId, current.agentId, node.requiredTools);
+          if (unavailable.length) {
+            await stop(context, run, `Tool configuration requires attention for ${node.id}: ${unavailable.join(", ")}. Install, authorize or repair the required connection, then resume.`);
+            break;
+          }
+        }
         if (current.userId) {
           const [member] = await tx
             .select({ id: companyMemberships.id })
@@ -1151,7 +1163,7 @@ export function workflowEngine(db: Db, effects: Effects) {
             {
               id: childId,
               title: `${parent.title} — ${node.title}`,
-              description: `# Authorized objective\n${run.snapshot.objective.description ?? run.snapshot.objective.title}\n\n# Workflow node\n${node.instructions}${verdictGuidance}\n\n${workflowHandoffInstructions(run.snapshot, node)}\n\n# Inputs\n${dependencyTasks.map((id) => `- /api/issues/${id}`).join("\n")}\n\n# Previous feedback\n${current.result ?? "None"}\n\nStay inside the approved scope. Do not change acceptance criteria or workflow configuration. Escalate unavailable tools or access.`,
+              description: `# Authorized objective\n${run.snapshot.objective.description ?? run.snapshot.objective.title}\n\n# Workflow node\n${node.instructions}${verdictGuidance}\n\n${workflowHandoffInstructions(run.snapshot, node)}\n\n# Execution allowance at dispatch\nDeadline: ${run.deadlineAt.toISOString()}. Attempt ${current.attempt} of ${effectiveLimits.maxAttempts}. Workflow cost ceiling: ${effectiveLimits.maxCostCents === null ? "no workflow-specific ceiling; company and agent budgets still apply" : `${effectiveLimits.maxCostCents} cents`}. Read the current workflow state before reporting remaining allowance. Save durable handoff evidence before exiting; do not extend limits or request broader access on your own.\n\n# Inputs\n${dependencyTasks.map((id) => `- /api/issues/${id}`).join("\n")}\n\n# Previous feedback\n${current.result ?? "None"}\n\nStay inside the approved scope. Do not change acceptance criteria or workflow configuration. Escalate unavailable tools or access.`,
               initialPlan: run.snapshot.objective.plan,
               parentId: parent.id,
               projectId: parent.projectId,
@@ -1617,7 +1629,7 @@ export function workflowEngine(db: Db, effects: Effects) {
           throw unprocessable(
             "This workflow requires a structured review report with artifact revision, criteria and evidence",
           );
-        const reportError = workflowReviewError(input.outcome, input.report);
+        const reportError = workflowReviewError(input.outcome, input.report, node.acceptanceCriteria);
         if (reportError) throw unprocessable(reportError);
         settleHumanWait(run);
         if (run.deadlineAt.getTime() <= Date.now())

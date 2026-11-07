@@ -273,6 +273,7 @@ describeEmbeddedPostgres("summary slot service", () => {
         .where(eq(issues.id, result.generatingIssue.id))
         .then((rows) => rows[0]!);
       expect(issueRow.assigneeAgentId).toBe(summarizerAgentId);
+      expect(issueRow.originKind).toBe("summary_slot");
       expect(issueRow.companyId).toBe(companyId);
       expect(issueRow.title).toMatch(/^Summarize project on \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC$/);
       expect(issueRow.hiddenAt).toBeInstanceOf(Date);

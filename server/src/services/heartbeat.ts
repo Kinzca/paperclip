@@ -2773,6 +2773,7 @@ export function heartbeatService(
               status: issueRef.status,
               priority: issueRef.priority,
               workMode: issueRef.workMode,
+              assigneeAgentId: issueContext?.assigneeAgentId,
               projectId: issueRef.projectId,
               executionPolicy: issueContext?.executionPolicy ?? null,
             }

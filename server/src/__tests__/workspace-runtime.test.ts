@@ -1,3 +1,4 @@
+import { nodeFixtureScript } from "./helpers/node-fixture.js";
 import { execFile, spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
@@ -169,7 +170,7 @@ async function writeRegisteredSourceConfig(baseCwd: string, instanceId = "source
 
 async function createTempRepo(defaultBranch = "main") {
   const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-worktree-repo-"));
-  await runGit(repoRoot, ["init"]);
+  await runGit(repoRoot, ["init", "--initial-branch", defaultBranch]);
   await runGit(repoRoot, ["config", "user.email", "paperclip@example.com"]);
   await runGit(repoRoot, ["config", "user.name", "Paperclip Test"]);
   await fs.writeFile(path.join(repoRoot, "README.md"), "hello\n", "utf8");
@@ -1403,11 +1404,10 @@ describe("realizeExecutionWorkspace", () => {
     await runGit(repoRoot, ["remote", "set-url", "origin", "https://fixture.example.invalid/private-repo"]);
     const bin = path.join(repoRoot, "fixture-bin"), calls = path.join(repoRoot, "fixture-calls.jsonl");
     await fs.mkdir(bin);
-    await fs.writeFile(path.join(bin, "git"), `#!${process.execPath}
-const fs = require("node:fs");
+    await fs.writeFile(path.join(bin, "git"), nodeFixtureScript(`const fs = require("node:fs");
 fs.appendFileSync(${JSON.stringify(calls)}, JSON.stringify(process.argv.slice(2)) + "\\n");
 process.stderr.write(${JSON.stringify(stderr)}, () => { process.exitCode = ${code}; });
-`);
+`));
     await fs.chmod(path.join(bin, "git"), 0o700);
     const error = await realizeWorktreeForTest(repoRoot, "absent-fixture", async () => ({
       configArgs: [], env: { PATH: `${bin}:${process.env.PATH}` }, source: "server_env",
@@ -5744,7 +5744,7 @@ describe("readLocalServicePortOwner", () => {
     const output = `p${process.pid}\0fcwd\0n${reportedCwd}\0\n`;
     await fs.writeFile(
       path.join(fakeBin, "lsof"),
-      `#!${process.execPath}\nprocess.stdout.write(${JSON.stringify(output)});\n`,
+      nodeFixtureScript(`process.stdout.write(${JSON.stringify(output)});`),
       { mode: 0o755 },
     );
     Object.defineProperty(process, "platform", { value: "darwin" });

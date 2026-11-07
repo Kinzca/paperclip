@@ -18,6 +18,7 @@ import {
   issueComments,
   issueThreadInteractions,
   issues,
+  workflowRuns,
 } from "@paperclipai/db";
 import { ONBOARDING_FIRST_TASK_ORIGIN_KIND } from "@paperclipai/shared";
 import {
@@ -342,12 +343,12 @@ describeEmbeddedPostgres("issue create onboarding first-task routes", () => {
     expect(mockAdapterExecute).not.toHaveBeenCalled();
   });
 
-  it("still queues an assignment wake for an ordinary assigned issue", async () => {
+  it("retains ordinary assignment in its workflow without waking the coordination root", async () => {
     const companyId = await seedCompany();
     const agentId = await seedAgent(companyId);
     const app = createApp();
 
-    await request(app)
+    const response = await request(app)
       .post(`/api/companies/${companyId}/issues`)
       .send({ title: "Ordinary task", assigneeAgentId: agentId })
       .expect(201);
@@ -357,8 +358,9 @@ describeEmbeddedPostgres("issue create onboarding first-task routes", () => {
       .select()
       .from(agentWakeupRequests)
       .where(eq(agentWakeupRequests.companyId, companyId));
-    // An ordinary assigned create still queues the assignment wake for the agent.
-    expect(wakeups.length).toBeGreaterThan(0);
-    expect(wakeups.some((row) => row.agentId === agentId)).toBe(true);
+    const [workflow] = await db.select().from(workflowRuns).where(eq(workflowRuns.issueId, response.body.id));
+    expect(workflow.snapshot.executorAgentId).toBe(agentId);
+    expect(workflow.needsReconcile).toBe(true);
+    expect(wakeups.some(row => row.payload?.issueId === response.body.id)).toBe(false);
   });
 });

@@ -469,6 +469,20 @@ export function workflowStore(db: Db) {
               `Baseline acceptance instructions must remain fixed: ${node.id}`,
             );
           if (
+            node.acceptanceCriteria &&
+            (candidate.acceptanceCriteria?.length !== node.acceptanceCriteria.length ||
+              node.acceptanceCriteria.some(expected => !candidate.acceptanceCriteria?.some(actual =>
+                actual.id === expected.id && actual.requirement === expected.requirement)))
+          )
+            throw unprocessable(`Baseline acceptance criteria must remain fixed: ${node.id}`);
+          if (
+            node.requiredTools?.length &&
+            (candidate.requiredTools?.length !== node.requiredTools.length ||
+              node.requiredTools.some(expected => !candidate.requiredTools?.some(actual =>
+                actual.applicationKey === expected.applicationKey && actual.toolName === expected.toolName)))
+          )
+            throw unprocessable(`Baseline verification tools must remain fixed: ${node.id}`);
+          if (
             node.kind === "check" &&
             JSON.stringify(candidate.check) !== JSON.stringify(node.check)
           )

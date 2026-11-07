@@ -12,6 +12,7 @@ import {
   workflowNodeAttempts,
   costEvents,
   workflowEvaluations,
+  workflowTemplateRevisions,
   projects,
   executionWorkspaces,
   instanceSettings,
@@ -26,6 +27,7 @@ import {
 import { issueService } from "../issues.js";
 import { workflowEngine } from "./engine.js";
 import { workflowStore } from "./store.js";
+import * as toolReadiness from "./tool-readiness.js";
 import { issueTreeControlService } from "../issue-tree-control.js";
 import { assertWorkflowIssueExecutionAllowed } from "./execution-gate.js";
 import { workflowRoutes } from "../../routes/workflows.js";
@@ -124,6 +126,89 @@ suite("native workflow execution", () => {
       cancelRun,
     };
   }
+
+  it("holds missing tool configuration before spending an attempt and resumes the same snapshot", async () => {
+    const context = await setup();
+    const original = await context.read();
+    original.snapshot.definition.nodes.find(node => node.id === "execute")!.requiredTools = [{ applicationKey: "fixture-editor", toolName: "inspect" }];
+    await db.update(workflowRuns).set({ snapshot: original.snapshot }).where(eq(workflowRuns.id, original.id));
+    const preflight = vi.spyOn(toolReadiness, "workflowToolReadiness");
+    preflight.mockResolvedValueOnce(["fixture-editor/inspect"]).mockResolvedValueOnce([]);
+    try {
+      await context.engine.sweepPending();
+      const held = await context.read();
+      expect(held.status).toBe("waiting_human");
+      expect(held.stopReason).toContain("fixture-editor/inspect");
+      expect(held.nodes.execute.attempt).toBe(0);
+      expect(held.nodes.execute.issueId).toBeNull();
+      expect(context.wakeup).not.toHaveBeenCalled();
+      expect(held.snapshot).toEqual(original.snapshot);
+      await context.engine.control(context.companyId, context.parent.id, {
+        action: "resume", expectedVersion: held.version, reason: "Required connection configured",
+      }, context.userId);
+      await context.engine.sweepPending();
+      const resumed = await context.read();
+      expect(resumed.nodes.execute.attempt).toBe(1);
+      expect(resumed.snapshot).toEqual(original.snapshot);
+      expect(context.wakeup).toHaveBeenCalledTimes(1);
+    } finally { preflight.mockRestore(); }
+  });
+
+  it("rejects a passing verdict that omits a frozen acceptance criterion", async () => {
+    const context = await setup();
+    const original = await context.read();
+    const criteria = [{ id: "ac-1", requirement: "Inspect the delivered revision" }, { id: "ac-2", requirement: "Run the interaction check" }];
+    original.snapshot.definition.nodes.find(node => node.id === "review")!.acceptanceCriteria = criteria;
+    await db.update(workflowRuns).set({ snapshot: original.snapshot }).where(eq(workflowRuns.id, original.id));
+    await context.engine.sweepPending();
+    await completeExecution(context);
+    const run = await context.read();
+    const reviewerRunId = randomUUID();
+    await db.insert(heartbeatRuns).values({
+      id: reviewerRunId, companyId: context.companyId, agentId: context.reviewer,
+      issueId: run.nodes.review.issueId, status: "running",
+    });
+    const actor = { userId: null, agentId: context.reviewer, runId: reviewerRunId };
+    const decision = {
+      nodeId: "review", attempt: 1, expectedVersion: run.version, outcome: "passed" as const,
+      comment: "Checked the retained build", report: {
+        artifact: "fixture-build", revision: "sha256:fixture", findings: [],
+        criteria: [{ ...criteria[0], outcome: "passed" as const, evidence: "Inspected retained build" }],
+      },
+    };
+    await expect(context.engine.decide(context.companyId, context.parent.id, decision, actor))
+      .rejects.toThrow("every frozen acceptance criterion");
+    expect((await context.read()).nodes.review.status).toBe("running");
+    decision.report.criteria = criteria.map(item => ({ ...item, outcome: "passed", evidence: "Executed against sha256:fixture" }));
+    await context.engine.decide(context.companyId, context.parent.id, decision, actor);
+    expect((await context.read()).nodes.review.status).toBe("running");
+    await db.update(heartbeatRuns).set({ status: "succeeded", finishedAt: new Date() }).where(eq(heartbeatRuns.id, reviewerRunId));
+    await context.engine.sweepPending();
+    expect((await context.read()).nodes.review.status).toBe("passed");
+  });
+
+  it("allows adding review safeguards but prevents weakening a published baseline", async () => {
+    const context = await setup();
+    const definition = structuredClone(BUILT_IN_WORKFLOW_TEMPLATES[0]);
+    const review = definition.nodes.find(node => node.kind === "review")!;
+    review.acceptanceCriteria = [{ id: "ac-1", requirement: "Inspect the retained revision" }];
+    review.requiredTools = [{ applicationKey: "fixture-editor", toolName: "inspect" }];
+    const revision = await context.store.propose(context.companyId, {
+      definition, basedOnRevisionId: null, rationale: "Add explicit review requirements",
+    }, { agentId: context.executor, userId: null });
+    // A published fixture isolates proposal invariants from trial execution.
+    await db.update(workflowTemplateRevisions).set({ status: "published" }).where(eq(workflowTemplateRevisions.id, revision.id));
+    await expect(context.store.propose(context.companyId, {
+      definition, basedOnRevisionId: revision.id, rationale: "Retain review requirements after JSON storage",
+    }, { agentId: context.executor, userId: null })).resolves.toBeDefined();
+    for (const field of ["acceptanceCriteria", "requiredTools"] as const) {
+      const weakened = structuredClone(definition);
+      delete weakened.nodes.find(node => node.kind === "review")![field];
+      await expect(context.store.propose(context.companyId, {
+        definition: weakened, basedOnRevisionId: revision.id, rationale: "Remove a review safeguard",
+      }, { agentId: context.executor, userId: null })).rejects.toThrow("must remain fixed");
+    }
+  });
 
   async function completeExecution(
     context: Pick<

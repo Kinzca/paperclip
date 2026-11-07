@@ -9,6 +9,10 @@ Native task workflows (2026-11-02) make bounded execution, verification, indepen
 review and explicit repair a company/project-inherited control-plane capability.
 See the implementation contract in [NATIVE-WORKFLOWS.md](NATIVE-WORKFLOWS.md).
 
+Workflow reliability includes declarative tool configuration admission, frozen
+review criteria and bounded owned tool execution. Readiness checks do not grant
+permissions; review evidence and live application readiness remain explicit.
+
 Target specification for the Paperclip control plane. Living document — updated incrementally during spec interviews.
 
 ---
