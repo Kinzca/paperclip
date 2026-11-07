@@ -561,7 +561,7 @@ describe("AgentProviderConnection reuse", () => {
     }] } as never);
     const { connected } = await mount(adapterType, false, true, false, false);
     openProvider();
-    expect(host.querySelector('select[aria-label="Saved subscription"]')?.textContent).toContain("My subscription (Your default)");
+    expect(host.querySelector('[role="combobox"][aria-label="Saved subscription"]')?.textContent).toContain("My subscription (Your default)");
     click("Use saved subscription");
     await vi.waitFor(() => expect(connected).toHaveBeenCalledWith({ env: {}, aiConnection: { provider, method: "subscription", mode: "responsible_user" } }));
     expect(managedApi.create).not.toHaveBeenCalled();
@@ -580,7 +580,7 @@ describe("AgentProviderConnection reuse", () => {
     await mount("claude_local", false, true, true);
     click("Use subscription instead");
     openProvider();
-    expect(host.querySelector('select[aria-label="Saved subscription"]')).toBeNull();
+    expect(host.querySelector('[role="combobox"][aria-label="Saved subscription"]')).toBeNull();
     expect(host.textContent).not.toContain("ChatGPT account");
   });
 

@@ -1,3 +1,12 @@
+import {
+  workflowPlatformUpdateSchema,
+  saveWorkflowPolicySchema,
+  createWorkflowRevisionSchema,
+  workflowControlSchema,
+  workflowDecisionSchema,
+  workflowEvaluationSchema,
+  workflowTrialsSchema,
+} from "@paperclipai/shared";
 import { updateFastResponseSchema } from "@paperclipai/shared";
 import { slackRegistrationSchema, slackSetupActionSchema, slackInstallAuthorizationSchema, slackRegistrationStateSchema, slackAppConfigurationSchema, slackAvatarStateSchema, slackAccountStateSchema } from "@paperclipai/shared";
 import { experimentalApiMetadata } from "./experimental-api-metadata.js";
@@ -1369,6 +1378,13 @@ const browserUseOperations = [
 ] as const;
 
 const BOARD_ONLY_OPERATIONS = new Set([
+  "PUT /api/companies/{companyId}/workflows/policy",
+  "GET /api/companies/{companyId}/workflows/revisions/{revisionId}/baselines",
+  "GET /api/companies/{companyId}/workflows/revisions/{revisionId}/evaluations",
+  "POST /api/companies/{companyId}/workflows/revisions/{revisionId}/evaluations",
+  "POST /api/companies/{companyId}/workflows/revisions/{revisionId}/publish",
+  "POST /api/companies/{companyId}/workflows/revisions/{revisionId}/trials",
+  "POST /api/issues/{issueId}/workflow/control",
   "GET /api/companies/{companyId}/fast-response",
   "PUT /api/companies/{companyId}/fast-response",
   "GET /api/companies/{companyId}/fast-response/models",
@@ -1630,6 +1646,8 @@ const BOARD_ONLY_OPERATIONS = new Set([
 ]);
 
 const INSTANCE_ADMIN_OPERATIONS = new Set([
+  "GET /api/instance/workflows/defaults",
+  "PUT /api/instance/workflows/defaults",
   "POST /api/companies",
   "POST /api/plugins/install",
   "POST /api/instance/database-backups",
@@ -12294,6 +12312,35 @@ for (const [method, path, summary] of [
       description: "JSON discovery by default. Accept: application/x-ndjson streams progress (phase, measured Git download percentages, and package/file counts), candidate metadata, then complete with discovery. An error event terminates a failed scan; partial candidates cannot be imported. Disconnecting cancels further provider reads.",
       content: { "application/json": { schema: z.unknown() }, "application/x-ndjson": { schema: z.string() } },
     } : r.ok(),
+    400: r.badRequest, 401: r.unauthorized, 403: r.forbidden,
+    404: r.notFound, 409: r.conflict, 422: r.unprocessable,
+  },
+});
+
+// Native workflow operations use the same validators as their mounted handlers.
+for (const [method, path, summary, body] of [
+  ["get", "/api/instance/workflows/defaults", "Read instance workflow defaults", undefined],
+  ["put", "/api/instance/workflows/defaults", "Update versioned instance workflow defaults", workflowPlatformUpdateSchema],
+  ["get", "/api/companies/{companyId}/workflows", "Read authorized workflow configuration", undefined],
+  ["put", "/api/companies/{companyId}/workflows/policy", "Save a company or project workflow policy", saveWorkflowPolicySchema],
+  ["post", "/api/companies/{companyId}/workflows/revisions", "Propose a workflow revision without weakening its baseline", createWorkflowRevisionSchema],
+  ["get", "/api/companies/{companyId}/workflows/revisions/{revisionId}/baselines", "List visible completed workflow baselines", undefined],
+  ["get", "/api/companies/{companyId}/workflows/revisions/{revisionId}/evaluations", "List visible revision evaluations", undefined],
+  ["post", "/api/companies/{companyId}/workflows/revisions/{revisionId}/evaluations", "Evaluate a workflow revision against a visible baseline", workflowEvaluationSchema],
+  ["post", "/api/companies/{companyId}/workflows/revisions/{revisionId}/publish", "Publish a qualified workflow revision", undefined],
+  ["post", "/api/companies/{companyId}/workflows/revisions/{revisionId}/trials", "Start bounded workflow revision trials", workflowTrialsSchema],
+  ["get", "/api/issues/{issueId}/workflow", "Read the authorized task workflow and attempt evidence", undefined],
+  ["post", "/api/issues/{issueId}/workflow/control", "Apply a versioned operator workflow control", workflowControlSchema],
+  ["post", "/api/issues/{issueId}/workflow/decisions", "Submit an authorized review verdict for the current attempt", workflowDecisionSchema],
+] as const) registerCurrentRoute({
+  method, path, summary, tags: ["workflows"], ...(body ? { body } : {}),
+  ...(path.endsWith("/baselines") ? { query: z.object({
+    q: z.string().trim().max(200).default(""),
+    limit: z.coerce.number().int().min(1).max(50).default(20),
+    offset: z.coerce.number().int().min(0).max(10000).default(0),
+  }) } : {}),
+  responses: {
+    [method === "post" && /\/(revisions|evaluations|trials)$/.test(path) ? 201 : 200]: r.ok(),
     400: r.badRequest, 401: r.unauthorized, 403: r.forbidden,
     404: r.notFound, 409: r.conflict, 422: r.unprocessable,
   },

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectFieldInput } from "@/test/select-field";
 
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -456,12 +457,12 @@ describe("AppsConnect — Connect with a link (M4 frame)", () => {
     await act(async () => setInputValue(url, "https://provider.example/mcp"));
     // The sign-in method shares the one Advanced disclosure with the access
     // controls, and Radix unmounts collapsed content — so it has to be opened.
-    expect(container.querySelector("select")).toBeNull();
+    expect(container.querySelector('button[role=combobox]')).toBeNull();
     await act(async () => buttonByText("Change")!.click());
     expect(buttonByText("Advanced")).toBeUndefined();
     expect(buttonByText("Change")?.getAttribute("aria-expanded")).toBe("true");
     await act(async () => {
-      const auth = container.querySelector<HTMLSelectElement>("select")!;
+      const auth = selectFieldInput(container)!;
       auth.value = "bearer";
       auth.dispatchEvent(new Event("change", { bubbles: true }));
     });

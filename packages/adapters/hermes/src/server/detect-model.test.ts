@@ -5,6 +5,7 @@ import { afterEach, expect, test } from "vitest";
 
 import { parseModelFromConfig, resolveProvider } from "./detect-model.js";
 import { testEnvironment } from "./test.js";
+import { withPythonVersion } from "./python-fixture.js";
 
 const providerEnvKeys = [
   "ANTHROPIC_API_KEY",
@@ -109,7 +110,7 @@ async function withHermesHomeConfig(
   }
 
   try {
-    await fn();
+    await withPythonVersion("3.12.0", fn);
   } finally {
     await rm(tempHome, { recursive: true, force: true });
   }

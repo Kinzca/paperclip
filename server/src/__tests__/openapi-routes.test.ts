@@ -13,6 +13,7 @@ const ROUTES_DIR = path.resolve(__dirname, "../routes");
 
 const apiPrefixes: Record<string, string> = {
   "pipelines.ts": "/api",
+  "workflows.ts": "/api",
   "cases.ts": "/api",
   "smoke-lab.ts": "/api",
   "access.ts": "/api",
@@ -894,6 +895,24 @@ describe("openapi routes", () => {
       extraInSpec: [],
       excludedRoutes: [...explicitOpenApiOperationCoverageExclusions].sort(),
     });
+  });
+
+  it("documents native workflow validators and keeps operator controls restricted", () => {
+    const { spec } = loadSpecRoutes();
+    const defaults = spec.paths["/api/instance/workflows/defaults"];
+    for (const method of ["get", "put"]) expect(defaults[method]["x-paperclip-authorization"])
+      .toEqual({ actor: "board", instanceAdmin: true });
+    const platformBody = defaults.put.requestBody.content["application/json"].schema;
+    expect(platformBody.required).toEqual(expect.arrayContaining(["expectedVersion", "policy", "allowHostCommands"]));
+    const control = spec.paths["/api/issues/{issueId}/workflow/control"].post;
+    expect(control["x-paperclip-authorization"]).toEqual({ actor: "board" });
+    expect(control.responses["409"]).toBeDefined();
+    const propose = spec.paths["/api/companies/{companyId}/workflows/revisions"].post;
+    expect(propose["x-paperclip-authorization"]).toEqual({ actor: "board_or_agent" });
+    const node = propose.requestBody.content["application/json"].schema.properties.definition.properties.nodes.items;
+    expect(node.properties.requiredTools.items.properties.toolName.type).toBe("string");
+    expect(node.properties.acceptanceCriteria.items.properties.requirement.type).toBe("string");
+    expect(propose.responses["201"]).toBeDefined();
   });
 
   it("documents the authenticated personal primary-agent contract", () => {

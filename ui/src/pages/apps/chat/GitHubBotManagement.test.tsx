@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectFieldInput } from "@/test/select-field";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -618,9 +619,9 @@ describe("GitHub bot management", () => {
     await render();
     const skill = `[/review](${buildSkillMentionHref("11111111-1111-4111-8111-111111111111", "review")})`;
     await input(container.querySelector('textarea[aria-label="Agent instructions"]')!, `Use ${skill}.`);
-    await input(container.querySelector('select[id$="github-prompt-event"]')!, "mention");
+    await input(selectFieldInput(container, '[id$="github-prompt-event"]')!, "mention");
     await input(container.querySelector('textarea[aria-label="Mention instructions"]')!, `For mentions, use ${skill}.`);
-    await input(container.querySelector('select[id$="github-prompt-event"]')!, "issue_opened");
+    await input(selectFieldInput(container, '[id$="github-prompt-event"]')!, "issue_opened");
     await input(container.querySelector('textarea[aria-label="New issue instructions"]')!, `For issues, use ${skill}.`);
     await click("Save changes");
     const saved = mocks.save.mock.calls[0][2];

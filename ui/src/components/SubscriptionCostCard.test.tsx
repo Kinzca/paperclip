@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectFieldInput } from "@/test/select-field";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -83,9 +84,9 @@ describe("subscription costs", () => {
       const amount = document.querySelector<HTMLInputElement>("#subscription-price")!;
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(amount, "1200");
       amount.dispatchEvent(new Event("input", { bubbles: true }));
-      const cadence = document.querySelector<HTMLSelectElement>("#subscription-cadence")!;
+      const cadence = selectFieldInput(document, "#subscription-cadence")!;
       cadence.value = "year"; cadence.dispatchEvent(new Event("change", { bubbles: true }));
-      const currency = document.querySelector<HTMLSelectElement>("#subscription-currency")!;
+      const currency = selectFieldInput(document, "#subscription-currency")!;
       currency.value = "EUR"; currency.dispatchEvent(new Event("change", { bubbles: true }));
     });
     await act(async () => document.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
@@ -104,7 +105,7 @@ describe("subscription costs", () => {
     expect(amount.value).toBe("15.755");
     expect(amount.checkValidity()).toBe(true);
     await act(async () => {
-      const tracking = document.querySelector<HTMLSelectElement>("#subscription-status")!;
+      const tracking = selectFieldInput(document, "#subscription-status")!;
       tracking.value = status; tracking.dispatchEvent(new Event("change", { bubbles: true }));
     });
     await click("Save price");
@@ -128,7 +129,7 @@ describe("subscription costs", () => {
     report.accounts.push({ ...report.accounts[0], id: "account-2", name: "Other connection", price: { ...report.accounts[0].price, revision: 3 } });
     await render(report); await click("View details"); await click("Edit price");
     expect(document.body.textContent).toContain("keeps the selected account’s price");
-    await act(async () => { const select = document.querySelector<HTMLSelectElement>("#subscription-link")!; select.value = "account-2"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+    await act(async () => { const select = selectFieldInput(document, "#subscription-link")!; select.value = "account-2"; select.dispatchEvent(new Event("change", { bubbles: true })); });
     await click("Link accounts");
     await vi.waitFor(() => expect(mocks.link).toHaveBeenCalledWith("company", "account-1", "account-2", 0, 3));
   });

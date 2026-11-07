@@ -66,7 +66,7 @@ async function flushReact() {
   });
 }
 
-function pageContribution(overrides: Partial<{ slots: unknown[] }> = {}) {
+function pageContribution(overrides: Partial<{ slots: unknown[]; pluginKey: string; displayName: string }> = {}) {
   return {
     pluginId: "plugin-wiki",
     pluginKey: "paperclipai.plugin-llm-wiki",
@@ -123,18 +123,21 @@ describe("PluginPage", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the breadcrumb and Back button on a legacy plugin route (no routeSidebar)", async () => {
+  it.each([
+    { pluginKey: "example-plugin", displayName: "Custom plugin", label: "Custom plugin", back: true },
+    { pluginKey: "paperclipai.plugin-llm-wiki", displayName: "LLM Wiki", label: "Wiki", back: false },
+  ])("renders $label with the correct host navigation", async ({ pluginKey, displayName, label, back }) => {
     mockParams.pluginRoutePath = "wiki";
-    mockPluginsApi.listUiContributions.mockResolvedValue([pageContribution()]);
+    mockPluginsApi.listUiContributions.mockResolvedValue([pageContribution({ pluginKey, displayName })]);
 
     const root = await renderPage(container);
 
     expect(mockSetBreadcrumbs).toHaveBeenCalledWith([
       { label: "Plugins", href: "/company/settings/instance/plugins" },
-      { label: "LLM Wiki" },
+      { label },
     ]);
-    expect(container.textContent).toContain("Back");
-    expect(container.querySelector('a[href="/PAP/dashboard"]')).not.toBeNull();
+    expect(container.textContent?.includes("Back")).toBe(back);
+    expect(container.querySelector('a[href="/PAP/dashboard"]') !== null).toBe(back);
 
     await act(async () => {
       root.unmount();

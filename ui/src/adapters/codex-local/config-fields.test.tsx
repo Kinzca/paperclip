@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectFieldInput } from "@/test/select-field";
 import { createRoot } from "react-dom/client";
 import { act } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -20,11 +21,14 @@ async function renderMarkup(node: ReactNode, expand?: string, inspect?: (contain
   if (expand) await act(async () => {
     container.querySelector(`[aria-label="${expand}"]`)?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
   });
-  inspect?.(container);
-  const html = container.innerHTML + Array.from(document.body.children).filter(child => child !== container).map(child => child.outerHTML).join("");
-  await act(async () => root.unmount());
-  container.remove();
-  return html;
+  try {
+    inspect?.(container);
+    const html = container.innerHTML + Array.from(document.body.children).filter(child => child !== container).map(child => child.outerHTML).join("");
+    return html;
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+  }
 }
 
 async function renderRunner(config: Record<string, unknown>, expand?: string, inspectOrDot?: ((container: HTMLElement) => void) | boolean): Promise<string> {
@@ -125,14 +129,13 @@ describe("Paperclip Runner Codex configuration", () => {
     await renderRunner({ provider: "acpx", acpxAgent: "cursor", acpxSessionMode }, undefined, container => {
       const modes = container.querySelectorAll('[aria-label="Cursor mode"]');
       expect(modes).toHaveLength(1);
-      expect((modes[0] as HTMLSelectElement).value).toBe(selected);
+      expect(selectFieldInput(container, '[aria-label="Cursor mode"]').value).toBe(selected);
     });
   });
 
   it.each([undefined, "off", "low", "high", "max"])("displays saved Pi thinking level %s", async piThinkingLevel => {
     await renderRunner({ provider: "acpx", acpxAgent: "pi", piThinkingLevel }, undefined, container => {
-      const mode = container.querySelector('[aria-label="Pi thinking level"]');
-      expect((mode as HTMLSelectElement).value).toBe(piThinkingLevel ?? "low");
+      expect(selectFieldInput(container, '[aria-label="Pi thinking level"]').value).toBe(piThinkingLevel ?? "low");
     });
   });
   it("shows unsupported saved Pi level without aliasing it", async () => {

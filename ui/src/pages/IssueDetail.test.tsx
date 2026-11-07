@@ -169,6 +169,8 @@ class ResizeObserverStub {
 (globalThis as any).ResizeObserver =
   (globalThis as any).ResizeObserver ?? ResizeObserverStub;
 
+vi.mock("../api/workflows", () => ({ workflowsApi: { run: vi.fn(async () => null) } }));
+
 vi.mock("../api/issues", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../api/issues")>();
   // Keep composed API operations real while replacing their request methods.

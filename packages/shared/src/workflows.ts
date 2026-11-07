@@ -211,6 +211,26 @@ export const workflowPolicySchema = z
   .strict();
 export type WorkflowPolicy = z.infer<typeof workflowPolicySchema>;
 
+export const workflowPlatformUpdateSchema = z
+  .object({
+    expectedVersion: z.number().int().positive(),
+    policy: workflowPolicySchema,
+    allowHostCommands: z.boolean(),
+  })
+  .strict()
+  .superRefine((input, ctx) => {
+    if (
+      Object.values(input.policy.bindings ?? {}).some(
+        (binding) => binding.kind === "agent",
+      )
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["policy", "bindings"],
+        message: "Instance defaults cannot pin company-specific agents",
+      });
+  });
+
 export const saveWorkflowPolicySchema = z
   .object({
     scope: z.enum(["company", "project"]),

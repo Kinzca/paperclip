@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectFieldInput } from "@/test/select-field";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Project } from "@paperclipai/shared";
@@ -88,9 +89,7 @@ function render(project: Project, onFieldUpdate: (field: string, data: Record<st
 }
 
 function concurrencySelect(): HTMLSelectElement {
-  const el = container.querySelector<HTMLSelectElement>('select[aria-label="Shared workspace concurrency"]');
-  if (!el) throw new Error("Shared workspace concurrency select not found");
-  return el;
+  return selectFieldInput(container, '[aria-label="Shared workspace concurrency"]');
 }
 
 describe("ProjectProperties — shared workspace concurrency select", () => {
@@ -135,6 +134,6 @@ it("hides project isolation controls without rewriting its policy", () => {
   render(makeProject(), onFieldUpdate, ["workspaces.isolation"]);
   expect(container.textContent).not.toContain("Execution Workspaces");
   expect(container.textContent).not.toContain("Enable isolated task checkouts");
-  expect(container.querySelector('select[aria-label="Shared workspace concurrency"]')).toBeNull();
+  expect(container.querySelector('button[role=combobox][aria-label="Shared workspace concurrency"]')).toBeNull();
   expect(onFieldUpdate).not.toHaveBeenCalled();
 });

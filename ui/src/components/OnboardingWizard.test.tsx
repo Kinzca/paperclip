@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectFieldInput } from "@/test/select-field";
 
 import { act } from "react";
 import type { LocalAiLoginStatus } from "@paperclipai/shared";
@@ -896,7 +897,7 @@ describe("OnboardingWizard restore-gate (stale localStorage across accounts)", (
         }]);
       }
       const { root, clickByText } = await openConnectStep();
-      const picker = document.body.querySelector('select[aria-label="Saved API key"]') as HTMLSelectElement;
+      const picker = selectFieldInput(document.body, '[aria-label="Saved API key"]');
       expect(picker.value).toBe(scope === "personal" ? "user:saved-key" : "company:saved-org-key");
       await clickByText((t) => isArcPrimary(t));
       expect((mockAgentsApi.testEnvironment.mock.calls.at(-1) as unknown[])[2]).toMatchObject({ adapterConfig: { env: { [key]: binding } } });

@@ -88,7 +88,11 @@ export function SelectField({
   }
 
   return <>
-    <Select value={encode(selectedValue)} disabled={disabled} onValueChange={(next) => change(next.slice("option:".length))}>
+    <Select value={encode(selectedValue)} disabled={disabled} onValueChange={(next) => {
+      // Radix's form bridge can emit an empty reset value when options change.
+      // Only encoded choices represent a selection; the real empty choice is "option:".
+      if (next.startsWith("option:")) change(next.slice("option:".length));
+    }}>
       <SelectTrigger
         {...triggerProps}
         ref={triggerRef}

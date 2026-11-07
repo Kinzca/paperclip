@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectFieldInput } from "@/test/select-field";
 
 import { createRoot as createReactRoot, type Root } from "react-dom/client";
 import { flushSync } from "react-dom";
@@ -1075,7 +1076,7 @@ describe("Secrets page layout", () => {
 
     await act(async () => {
       setInputValue(document.getElementById("new-secret-name") as HTMLInputElement, "AWS test token");
-      setSelectValue(document.getElementById("new-secret-provider") as HTMLSelectElement, "aws_secrets_manager");
+      setSelectValue(selectFieldInput(document, "#new-secret-provider"), "aws_secrets_manager");
       setTextareaValue(document.getElementById("new-secret-value") as HTMLTextAreaElement, "secret-value");
     });
     await flushReact();

@@ -31,7 +31,7 @@ import {
   workflowControlSchema,
   workflowDecisionSchema,
   workflowEvaluationSchema,
-  workflowPolicySchema,
+  workflowPlatformUpdateSchema,
   workflowTrialsSchema,
   BUILT_IN_WORKFLOW_TEMPLATES,
   type WorkflowSnapshot,
@@ -56,26 +56,6 @@ import {
 } from "../services/workflows/admission.js";
 import type { workflowEngine } from "../services/workflows/engine.js";
 import { workflowTransaction } from "../services/workflows/transaction.js";
-
-const platformUpdateSchema = z
-  .object({
-    expectedVersion: z.number().int().positive(),
-    policy: workflowPolicySchema,
-    allowHostCommands: z.boolean(),
-  })
-  .strict()
-  .superRefine((input, ctx) => {
-    if (
-      Object.values(input.policy.bindings ?? {}).some(
-        (binding) => binding.kind === "agent",
-      )
-    )
-      ctx.addIssue({
-        code: "custom",
-        path: ["policy", "bindings"],
-        message: "Instance defaults cannot pin company-specific agents",
-      });
-  });
 
 export function workflowRoutes(
   db: Db,
@@ -123,7 +103,7 @@ export function workflowRoutes(
   });
   router.put(
     "/instance/workflows/defaults",
-    validate(platformUpdateSchema),
+    validate(workflowPlatformUpdateSchema),
     async (req, res) => {
       assertInstanceAdmin(req);
       const saved = await workflowTransaction(db, async (context) => {

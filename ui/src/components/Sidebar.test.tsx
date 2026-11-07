@@ -85,12 +85,24 @@ vi.mock("../hooks/useInboxBadge", () => ({
 }));
 
 vi.mock("@/plugins/slots", () => ({
+  usePluginSlots: () => ({ slots: [
+    { id: "page", type: "page", pluginId: "fixture", pluginKey: "fixture", displayName: "Fixture plugin", routePath: "fixture" },
+    { id: "nav", type: "sidebar", pluginId: "fixture", pluginKey: "fixture", displayName: "Fixture plugin", navigation: { routePath: "fixture", icon: "book-open" } },
+    { id: "legacy", type: "sidebar", pluginId: "legacy", pluginKey: "legacy", displayName: "Legacy plugin", navigation: false },
+  ] }),
+  PluginSlotMount: () => <div data-plugin-slot-types="sidebar">Plugin slot outlet</div>,
   PluginSlotOutlet: ({ slotTypes }: { slotTypes: string[] }) => (
     <div data-plugin-slot-types={slotTypes.join(",")}>Plugin slot outlet</div>
   ),
 }));
 
 vi.mock("@/plugins/launchers", () => ({
+  usePluginLaunchers: () => ({
+    launchers: [{ id: "launcher", pluginId: "fixture", pluginKey: "fixture", action: { type: "navigate", target: "/fixture" } }],
+    contributionsByPluginId: new Map([["fixture", { slots: [{ type: "page", routePath: "fixture" }] }]]),
+  }),
+  launcherDisplayName: () => "Fixture launcher",
+  usePluginLauncherRuntime: () => ({ activateLauncher: vi.fn() }),
   PluginLauncherOutlet: ({ placementZones }: { placementZones: string[] }) => (
     <div data-plugin-launcher-zone={placementZones.join(",")}>Plugin launcher outlet</div>
   ),
@@ -204,29 +216,15 @@ describe("Sidebar", () => {
     });
   });
 
-  it("renders plugin sidebar launchers inside the Work section", async () => {
-    mockInstanceSettingsApi.getExperimental.mockResolvedValue({
-      enableIsolatedWorkspaces: false,
-      enableStreamlinedLeftNavigation: true,
-    });
+  it("renders plugin launchers and declared navigation with host rows in Plugins", async () => {
+    mockInstanceSettingsApi.getExperimental.mockResolvedValue({ enableIsolatedWorkspaces: false, enableStreamlinedLeftNavigation: true });
     const root = await renderSidebar();
-
-    const workSection = [...container.querySelectorAll("nav [data-plugin-launcher-zone]")]
-      .find((node) => node.getAttribute("data-plugin-launcher-zone") === "sidebar");
-    expect(workSection?.textContent).toContain("Plugin launcher outlet");
-    // The Work section is a Collapsible now (one extra wrapper level), so
-    // resolve the section root by walking up until the header label appears.
-    let workSectionContainer = workSection?.parentElement ?? null;
-    while (workSectionContainer && !workSectionContainer.textContent?.includes("Work")) {
-      workSectionContainer = workSectionContainer.parentElement;
-    }
-    expect(workSectionContainer?.textContent).toContain("Work");
-    expect(workSectionContainer?.textContent).toContain("Tasks");
-    expect(workSectionContainer?.textContent).not.toContain("Goals");
-
-    flushSync(() => {
-      root.unmount();
-    });
+    try {
+      const links = [...container.querySelectorAll("nav a")];
+      expect(links.find(link => link.textContent === "Fixture launcher")?.getAttribute("href")).toBe("/PAP/fixture");
+      expect(links.find(link => link.textContent === "Fixture plugin")?.getAttribute("href")).toBe("/PAP/fixture");
+      expect(container.querySelector("nav")?.textContent).toContain("Plugins");
+    } finally { flushSync(() => root.unmount()); }
   });
 
   it("uses the simplified work navigation with one Agents destination", async () => {
@@ -330,16 +328,16 @@ describe("Sidebar", () => {
     });
   });
 
-  it("renders plugin sidebar slots in Work below Workspaces", async () => {
+  it("renders legacy plugin slots below Workspaces in the Plugins section", async () => {
     mockInstanceSettingsApi.getExperimental.mockResolvedValue({ enableIsolatedWorkspaces: true });
     const root = await renderSidebar();
 
     const sidebarSlot = [...container.querySelectorAll("nav [data-plugin-slot-types]")]
       .find((node) => node.getAttribute("data-plugin-slot-types") === "sidebar");
     expect(sidebarSlot?.textContent).toContain("Plugin slot outlet");
-    const workSectionContainer = sidebarSlot?.parentElement?.parentElement;
+    const workSectionContainer = container.querySelector("nav");
     const workText = workSectionContainer?.textContent ?? "";
-    expect(workText).toContain("Work");
+    expect(workText).toContain("Plugins");
     expect(workText).toContain("Workspaces");
     expect(workText.indexOf("Workspaces")).toBeLessThan(workText.indexOf("Plugin slot outlet"));
 
@@ -523,7 +521,7 @@ describe("Sidebar", () => {
     const labels = (section: Element | undefined) => [...(section?.querySelectorAll("a") ?? [])]
       .map((anchor) => anchor.textContent?.trim());
 
-    expect(labels(workSection)).toEqual(["Tasks", "Projects", "Routines", "Artifacts"]);
+    expect(labels(workSection)).toEqual(["Tasks", "Projects", "Routines", "Task workflows", "Artifacts"]);
     expect(labels(orgSection)).toEqual(["Agents", "Skills", "Connectors", "Audit"]);
     expect(sections.indexOf(workSection!)).toBeLessThan(sections.indexOf(orgSection!));
     expect(

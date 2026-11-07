@@ -96,6 +96,10 @@ Review the exact staged file list for instance data before committing and pushin
 
 ## Compatibility and limits
 
+The 97 failures recorded above were resolved in the subsequent
+[baseline-test repair](2026-11-07-existing-test-failures.md), which records the
+complete follow-up coverage and correction-run results.
+
 Optional fields live in existing JSON template snapshots; no database schema or
 migration is required. Existing workflows do not acquire new gates retroactively.
 Origin corrections apply to newly created internal jobs; previously admitted

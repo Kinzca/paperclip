@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectFieldInput } from "@/test/select-field";
 
 import { act as reactAct, useState, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -701,7 +702,7 @@ describe("AgentMail inline setup", () => {
     emailListMock.mockResolvedValue([{ id: interaction.id, address: null, status: "draft" }]);
     renderBody(interaction); await flush();
     await waitForAssertion(() => expect(button("Connect AgentMail")?.disabled).toBe(false));
-    expect((document.querySelector("select") as HTMLSelectElement)?.value).toBe("saved-account");
+    expect((selectFieldInput(document))?.value).toBe("saved-account");
     expect(emailConnectMock).not.toHaveBeenCalled();
     await clickReadyButton("Connect AgentMail");
     expect(emailConnectMock).not.toHaveBeenCalled();
@@ -751,7 +752,7 @@ describe("AgentMail inline setup", () => {
     emailCredentialsMock.mockResolvedValue([{ id: "selected-account", label: "My selected key", scope: "organization", createdAt: "2026-10-01T14:00:00Z" }]);
     setupOptionsMock.mockResolvedValue({ existingConnections: [], emailSetup: { credentialConnectionId: "earlier-account", readyConnectionId: null } });
     renderBody(resumedInteraction); await flush();
-    await waitForAssertion(() => expect((document.querySelector('select') as HTMLSelectElement)?.value).toBe("selected-account"));
+    await waitForAssertion(() => expect((selectFieldInput(document))?.value).toBe("selected-account"));
     await clickReadyButton("Connect AgentMail");
     expect(emailConnectMock).not.toHaveBeenCalled();
     expect(emailSetupMock).toHaveBeenCalledWith(interaction.companyId, expect.objectContaining({

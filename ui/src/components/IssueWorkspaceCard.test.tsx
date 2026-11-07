@@ -221,7 +221,7 @@ describe("IssueWorkspaceCard", () => {
 
     const selects = container.querySelectorAll("select");
     expect(selects).toHaveLength(1);
-    expect(container.querySelector("button[role='combobox']")?.textContent).toContain("Issue sandbox");
+    expect(container.querySelector("button[role='combobox']")?.textContent).toContain("Existing isolated workspace");
 
     const saveButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Save"));
     expect(saveButton).not.toBeUndefined();
@@ -285,7 +285,7 @@ describe("IssueWorkspaceCard", () => {
 
     const selects = container.querySelectorAll("select");
     expect(selects).toHaveLength(1);
-    expect(container.querySelector("button[role='combobox']")?.textContent).toContain("Issue sandbox");
+    expect(container.querySelector("button[role='combobox']")?.textContent).toContain("Existing isolated workspace");
     expect(container.textContent).not.toContain("Project default environment");
 
     act(() => {

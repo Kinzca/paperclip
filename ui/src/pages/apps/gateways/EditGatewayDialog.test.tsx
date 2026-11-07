@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectFieldInput } from "@/test/select-field";
 
 import { type ReactNode } from "react";
 import { flushSync } from "react-dom";
@@ -136,7 +137,7 @@ describe("EditGatewayDialog", () => {
 
     const nameInput = container.querySelector<HTMLInputElement>('input[required]');
     const descriptionInput = container.querySelector<HTMLTextAreaElement>("textarea");
-    const profileSelect = container.querySelector<HTMLSelectElement>("select");
+    const profileSelect = selectFieldInput(container);
     const form = container.querySelector("form");
     if (!nameInput || !descriptionInput || !profileSelect || !form) throw new Error("gateway edit form missing");
 

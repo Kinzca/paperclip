@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectFieldInput } from "@/test/select-field";
 
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
@@ -56,7 +57,7 @@ describe("Permissions group control", () => {
       ),
     );
 
-    const select = container.querySelector<HTMLSelectElement>('select[aria-label="Set every action in Write (3)"]');
+    const select = selectFieldInput(container, '[aria-label="Set every action in Write (3)"]');
     expect(select).toBeTruthy();
     expect(select!.value).toBe("");
     flushSync(() => {

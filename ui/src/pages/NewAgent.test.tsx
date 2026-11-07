@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectFieldInput } from "@/test/select-field";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -232,7 +233,7 @@ describe("New agent setup", () => {
     api.getAdapterAuthSignal.mockResolvedValue({ status: "missing" });
     await render(adapterType);
     expect(container.textContent).toContain("does not support browser sign-in");
-    expect(container.querySelector('select[aria-label="Environment"]')).toBeNull();
+    expect(container.querySelector('button[role=combobox][aria-label="Environment"]')).toBeNull();
     await click("2Configure");
     expect(container.querySelector('button[type="submit"]')).toBeNull();
     expect([...container.querySelectorAll("button")].find(button => button.textContent?.trim() === "Run test")?.disabled).toBe(true);
@@ -240,13 +241,13 @@ describe("New agent setup", () => {
     expect(api.testEnvironment).not.toHaveBeenCalled();
     expect(api.hire).not.toHaveBeenCalled();
     await click("2Configure");
-    const select = container.querySelector('select[aria-label="Environment"]') as HTMLSelectElement;
+    const select = selectFieldInput(container, '[aria-label="Environment"]');
     await act(async () => {
       select.value = "login-env";
       select.dispatchEvent(new Event("change", { bubbles: true }));
     });
     await settle();
-    expect(container.querySelector('select[aria-label="Environment"]')).toBeNull();
+    expect(container.querySelector('button[role=combobox][aria-label="Environment"]')).toBeNull();
     await click("Complete subscription login");
     await click("Finish setup");
     expect(api.hire.mock.calls[0][1]).toMatchObject({ defaultEnvironmentId: "login-env", runtimeConfig: { aiConnection: { method: "subscription" } } });
@@ -275,10 +276,10 @@ describe("New agent setup", () => {
       secret: { companyId: "company-1", status: "active" },
     }]);
     await render("paperclip_runner", "grok");
-    expect(container.querySelector('select[aria-label="Environment"]')).toBeNull();
+    expect(container.querySelector('button[role=combobox][aria-label="Environment"]')).toBeNull();
     await click("GrokAPI key");
     await click("Use saved API key");
-    const select = container.querySelector('select[aria-label="Environment"]') as HTMLSelectElement;
+    const select = selectFieldInput(container, '[aria-label="Environment"]');
     expect(select.disabled).toBe(false);
     expect([...select.options].some((option) => option.value === "local-1")).toBe(!managedOnly);
     await act(async () => {
@@ -560,7 +561,7 @@ describe("New agent setup", () => {
     }]);
     await render(adapter, runner);
     await click(provider + "API key");
-    expect((container.querySelector("select[aria-label='Saved API key']") as HTMLSelectElement).value).toBe("user:existing-key");
+    expect((selectFieldInput(container, "[aria-label='Saved API key']")).value).toBe("user:existing-key");
     await click("Use saved API key");
     const binding = { type: "user_secret_ref", key, version: "latest" };
     expect(api.testEnvironment.mock.calls[0][2].adapterConfig.env[key]).toEqual(binding);

@@ -6,6 +6,7 @@ import { expect, test } from "vitest";
 import { HERMES_CLI } from "../shared/constants.js";
 import { resolveHermesCommand } from "./execute.js";
 import { testEnvironment } from "./test.js";
+import { withPythonVersion } from "./python-fixture.js";
 
 test("resolveHermesCommand prefers hermesCommand over command", () => {
   expect(resolveHermesCommand({ hermesCommand: "hermes_maximus", command: "hermes_backup" }))
@@ -17,7 +18,7 @@ test("resolveHermesCommand falls back to command before default hermes binary", 
   expect(resolveHermesCommand({})).toBe(HERMES_CLI);
 });
 
-test("testEnvironment accepts config.command when hermesCommand is absent", async () => {
+test.each(["3.12.0", "3.9.0"])("testEnvironment resolves config.command and checks Python %s", async (pythonVersion) => withPythonVersion(pythonVersion, async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "hermes-command-resolution-"));
   const cliPath = path.join(tempDir, "fake-hermes");
 
@@ -37,7 +38,10 @@ test("testEnvironment accepts config.command when hermesCommand is absent", asyn
       },
     });
 
-    expect(result.status).not.toBe("fail");
+    if (pythonVersion === "3.9.0") expect(result.status).toBe("fail");
+    else expect(result.status).not.toBe("fail");
+    expect(result.checks.find(check => check.code === "hermes_python_old")?.level)
+      .toBe(pythonVersion === "3.9.0" ? "error" : undefined);
     expect(result.checks.some((check) => check.code === "hermes_cli_not_found")).toBe(false);
     expect(result.checks.some(
       (check) => check.code === "hermes_version" && check.message.includes("fake-hermes 1.2.3"),
@@ -45,7 +49,7 @@ test("testEnvironment accepts config.command when hermesCommand is absent", asyn
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
-});
+}));
 
 test("managed connections probe the selected environment without falling back to host keys", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "hermes-managed-probe-"));

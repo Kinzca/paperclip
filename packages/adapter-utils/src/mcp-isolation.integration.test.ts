@@ -196,7 +196,7 @@ describe("same-machine MCP isolation", () => {
   it("keeps concurrent Codex homes disjoint and supports CLI MCP overrides", async () => {
     const version = await commandVersion("codex");
     if (!version) return;
-    expect(version).toMatch(/^codex-cli \d+\.\d+\.\d+$/);
+    expect(version).toMatch(/^codex-cli \d+\.\d+\.\d+(?:-[\da-zA-Z.-]+)?(?:\+[\da-zA-Z.-]+)?$/);
 
     const root = await createMcpIsolationRoot("paperclip-codex-mcp-isolation-");
     cleanupRoots.push(root);

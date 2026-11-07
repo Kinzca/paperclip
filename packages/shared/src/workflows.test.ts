@@ -12,6 +12,7 @@ import {
   workflowControlSchema,
   effectiveWorkflowLimits,
   createWorkflowRevisionSchema,
+  workflowPlatformUpdateSchema,
   type WorkflowNodeState,
 } from "./workflows.js";
 
@@ -37,6 +38,11 @@ function states(passed: string[] = []): Record<string, WorkflowNodeState> {
 }
 
 describe("workflow contracts", () => {
+  it("keeps instance workflow defaults free of company agent bindings", () => {
+    const input = { expectedVersion: 1, allowHostCommands: false, policy: { bindings: { execute: { kind: "executor" } } } };
+    expect(workflowPlatformUpdateSchema.safeParse(input).success).toBe(true);
+    expect(workflowPlatformUpdateSchema.safeParse({ ...input, policy: { bindings: { execute: { kind: "agent", agentId: "11111111-1111-4111-8111-111111111111" } } } }).success).toBe(false);
+  });
   it("requires a review to cover the unchanged frozen criteria", () => {
     const criteria = [{ id: "ac-1", requirement: "Inspect the delivered revision" }, { id: "ac-2", requirement: "Run the interaction check" }];
     const report = { artifact: "fixture-build", revision: "sha256:fixture", findings: [], criteria: criteria.map(item => ({ ...item, outcome: "passed" as const, evidence: "Executed on the retained build" })) };

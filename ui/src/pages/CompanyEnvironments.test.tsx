@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { selectFieldInput } from "@/test/select-field";
 
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -1732,9 +1733,7 @@ describe("CompanyEnvironments — test provider button", () => {
     expect(dialog.textContent).not.toContain("Retired");
     expect(dialog.textContent).toContain("Other references to this environment");
 
-    const reassignSelect = dialog.querySelector<HTMLSelectElement>(
-      "[data-testid='environment-delete-reassign-select']",
-    )!;
+    const reassignSelect = selectFieldInput(dialog, "[data-testid='environment-delete-reassign-select']");
     const optionLabels = Array.from(reassignSelect.querySelectorAll("option")).map((option) =>
       option.textContent?.trim(),
     );
