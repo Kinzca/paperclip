@@ -1,3 +1,4 @@
+import { isPendingInteractionWakeContext } from "./pending-interaction-wake.js";
 import { selectHeartbeatEnvironment } from "./heartbeat/environment-selection.js";
 import { prepareHeartbeatWorkspace } from "./heartbeat/workspace-preparation.js";
 import { executeHeartbeatRuntime, NativeSessionResumeScheduledError, NativeWorkspaceFinalizeScheduledError } from "./heartbeat/runtime-execution.js";
@@ -791,7 +792,7 @@ export function shouldAutoCheckoutIssueForWake(input: {
   const wakeReason = readNonEmptyString(input.contextSnapshot?.wakeReason);
   if (!wakeReason) return false;
   if (wakeReason === "issue_comment_mentioned") return false;
-  if (wakeReason === "source_scoped_recovery_action") return false;
+  if (wakeReason === "source_scoped_recovery_action" || isPendingInteractionWakeContext(input.contextSnapshot ?? {})) return false;
   if (wakeReason.startsWith("execution_")) return false;
 
   return true;
@@ -3554,7 +3555,7 @@ export function heartbeatService(
         }
         if (
           !issueId ||
-          (!isResolvedInteractionContinuationWakeContext(context) &&
+          (!isResolvedInteractionContinuationWakeContext(context) && !isPendingInteractionWakeContext(context) &&
             !["native_safe_replacement", "native_provider_overloaded"].includes(run.scheduledRetryReason ?? ""))
         ) {
           return { dispatched: true, resultPromise: dispatch(() => {}) };

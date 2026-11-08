@@ -14,6 +14,7 @@ import {
   nativeRunFinalizations,
   heartbeatRuns,
   issueComments,
+  issueRelations,
   issueDocuments,
   issueThreadInteractions,
   issues,
@@ -215,6 +216,41 @@ describeEmbeddedPostgres("heartbeat stale queued-run invalidation", () => {
     });
     return { companyId, agentId };
   }
+
+  it.each([false, true])("dispatches a directed pending question without reassignment (withdraw before dispatch=%s)", async withdraw => {
+    const { companyId, agentId } = await seedCompanyAndAgent();
+    const ownerId = randomUUID();
+    await db.insert(agents).values({ id: ownerId, companyId, name: "Question author", role: "engineer",
+      status: "idle", adapterType: "codex_local", adapterConfig: {} });
+    const [issue] = await db.insert(issues).values({ companyId, title: "Source issue", status: "in_review",
+      assigneeAgentId: ownerId }).returning();
+    const [blocker] = await db.insert(issues).values({ companyId, title: "Unfinished child", status: "todo" }).returning();
+    await db.insert(issueRelations).values({ companyId, issueId: blocker.id, relatedIssueId: issue.id, type: "blocks" });
+    const [interaction] = await db.insert(issueThreadInteractions).values({ companyId, issueId: issue.id,
+      kind: "ask_user_questions", createdByAgentId: ownerId, addresseeAgentId: agentId,
+      payload: { version: 1, questions: [] } }).returning();
+    if (withdraw) afterContinuationDispatchCheck = async () => {
+      await db.update(issueThreadInteractions).set({ status: "cancelled" }).where(eq(issueThreadInteractions.id, interaction.id));
+    };
+    const run = await heartbeat.wakeup(agentId, { source: "automation", triggerDetail: "system",
+      reason: "interaction_pending", requestedByActorType: "system",
+      payload: { issueId: issue.id, interactionId: interaction.id, mutation: "interaction" },
+      contextSnapshot: withdraw ? { issueId: issue.id, interactionId: interaction.id,
+        wakeReason: "interaction_pending", source: "issue.interaction.created" } : {} });
+    expect(run, JSON.stringify(await db.select().from(agentWakeupRequests))).not.toBeNull();
+    expect(await waitForCondition(async () => {
+      const result = await heartbeat.getRun(run!.id);
+      return ["succeeded", "failed", "cancelled"].includes(result?.status ?? "");
+    }, 10000)).toBe(true);
+    await heartbeat.waitForRunExecutionDrain(run!.id);
+    const result = await heartbeat.getRun(run!.id);
+    expect(countExecuteCallsForRun(run!.id)).toBe(withdraw ? 0 : 1);
+    expect(result).toMatchObject(withdraw
+      ? { status: "cancelled", errorCode: "issue_interaction_unavailable" }
+      : { status: "succeeded" });
+    const [after] = await db.select().from(issues).where(eq(issues.id, issue.id));
+    expect(after).toMatchObject({ assigneeAgentId: ownerId, status: "in_review", executionRunId: null, checkoutRunId: null });
+  });
 
   it.each(["preparing", "verifying", "resuming"] as const)("keeps assigned work queued through %s, including recovery with timers disabled", async lifecycleState => {
     const { companyId, agentId } = await seedCompanyAndAgent({ heartbeatConfig: { enabled: false } });

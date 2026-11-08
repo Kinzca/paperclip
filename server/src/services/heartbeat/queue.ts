@@ -1,3 +1,4 @@
+import { isPendingInteractionWakeContext, isVerifiedPendingInteractionWake } from "../pending-interaction-wake.js";
 import { isStageHandoff, isCurrentStageWait, stageWaitSnapshot } from "./stage-handoff.js";
 import { isAgentAwaitingSetup } from "../../modules/agent-lifecycle/index.js";
 import { normalizeAgentNameKey } from "./retries.js";
@@ -1088,7 +1089,9 @@ export function createHeartbeatQueue(db: Db, dependencies: HeartbeatQueueDepende
         !allowsIssueInteractionWake(
           context,
           ISSUE_TREE_CONTROL_INTERACTION_WAKE_REASONS,
-        )
+        ) && !await isVerifiedPendingInteractionWake(db, {
+          companyId: run.companyId, issueId, agentId: run.agentId, contextSnapshot: context,
+        })
       ) {
         await cancelQueuedRunForBlockedDependencies(
           run,
@@ -1146,7 +1149,7 @@ export function createHeartbeatQueue(db: Db, dependencies: HeartbeatQueueDepende
         eq(issues.id, issueId), eq(issues.companyId, run.companyId),
       )).for("update") : [];
       const ownsIssue = owner?.assigneeAgentId === run.agentId &&
-        context.wakeReason !== "source_scoped_recovery_action";
+        context.wakeReason !== "source_scoped_recovery_action" && !isPendingInteractionWakeContext(context);
       if (ownsIssue && ["native_safe_replacement", "native_provider_overloaded"].includes(run.scheduledRetryReason ?? "") &&
           owner.checkoutRunId && owner.checkoutRunId !== run.id) {
         return { ownsIssue, blocked: true };
@@ -1589,7 +1592,7 @@ export function createHeartbeatQueue(db: Db, dependencies: HeartbeatQueueDepende
     const claimedWakeReason = readNonEmptyString(claimedContext.wakeReason);
     if (
       !nativeReviewContext && claimedIssueId &&
-      claimedWakeReason !== "source_scoped_recovery_action"
+      claimedWakeReason !== "source_scoped_recovery_action" && !isPendingInteractionWakeContext(claimedContext)
     ) {
       const claimedAgent = await getAgent(claimed.agentId);
       await db
@@ -2119,6 +2122,12 @@ export function createHeartbeatQueue(db: Db, dependencies: HeartbeatQueueDepende
     // Keep each request's own server-derived origin, including coalesced wakes.
     // A run's merged context cannot establish which caller authored one receipt.
     // Overwrite caller-supplied nested context rather than trusting it.
+    // Board/API redelivery may carry only the original interaction locator.
+    // The origin tag selects the same persisted-authority check as route delivery.
+    if (reason === "interaction_pending") {
+      enrichedContextSnapshot.source ??= "issue.interaction.created";
+      enrichedContextSnapshot.interactionId ??= payload?.interactionId;
+    }
     payload = { ...payload, [DEFERRED_WAKE_CONTEXT_KEY]: { ...enrichedContextSnapshot } };
     let issueId =
       readNonEmptyString(enrichedContextSnapshot.issueId) ?? issueIdFromPayload;
@@ -3454,15 +3463,18 @@ export function createHeartbeatQueue(db: Db, dependencies: HeartbeatQueueDepende
             .then((rows) => rows.get(issue.id) ?? null);
 
           // Blocked descendants should stay idle until the final blocker resolves.
-          // Human comment/mention wakes are the exception: they may run in a
-          // bounded interaction mode so the assignee can answer or triage.
+          // Comment/mention wakes and verified addressed questions may run in
+          // interaction mode to answer or triage without starting implementation.
           const blockedInteractionWake =
             dependencyReadiness &&
             !dependencyReadiness.isDependencyReady &&
-            allowsIssueInteractionWake(
+            (allowsIssueInteractionWake(
               enrichedContextSnapshot,
               ISSUE_TREE_CONTROL_INTERACTION_WAKE_REASONS,
-            );
+            ) || await isVerifiedPendingInteractionWake(tx as unknown as Db, {
+              companyId: issue.companyId, issueId: issue.id, agentId,
+              contextSnapshot: enrichedContextSnapshot,
+            }));
 
           if (blockedInteractionWake) {
             enrichedContextSnapshot.dependencyBlockedInteraction = true;

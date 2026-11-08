@@ -12,6 +12,7 @@ import {
   heartbeatRunEvents,
   heartbeatRuns,
   issueDocuments,
+  issueThreadInteractions,
   issueRelations,
   issueRecoveryActions,
   issueTreeHolds,
@@ -696,6 +697,107 @@ describeEmbeddedPostgres("run-dispatch postgres adapter", () => {
         paperclipWake: { privateTestMarker: "not-for-the-status-effect" },
       });
     });
+
+    it.each([
+      ["pending", "anyone", true],
+      ["pending", "human_only", false],
+      ["answered", "anyone", false],
+      ["withdrawn", "anyone", false],
+    ] as const)("checks persisted directed interaction %s/%s before dispatch", async (status, policy, allowed) => {
+      const { companyId, agentId } = await seedCompanyAndAgent();
+      const ownerId = randomUUID();
+      await seedAgent({ id: ownerId, companyId, name: "Question author" });
+      const issueId = randomUUID();
+      await seedIssue({ companyId, issueId, status: "in_review", assigneeAgentId: ownerId });
+      const interactionId = randomUUID();
+      await db.insert(issueThreadInteractions).values({
+        id: interactionId, companyId, issueId, kind: "ask_user_questions", status,
+        createdByAgentId: ownerId, addresseeAgentId: agentId,
+        effectiveResolverPolicy: policy, payload: { version: 1, questions: [] },
+      });
+      const runId = await seedRun({ companyId, agentId, contextSnapshot: {
+        issueId, interactionId, wakeReason: "interaction_pending", source: "issue.interaction.created",
+      } });
+      const result = await createPostgresRunDispatchAdapter(db).cancelStaleQueuedRun({
+        runId, companyId, expectedStatus: "queued", now: new Date(),
+      });
+      expect(await createPostgresRunDispatchAdapter(db).evaluateScheduledRetryGate({
+        runId, companyId, retryReasonOverride: "ai_connection_busy", now: new Date(),
+      })).toMatchObject(allowed ? { allowed: true } : { allowed: false, errorCode: "issue_interaction_unavailable" });
+      expect(result.outcome).toBe(allowed ? "not_stale" : "cancelled");
+      if (!allowed) expect(result).toMatchObject({ errorCode: "issue_interaction_unavailable" });
+      if (allowed) {
+        await db.update(heartbeatRuns).set({ contextSnapshot: { issueId, interactionId,
+          wakeReason: "ai_connection_busy_retry", source: "issue.interaction.created",
+        } }).where(eq(heartbeatRuns.id, runId));
+        expect(await createPostgresRunDispatchAdapter(db).evaluateScheduledRetryGate({
+          runId, companyId, retryReasonOverride: "ai_connection_busy", now: new Date(),
+        })).toMatchObject({ allowed: true });
+      }
+      const [issue] = await db.select().from(issues).where(eq(issues.id, issueId));
+      expect(issue.assigneeAgentId).toBe(ownerId);
+      expect(issue.executionRunId).toBeNull();
+      expect(issue.checkoutRunId).toBeNull();
+    });
+
+    it("rechecks withdrawal after claim before provider handoff without taking the owner's lease", async () => {
+      const { companyId, agentId } = await seedCompanyAndAgent();
+      const ownerId = randomUUID();
+      await seedAgent({ id: ownerId, companyId, name: "Owner" });
+      const issueId = randomUUID();
+      await seedIssue({ companyId, issueId, status: "in_review", assigneeAgentId: ownerId });
+      const interactionId = randomUUID();
+      await db.insert(issueThreadInteractions).values({ id: interactionId, companyId, issueId,
+        kind: "ask_user_questions", addresseeAgentId: agentId,
+        payload: { version: 1, questions: [] } });
+      const runId = await seedRun({ companyId, agentId, status: "running", contextSnapshot: {
+        issueId, interactionId, wakeReason: "interaction_pending", source: "issue.interaction.created",
+      } });
+      const adapter = createPostgresRunDispatchAdapter(db);
+      const dispatch = vi.fn(async () => "answered");
+      const first = await adapter.dispatchResolvedInteractionIfCurrent({ companyId, runId,
+        expectedStatus: "running", now: new Date(), dispatch });
+      expect(first.dispatched).toBe(true);
+      if (first.dispatched) await first.resultPromise;
+      await db.update(issueThreadInteractions).set({ status: "cancelled" }).where(eq(issueThreadInteractions.id, interactionId));
+      const second = await adapter.dispatchResolvedInteractionIfCurrent({ companyId, runId,
+        expectedStatus: "running", now: new Date(), dispatch });
+      expect(second).toMatchObject({ dispatched: false, cancellation: { errorCode: "issue_interaction_unavailable" } });
+      expect(dispatch).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(["recipient", "issue", "company", "creator", "governed", "malformed"])(
+      "rejects directed interaction with invalid %s authority", async (mismatch) => {
+        const { companyId, agentId } = await seedCompanyAndAgent();
+        const ownerId = randomUUID();
+        await seedAgent({ id: ownerId, companyId, name: "Author" });
+        const issueId = randomUUID();
+        await seedIssue({ companyId, issueId, status: "in_progress", assigneeAgentId: agentId });
+        const otherIssue = randomUUID();
+        await seedIssue({ companyId, issueId: otherIssue, status: "in_progress", assigneeAgentId: ownerId });
+        const otherCompany = mismatch === "company" ? await seedCompanyAndAgent() : null;
+        const interactionId = randomUUID();
+        await db.insert(issueThreadInteractions).values({
+          id: interactionId, companyId: otherCompany?.companyId ?? companyId,
+          issueId: mismatch === "issue" ? otherIssue : issueId,
+          kind: mismatch === "governed" ? "request_confirmation" : "ask_user_questions",
+          createdByAgentId: mismatch === "creator" ? agentId : ownerId,
+          addresseeAgentId: mismatch === "recipient" ? ownerId : agentId,
+          effectiveResolverPolicy: mismatch === "creator" ? "not_creator" : "anyone",
+          payload: mismatch === "governed" ? { version: 1, prompt: "Approve", toolAction: { version: 1, actionRequestId: randomUUID(), invocationId: randomUUID(),
+            toolName: "test", toolDisplayName: "Test", connectionId: null, applicationId: null,
+            appDisplayName: null, risk: "read", previewMarkdown: "Test", argumentsSummaryJson: "{}",
+            argumentsHash: "hash", expiresAt: new Date(Date.now() + 60000).toISOString() } } : { version: 1, questions: [] },
+        });
+        const runId = await seedRun({ companyId, agentId, contextSnapshot: {
+          issueId, interactionId: mismatch === "malformed" ? "invalid" : interactionId,
+          wakeReason: "interaction_pending", source: "issue.interaction.created",
+        } });
+        expect(await createPostgresRunDispatchAdapter(db).cancelStaleQueuedRun({
+          runId, companyId, expectedStatus: "queued", now: new Date(),
+        })).toMatchObject({ outcome: "cancelled", errorCode: "issue_interaction_unavailable" });
+      },
+    );
 
     it("maps a reassigned issue into a stale queued-run decision", async () => {
       const { companyId, agentId } = await seedCompanyAndAgent();

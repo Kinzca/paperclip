@@ -49,6 +49,7 @@ export type ReviewParticipantFacts = {
 };
 
 export type ScheduledRetryGateErrorCode =
+  | "issue_interaction_unavailable"
   | "agent_not_invokable"
   | "heartbeat_wake_on_demand_disabled"
   | "budget_blocked"
@@ -76,6 +77,8 @@ export type GateDecision =
     };
 
 export type ScheduledRetryFacts = {
+  /** Undefined for ordinary work; pending responder wakes must be revalidated from current storage. */
+  verifiedPendingInteraction?: boolean;
   runId: string;
   runAgentId: string;
   issueId: string | null;
@@ -108,6 +111,7 @@ export type ScheduledRetryFacts = {
 };
 
 export type QueuedRunStalenessErrorCode =
+  | "issue_interaction_unavailable"
   | "issue_waiting_for_response"
   | "execution_reconciliation_required"
   | "issue_dependencies_blocked"
@@ -130,6 +134,8 @@ export type StalenessDecision =
     };
 
 export type QueuedRunFacts = {
+  /** Undefined for ordinary work; pending responder wakes must be revalidated from current storage. */
+  verifiedPendingInteraction?: boolean;
   pendingResponse?: "interaction" | "approval" | null;
   /** Rechecked for automatic native replacements immediately before dispatch. */
   dependenciesBlocked?: DependencyBlockFacts | null;
@@ -314,6 +320,12 @@ export function decideScheduledRetryGate(
     };
   }
 
+  if (facts.verifiedPendingInteraction === false) {
+    return { allowed: false, issueId: facts.issueId, errorCode: "issue_interaction_unavailable",
+      reason: "Scheduled responder suppressed because the pending interaction is no longer addressed or permitted",
+      details: { issueId: facts.issueId } };
+  }
+
   if (facts.retryReasonKind === "disposition_repair" && facts.dispositionRepair) {
     const repair = facts.dispositionRepair;
     const superseded =
@@ -340,6 +352,7 @@ export function decideScheduledRetryGate(
   }
 
   const ownership = decideIssueOwnership({
+    isInteractionWake: facts.verifiedPendingInteraction === true,
     runAgentId: facts.runAgentId,
     issueAssigneeAgentId: facts.issueAssigneeAgentId,
     isNonAssigneeWorkspaceBusyRetry: facts.isNonAssigneeWorkspaceBusyRetry,
@@ -410,7 +423,7 @@ export function decideScheduledRetryGate(
   const lockOutcome = decideExecutionLock({
     requiresExecutionLock:
       (requiresInProgress ||
-        (facts.retryReasonKind === "ai_connection_wait" && !facts.isNonAssigneeWorkspaceBusyRetry)) &&
+        (facts.retryReasonKind === "ai_connection_wait" && !facts.isNonAssigneeWorkspaceBusyRetry && !facts.verifiedPendingInteraction)) &&
       facts.enforceIssueExecutionLock,
     runId: facts.runId,
     issueExecutionRunId: facts.issueExecutionRunId,
@@ -433,6 +446,7 @@ export function decideScheduledRetryGate(
   const participantOutcome = decideReviewParticipant({
     ...facts.reviewParticipant,
     runAgentId: facts.runAgentId,
+    bypass: facts.verifiedPendingInteraction === true,
   });
   if (participantOutcome === "participant_changed") {
     return {
@@ -464,7 +478,7 @@ export function decideScheduledRetryGate(
     };
   }
 
-  if (facts.dependenciesBlocked) {
+  if (facts.dependenciesBlocked && !facts.verifiedPendingInteraction) {
     return {
       allowed: false,
       reason: "Scheduled retry suppressed because issue dependencies are still blocked",
@@ -507,6 +521,12 @@ export function decideQueuedRunStaleness(
       reason: "Cancelled because the target issue no longer exists",
       details: { issueId: facts.issueId },
     };
+  }
+
+  if (facts.verifiedPendingInteraction === false) {
+    return { stale: true, errorCode: "issue_interaction_unavailable",
+      reason: "Cancelled because the pending interaction is no longer addressed or permitted",
+      details: { issueId: facts.issueId } };
   }
 
   if (facts.isResolvedInteractionContinuation || facts.isConnectionContinuation) {
@@ -648,7 +668,7 @@ export function decideQueuedRunStaleness(
   const lockOutcome = decideExecutionLock({
     // A server-recorded non-assignee wake never held the task execution lock.
     requiresExecutionLock: requiresInProgress ||
-      (facts.retryReasonKind === "ai_connection_wait" && !facts.isNonAssigneeWorkspaceBusyRetry),
+      (facts.retryReasonKind === "ai_connection_wait" && !facts.isNonAssigneeWorkspaceBusyRetry && !facts.verifiedPendingInteraction),
     runId: facts.runId,
     issueExecutionRunId: facts.issueExecutionRunId,
   });
@@ -669,7 +689,7 @@ export function decideQueuedRunStaleness(
   const participantOutcome = decideReviewParticipant({
     ...facts.reviewParticipant,
     runAgentId: facts.runAgentId,
-    bypass: facts.wakeCommentIdPresent,
+    bypass: facts.wakeCommentIdPresent || facts.verifiedPendingInteraction === true,
   });
   if (participantOutcome === "participant_changed") {
     return {

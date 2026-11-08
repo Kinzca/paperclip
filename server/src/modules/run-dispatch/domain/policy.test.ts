@@ -528,3 +528,26 @@ describe("AI subscription wait ownership", () => {
       .toMatchObject({ stale: true, errorCode: "issue_execution_lock_changed" });
   });
 });
+
+
+describe("directed responder retry boundaries", () => {
+  const responder: ScheduledRetryFacts = { ...baseGateFacts(), verifiedPendingInteraction: true,
+    issueAssigneeAgentId: "question-author", issueExecutionRunId: null,
+    retryReasonKind: "ai_connection_wait", enforceIssueExecutionLock: true,
+    dependenciesBlocked: { unresolvedBlockerIssueIds: ["child"], unresolvedBlockerCount: 1 },
+    reviewParticipant: { ...NO_PARTICIPANT, isInReview: true, hasParticipant: true,
+      participantIsAgent: true, participantAgentId: "other-reviewer" } };
+  it("can retry a verified answer without source ownership or dependency readiness", () => {
+    expect(decideScheduledRetryGate(responder, NOW)).toEqual({ allowed: true });
+  });
+  it("preserves pause, budget, invokability and terminal status gates", () => {
+    expect(decideScheduledRetryGate({ ...responder, activePauseHold: { holdId: "hold", rootIssueId: "root" } }, NOW))
+      .toMatchObject({ allowed: false, errorCode: "issue_paused" });
+    expect(decideScheduledRetryGate({ ...responder, budgetBlock: { reason: "limit", scopeType: "company", scopeId: "company" } }, NOW))
+      .toMatchObject({ allowed: false, errorCode: "budget_blocked" });
+    expect(decideScheduledRetryGate({ ...responder, agentInvokable: false }, NOW))
+      .toMatchObject({ allowed: false, errorCode: "agent_not_invokable" });
+    expect(decideScheduledRetryGate({ ...responder, issueStatus: "cancelled" }, NOW))
+      .toMatchObject({ allowed: false, errorCode: "issue_cancelled" });
+  });
+});

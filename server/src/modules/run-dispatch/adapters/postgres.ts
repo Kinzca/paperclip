@@ -1,3 +1,4 @@
+import { isPendingInteractionWakeContext, isVerifiedPendingInteractionWake } from "../../../services/pending-interaction-wake.js";
 import { hasConversationContinuationPolicy } from "../../../services/conversation-continuation.js";
 import { getExecutionBlocker } from "../../../services/execution-blocker.js";
 import { getNativeReviewAssignment } from "../../../services/native-runtime/native-review-participant.js";
@@ -363,6 +364,11 @@ export function createPostgresRunDispatchAdapter(
     facts.issueFound = issue !== null;
     if (!facts.issueFound) return { agentFound: true, facts };
 
+    facts.verifiedPendingInteraction = isPendingInteractionWakeContext(input.contextSnapshot)
+      ? await isVerifiedPendingInteractionWake(dbOrTx, {
+          companyId: input.companyId, issueId, agentId: input.agentId,
+          contextSnapshot: input.contextSnapshot,
+        }) : undefined;
     facts.issueStatus = issue.status;
     facts.issueAssigneeAgentId = issue.assigneeAgentId;
     facts.issueExecutionRunId = issue.executionRunId;
@@ -529,7 +535,11 @@ export function createPostgresRunDispatchAdapter(
     );
 
     const wakeCommentId = deriveCommentId(context);
-    const isInteractionWake = allowsIssueInteractionWake(
+    const verifiedPendingInteraction = isPendingInteractionWakeContext(context)
+      ? await isVerifiedPendingInteractionWake(dbOrTx, {
+          companyId: input.companyId, issueId, agentId: input.agentId, contextSnapshot: context,
+        }) : undefined;
+    const isInteractionWake = verifiedPendingInteraction === true || allowsIssueInteractionWake(
       context,
       ISSUE_TREE_CONTROL_INTERACTION_WAKE_REASONS,
     );
@@ -609,6 +619,7 @@ export function createPostgresRunDispatchAdapter(
       isConnectionContinuation: (isResolvedInteractionContinuation && context.interactionKind === "connection_intent")
         || context.source === "connection_tools.refreshed",
       isInteractionWake,
+      verifiedPendingInteraction,
       isAuthorizedSourceScopedRecovery,
       isNonAssigneeWorkspaceBusyRetry: isNonAssigneeWorkspaceBusyRetry(retryReason, context),
       resumeIntent,
@@ -1113,13 +1124,13 @@ export function createPostgresRunDispatchAdapter(
       if (run.status !== input.expectedStatus || run.resultJson?.cancellation || run.resultJson?.startupCancellation) {
         return { dispatched: false as const, cancellation: { outcome: "lost_race" as const } };
       }
-      const { issueId, decision: initialDecision } = await decideCurrentRunStaleness(
+      const { issueId, facts, decision: initialDecision } = await decideCurrentRunStaleness(
         tx,
         run,
         input.now,
       );
       const decision =
-        !initialDecision.stale && issueId
+        !initialDecision.stale && issueId && !facts?.verifiedPendingInteraction
           ? await tx
               .select({ executionRunId: issues.executionRunId })
               .from(issues)
