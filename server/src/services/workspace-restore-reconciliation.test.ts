@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -11,6 +13,7 @@ import { getExecutionBlocker } from "./execution-blocker.js";
 import { markExecutionReconciliation, validateExecutionReconciliation } from "./execution-recovery-resolution.js";
 import { remoteTerminationReceipt } from "./remote-execution-termination.js";
 import { LEGACY_WORKSPACE_RECOVERY_SCHEMA } from "./workspace-restore-recovery-state.js";
+import { getConversationOwnershipBlocker } from "./conversation-continuation.js";
 
 const external = process.env.PAPERCLIP_TEST_DATABASE_URL;
 const support = external ? { supported: true } : await getEmbeddedPostgresTestSupport();
@@ -78,6 +81,50 @@ const support = external ? { supported: true } : await getEmbeddedPostgresTestSu
     const f = await seed();
     await db.update(heartbeatRuns).set({ processPid: process.pid }).where(eq(heartbeatRuns.id, f.sourceRunId));
     await expect(validateExecutionReconciliation({ db, ...f })).resolves.toMatchObject({ id: f.sourceRunId });
+  });
+
+  it.skipIf(process.platform === "win32")("admits reconciliation after leader PID/PGID reuse without stopping the replacement or clearing data", async () => {
+    const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { detached: true, stdio: "ignore" });
+    await once(child, "spawn");
+    try {
+      const f = await seed();
+      await db.delete(environmentLeases).where(eq(environmentLeases.id, f.leaseId));
+      await db.update(heartbeatRuns).set({ processPid: child.pid!, processGroupId: child.pid!,
+        processStartedAt: new Date("2000-01-01T00:00:00Z"),
+        resultJson: { conversationContinuation: "continue_conversation_v1" },
+      }).where(eq(heartbeatRuns.id, f.sourceRunId));
+      expect(process.kill(-child.pid!, 0)).toBe(true);
+      expect(await getConversationOwnershipBlocker(db, f.companyId, f.issueId)).toBeNull();
+      await expect(validateExecutionReconciliation({ db, ...f })).resolves.toMatchObject({ id: f.sourceRunId });
+      expect(process.kill(child.pid!, 0)).toBe(true);
+      expect(process.kill(-child.pid!, 0)).toBe(true);
+      const [preserved] = await db.select().from(heartbeatRuns).where(eq(heartbeatRuns.id, f.sourceRunId));
+      expect(preserved).toMatchObject({ status: "failed", processPid: child.pid, processGroupId: child.pid,
+        processStartedAt: new Date("2000-01-01T00:00:00Z"),
+        resultJson: { conversationContinuation: "continue_conversation_v1" } });
+      expect(await db.select().from(issues).where(eq(issues.id, f.issueId))).toHaveLength(1);
+      expect(await db.select().from(issueRecoveryActions).where(eq(issueRecoveryActions.id, f.actionId))).toHaveLength(1);
+
+      // A post-spawn fallback timestamp can be later than the real OS start.
+      // Such a mismatch must not dismiss the still-running original provider.
+      await db.update(heartbeatRuns).set({ processStartedAt: new Date(Date.now() + 60_000) })
+        .where(eq(heartbeatRuns.id, f.sourceRunId));
+      expect(await getConversationOwnershipBlocker(db, f.companyId, f.issueId)).toMatchObject({ cause: "execution_owner_active" });
+      await expect(validateExecutionReconciliation({ db, ...f })).rejects.toThrow("previous provider is still running");
+      await db.update(heartbeatRuns).set({ processStartedAt: new Date("2000-01-01T00:00:00Z") })
+        .where(eq(heartbeatRuns.id, f.sourceRunId));
+
+      await db.insert(environmentLeases).values({ companyId: f.companyId, heartbeatRunId: f.sourceRunId,
+        provider: "local", leasePolicy: "ephemeral", status: "active" });
+      expect(await getConversationOwnershipBlocker(db, f.companyId, f.issueId)).toMatchObject({ cause: "execution_owner_active",
+        nextAction: expect.stringContaining("environment lease") });
+      await expect(validateExecutionReconciliation({ db, ...f })).rejects.toThrow("environment has not finished releasing");
+      expect(process.kill(child.pid!, 0)).toBe(true);
+    } finally {
+      const exited = once(child, "exit");
+      child.kill("SIGTERM");
+      await exited;
+    }
   });
 
   it.each(["pending_stop", "wrong_receipt", "missing_source", "unrecorded_source", "empty_sources"])("rejects repair with %s even when releasedAt is populated", async scenario => {

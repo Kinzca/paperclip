@@ -24,6 +24,7 @@ import { parseIssueExecutionState } from "./issue-execution-policy.js";
 import { isSupersededConversationRun } from "./agent-conversations.js";
 import { hasRequiredWorkspaceRecovery } from "./workspace-restore-recovery-state.js";
 import { hasRemoteTerminationReceipt } from "./remote-execution-termination.js";
+import { mayOwnLocalRunProcesses } from "./local-run-process-ownership.js";
 
 /** An operator records observed outcomes; this is not permission to blindly retry. */
 export async function validateExecutionReconciliation(input: {
@@ -103,19 +104,7 @@ export async function validateExecutionReconciliation(input: {
   }
   // A retained remote source's PIDs belong to its sandbox, not this server.
   // Its exact lease receipts above replace host-local process probes.
-  for (const pid of checkLocalProcesses ? [
-    run.processPid,
-    run.processGroupId ? -run.processGroupId : null,
-  ] : []) {
-    if (!pid) continue;
-    try {
-      process.kill(pid, 0);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ESRCH") continue;
-      throw conflict(
-        "The previous provider's process ownership cannot be verified.",
-      );
-    }
+  if (checkLocalProcesses && await mayOwnLocalRunProcesses(run)) {
     throw conflict(
       "The previous provider is still running. Stop it before continuing.",
     );

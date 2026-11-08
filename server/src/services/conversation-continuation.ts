@@ -1,7 +1,7 @@
 import { hasRequiredWorkspaceRecovery } from "./workspace-restore-recovery-state.js";
 import { and, desc, eq, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { environmentLeases, heartbeatRunEvents, heartbeatRuns, issueRecoveryActions, type Db } from "@paperclipai/db";
-import { readProcessStartedAt } from "./hot-restart.js";
+import { mayOwnLocalRunProcesses } from "./local-run-process-ownership.js";
 import { hasRemoteTerminationReceipt } from "./remote-execution-termination.js";
 
 // These adapters accept a conversation turn. Retrying a process or webhook can
@@ -87,16 +87,6 @@ export function conversationRecoveryActionPredicate() {
   );
 }
 
-/** OS liveness probes do not signal or stop the process. Unknown ownership holds. */
-function processMayBeAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code !== "ESRCH";
-  }
-}
-
 /** A terminal conversation row does not prove that its execution authority ended.
  * Other adapters keep their existing bootstrap and ownership protocols.
  */
@@ -136,20 +126,13 @@ export async function getConversationOwnershipBlocker(db: Db, companyId: string,
       // A separate local lease keeps the existing host process checks below.
       if (leases.every(lease => lease.provider !== "local")) continue;
     }
-    let pidAlive = run.processPid !== null && processMayBeAlive(run.processPid);
-    if (pidAlive && run.processStartedAt) {
-      // A recycled PID cannot keep an old task blocked. An unreadable identity
-      // stays conservative; the original process may still own execution.
-      const observed = await readProcessStartedAt(run.processPid!).catch(() => null);
-      if (observed && new Date(observed).getTime() !== run.processStartedAt.getTime()) pidAlive = false;
-    }
-    const groupAlive = run.processGroupId !== null && processMayBeAlive(-run.processGroupId);
-    if (pidAlive || groupAlive || leaseHeld) {
+    const processOwned = await mayOwnLocalRunProcesses(run);
+    if (processOwned || leaseHeld) {
       return {
         runId: run.id,
         agentId: run.agentId,
         cause: "execution_owner_active",
-        nextAction: pidAlive || groupAlive
+        nextAction: processOwned
           ? "The previous provider process is still running. Stop it before continuing this task."
           : "The previous execution has not released its environment lease. Wait for cleanup before continuing this task.",
       };
