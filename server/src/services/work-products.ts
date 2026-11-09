@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import { executionWorkspaces, heartbeatRunEvents, issueWorkProducts, workspaceRuntimeServices } from "@paperclipai/db";
-import type { IssueWorkProduct } from "@paperclipai/shared";
+import { issueWorkProductMetadataSchema, type IssueWorkProduct } from "@paperclipai/shared";
 import { unprocessable } from "../errors.js";
 import { insertRowsInChunks } from "./batch-insert.js";
 import {
@@ -271,6 +271,7 @@ export function workProductService(
     },
 
     createForIssue: async (issueId: string, companyId: string, data: Omit<typeof issueWorkProducts.$inferInsert, "issueId" | "companyId">) => {
+      if (data.metadata) data = { ...data, metadata: issueWorkProductMetadataSchema.parse(data.metadata) };
       const row = await db.transaction(async (tx) => {
         await validateExecutionWorkspace(tx, companyId, data.executionWorkspaceId);
         if (data.isPrimary) {
@@ -304,8 +305,28 @@ export function workProductService(
           .select()
           .from(issueWorkProducts)
           .where(eq(issueWorkProducts.id, id))
+          .for("update")
           .then((rows) => rows[0] ?? null);
         if (!existing) return null;
+
+        // Older providers could store arbitrary extension metadata. Preserve it
+        // on unrelated edits; only schema-valid evidence can carry review identity.
+        const saved = issueWorkProductMetadataSchema.safeParse(existing.metadata);
+        const previous = saved.success ? saved.data : null;
+        const metadata = patch.metadata === undefined ? previous
+          : patch.metadata === null ? null : issueWorkProductMetadataSchema.parse(patch.metadata);
+        const changedArtifact = (patch.url !== undefined && patch.url !== existing.url) ||
+          (patch.externalId !== undefined && patch.externalId !== existing.externalId) ||
+          metadata?.attachmentId !== previous?.attachmentId ||
+          metadata?.verification?.revision !== previous?.verification?.revision ||
+          metadata?.verification?.sourceSha256 !== previous?.verification?.sourceSha256 ||
+          metadata?.verification?.media?.sha256 !== previous?.verification?.media?.sha256;
+        if (patch.metadata !== undefined) patch = { ...patch, metadata };
+        if (changedArtifact && (existing.reviewState === "approved" || existing.status === "approved" ||
+          patch.reviewState === "approved" || patch.status === "approved")) {
+          patch = { ...patch, reviewState: patch.reviewState === "needs_board_review" || existing.reviewState === "needs_board_review"
+            ? "needs_board_review" : "none", status: "ready_for_review" };
+        }
 
         await validateExecutionWorkspace(tx, existing.companyId, patch.executionWorkspaceId);
 

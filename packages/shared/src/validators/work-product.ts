@@ -70,9 +70,27 @@ export const attachmentArtifactWorkProductMetadataSchema = z.object({
 
 export type AttachmentArtifactWorkProductMetadata = z.infer<typeof attachmentArtifactWorkProductMetadataSchema>;
 
+/** Evidence declarations are version-bound; they never grant independent QA approval. */
+export const workProductVerificationSchema = z.object({
+  revision: z.string().trim().min(1).max(200),
+  sourceSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  runId: z.string().uuid().optional(),
+  execution: z.enum(["scripted_runtime", "manual_runtime", "offline", "not_assessed"]),
+  viewing: z.enum(["sampled_frames", "normal_speed", "not_assessed"]),
+  media: z.object({
+    sha256: z.string().regex(/^[a-f0-9]{64}$/),
+    byteSize: z.number().int().positive(),
+    durationSeconds: z.number().positive().finite(),
+    decodedFrames: z.number().int().positive(),
+    maxPtsErrorSeconds: z.number().nonnegative().finite(),
+    candidateLabel: z.string().trim().min(1).max(500),
+  }).strict().optional(),
+}).strict();
+
 export const issueWorkProductMetadataSchema = z
   .object({
     resourceRef: workspaceFileRefSchema.optional().nullable(),
+    verification: workProductVerificationSchema.optional(),
   })
   .passthrough();
 

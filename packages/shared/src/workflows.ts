@@ -71,6 +71,8 @@ export const workflowNodeSchema = z
       .array(z.object({
         applicationKey: z.string().trim().min(1).max(200),
         toolName: z.string().trim().min(1).max(200),
+        /** Local MCP admission inspects explicit per-agent Codex overrides, without invoking tools. */
+        transport: z.enum(["profile", "local_mcp"]).optional(),
       }).strict())
       .max(32)
       .optional(),
@@ -422,6 +424,12 @@ export interface WorkflowNodeState {
   result: string | null;
   interrupted?: boolean;
   resumeGeneration?: number;
+  /** Durable event identities; never an authorization to answer an interaction. */
+  delegatedWait?: {
+    kind: "dependencies" | "agent_interaction" | "human_interaction";
+    issueIds: string[];
+    interactionIds: string[];
+  };
 }
 export interface WorkflowSnapshot {
   schemaVersion: 1;

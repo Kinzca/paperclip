@@ -258,6 +258,10 @@ describe("managed GitHub launcher environment", () => {
       expect(github.exitCode, github.stderr).toBe(0);
       expect(github.stdout).toBe("git started\ngh started\n");
     },
+    // This is an integration round trip through launcher staging, two CLIs and
+    // six real profile shells. Keep each command bounded, but allow their
+    // aggregate setup/teardown under the file-parallel package suite.
+    15_000,
   );
 
   it("preserves an explicit remote PATH without querying the remote environment", async () => {

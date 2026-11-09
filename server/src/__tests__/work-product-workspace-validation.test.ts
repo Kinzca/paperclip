@@ -38,6 +38,34 @@ describeDatabase("work product execution workspace validation", () => {
 
   const input = { type: "pull_request", provider: "github", title: "Test output", status: "active", isPrimary: true };
 
+  it("invalidates old approval when a candidate revision or attachment changes", async () => {
+    const f = await fixture();
+    const svc = workProductService(db);
+    const verification = { revision: "r1", execution: "scripted_runtime", viewing: "sampled_frames" };
+    const product = (await svc.createForIssue(f.issueId, f.companyId, {
+      ...input, status: "approved", reviewState: "approved", metadata: { verification },
+    }))!;
+    expect((await svc.update(product.id, { title: "Same version caption" }))?.reviewState).toBe("approved");
+    const changed = await svc.update(product.id, {
+      metadata: { verification: { ...verification, revision: "r2" } }, status: "approved", reviewState: "approved",
+    });
+    expect(changed).toMatchObject({ status: "ready_for_review", reviewState: "none" });
+    expect(changed?.metadata?.verification).toMatchObject({ revision: "r2" });
+    await svc.update(product.id, { reviewState: "approved", status: "approved" });
+    expect(await svc.update(product.id, { metadata: { verification: { ...verification, revision: "r2" }, attachmentId: randomUUID() } }))
+      .toMatchObject({ status: "ready_for_review", reviewState: "none" });
+  });
+
+  it("preserves legacy extension metadata on unrelated edits without treating it as version proof", async () => {
+    const f = await fixture();
+    const svc = workProductService(db);
+    const product = (await svc.createForIssue(f.issueId, f.companyId, input))!;
+    const legacy = { verification: { customProviderFlag: true }, caption: "Legacy extension" };
+    await db.update(issueWorkProducts).set({ metadata: legacy }).where(eq(issueWorkProducts.id, product.id));
+    expect((await svc.update(product.id, { title: "Caption update" }))?.metadata).toEqual(legacy);
+    expect((await svc.getById(product.id))?.metadata).toEqual(legacy);
+  });
+
   it.each(["missing", "project", "other company"])("rejects a %s workspace on create without replacing the primary", async (kind) => {
     const f = await fixture();
     const svc = workProductService(db);

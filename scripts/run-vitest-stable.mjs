@@ -462,7 +462,11 @@ function runProjectGroup(projects, groupName, shardIndex = null, shardCount = nu
     shardCount !== null && shardCount > 1 ? [`--shard=${shardIndex + 1}/${shardCount}`] : [];
   const shardSuffix = shardArgs.length > 0 ? ` shard ${shardIndex + 1}/${shardCount}` : "";
   for (const project of projects) {
-    runVitest(["--project", project, ...shardArgs], `${groupName} project ${project}${shardSuffix}`);
+    // The utility package includes real Git/HTTP/shell launcher round trips.
+    // Concurrent file workers turn their narrow command budgets into host-load
+    // flakes. Retain all assertions and suites while avoiding startup contention.
+    const executionArgs = project === "@paperclipai/adapter-utils" ? serializedServerVitestArgs : [];
+    runVitest(["--project", project, ...shardArgs, ...executionArgs], `${groupName} project ${project}${shardSuffix}`);
   }
 }
 

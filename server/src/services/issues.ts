@@ -10843,6 +10843,7 @@ export function issueService(db: Db) {
         actorUserId?: string | null;
         companyGuard?: string;
         expectedExecutionPolicy?: typeof issues.$inferInsert.executionPolicy;
+        expectedUpdatedAt?: string;
       },
       dbOrTx: any = db,
       postCommitActivityPublications?: ActivityPublication[],
@@ -10891,6 +10892,7 @@ export function issueService(db: Db) {
         actorUserId,
         companyGuard,
         expectedExecutionPolicy,
+        expectedUpdatedAt,
         ...issueData
       } = data;
       // An explicit edit claims the title, even if it keeps the same text.
@@ -11183,6 +11185,33 @@ export function issueService(db: Db) {
           .for("update")
           .then((rows: Array<typeof issues.$inferSelect>) => rows[0] ?? null);
         if (!receiptExisting) return null;
+        // A millisecond timestamp is the public handoff revision. Ensure two
+        // committed writes in one clock tick cannot accept the same snapshot.
+        patch.updatedAt = new Date(Math.max(Date.now(), receiptExisting.updatedAt.getTime() + 1));
+        if (receiptExisting.originKind === "workflow_node" && patch.status === "blocked" && blockedByIssueIds?.length) {
+          const parkedChildren = await tx.select({ id: issues.id }).from(issues).where(and(
+            eq(issues.companyId, receiptExisting.companyId), eq(issues.parentId, id),
+            inArray(issues.id, blockedByIssueIds), eq(issues.status, "backlog"),
+          ));
+          if (parkedChildren.length) throw conflict("Activate delegated work before waiting for it; backlog is not an executable handoff.", {
+            code: "delegated_handoff_not_activated", issueIds: parkedChildren.map((child: { id: string }) => child.id),
+          });
+        }
+        if (expectedUpdatedAt !== undefined && receiptExisting.updatedAt.toISOString() !== expectedUpdatedAt) {
+          throw conflict("The task changed; reload before applying this handoff.", { code: "issue_changed" });
+        }
+        if (actorAgentId && actorAgentId !== receiptExisting.assigneeAgentId &&
+          (patch.status === "backlog" || patch.status === "cancelled")) {
+          const [active] = await tx.select({ id: heartbeatRuns.id }).from(heartbeatRuns).where(and(
+            eq(heartbeatRuns.companyId, receiptExisting.companyId),
+            inArray(heartbeatRuns.status, ["queued", "running"]),
+            or(eq(heartbeatRuns.issueId, id), eq(heartbeatRuns.nativeIssueId, id),
+              eq(heartbeatRuns.id, receiptExisting.executionRunId ?? receiptExisting.checkoutRunId ?? sql`null`)),
+          )).limit(1);
+          if (active) throw conflict("The assigned worker is active. Coordinate release before parking or cancelling its task.", {
+            code: "active_task_owner_release_required",
+          });
+        }
         if (!options.workflowTransition && (patch.status === "done" || issueData.assigneeAgentId !== undefined || issueData.assigneeUserId !== undefined || issueData.description !== undefined || issueData.title !== undefined || issueData.projectId !== undefined || issueData.projectWorkspaceId !== undefined || issueData.executionPolicy !== undefined)) {
           const [workflow] = await tx.select({ id: workflowRuns.id, status: workflowRuns.status }).from(workflowRuns)
             .where(and(eq(workflowRuns.issueId, receiptExisting.id), eq(workflowRuns.companyId, receiptExisting.companyId)));

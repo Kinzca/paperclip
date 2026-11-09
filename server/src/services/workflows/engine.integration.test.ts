@@ -16,6 +16,7 @@ import {
   projects,
   executionWorkspaces,
   instanceSettings,
+  issueThreadInteractions,
 } from "@paperclipai/db";
 import { BUILT_IN_WORKFLOW_TEMPLATES } from "@paperclipai/shared";
 import express from "express";
@@ -564,6 +565,24 @@ suite("native workflow execution", () => {
     expect((await context.read()).nodes.review.userId).toBe(context.userId);
   });
 
+  it("does not accept an interaction responder's receipt as the executor's completed work", async () => {
+    const context = await setup();
+    await context.engine.sweepPending();
+    const before = await context.read();
+    const taskId = before.nodes.execute.issueId!;
+    await db.insert(heartbeatRuns).values({
+      companyId: context.companyId, agentId: context.reviewer, issueId: taskId,
+      status: "succeeded", exitCode: 0, finishedAt: new Date(),
+    });
+    await issueService(db).update(taskId, { status: "done" });
+    await context.store.markIssueChanged(context.companyId, taskId);
+    await context.engine.sweepPending();
+    const after = await context.read();
+    expect(after.nodes.execute.status).not.toBe("passed");
+    expect(after.nodes.verify.status).toBe("pending");
+    expect(after.nodes.execute.attempt).toBe(2);
+  });
+
   it("keeps delegated workers alive while a node waits and resumes the same attempt after restart", async () => {
     const context = await setup();
     await context.engine.sweepPending();
@@ -605,6 +624,181 @@ suite("native workflow execution", () => {
     await restarted.sweepPending();
     expect(ownWakes().at(-1)).toEqual(ownWakes().at(-2));
     expect((await context.read()).nodes.execute.resumeGeneration).toBe(1);
+  });
+
+  it.each([
+    { policy: "anyone", kind: "ask_user_questions", responderStatus: "active" },
+    { policy: "anyone", kind: "ask_user_questions", responderStatus: "error" },
+    { policy: "human_only", kind: "ask_user_questions", responderStatus: "active" },
+    { policy: "human_only", kind: "request_confirmation", responderStatus: "active" },
+  ] as const)("parks a $responderStatus $policy $kind locally and resumes its exact event after restart", async ({ policy, kind, responderStatus }) => {
+    const context = await setup();
+    await context.engine.sweepPending();
+    const before = await context.read();
+    const nodeId = before.nodes.execute.issueId!;
+    const service = issueService(db);
+    await db.update(agents).set({ status: responderStatus }).where(eq(agents.id, context.reviewer));
+    const independent = await service.create(context.companyId, {
+      title: "Prepare a reviewable alternative", parentId: nodeId, status: "in_progress",
+      assigneeAgentId: context.reviewer,
+    });
+    const live = (await db.insert(heartbeatRuns).values({
+      companyId: context.companyId, agentId: context.reviewer, issueId: independent.id, status: "running",
+    }).returning())[0];
+    const card = (await db.insert(issueThreadInteractions).values({
+      companyId: context.companyId, issueId: nodeId, kind,
+      effectiveResolverPolicy: policy, requestedResolverPolicy: policy,
+      addresseeAgentId: policy === "anyone" ? context.reviewer : null,
+      payload: kind === "request_confirmation" ? { version: 1, prompt: "Approve the prepared alternative?" }
+        : { version: 1, questions: [] },
+    }).returning())[0];
+    await service.update(nodeId, { status: "blocked" });
+    await context.store.markIssueChanged(context.companyId, nodeId);
+    await context.engine.sweepPending();
+    const waiting = await context.read();
+    expect(waiting.status).toBe("running");
+    expect(waiting.pauseHoldId).toBeNull();
+    expect(waiting.nodes.execute.delegatedWait).toMatchObject({
+      kind: policy === "anyone" ? "agent_interaction" : "human_interaction", interactionIds: [card.id],
+    });
+    expect(context.cancelRun).not.toHaveBeenCalled();
+    await assertWorkflowIssueExecutionAllowed(db, context.companyId, independent.id);
+    expect((await db.select().from(heartbeatRuns).where(eq(heartbeatRuns.id, live.id)))[0].status).toBe("running");
+    // Only the genuine response changes the card. The workflow never supplies one.
+    expect((await db.select().from(issueThreadInteractions).where(eq(issueThreadInteractions.id, card.id)))[0].status).toBe("pending");
+    await db.update(issueThreadInteractions).set({ status: kind === "request_confirmation" ? "approved" : "answered", resolvedAt: new Date() })
+      .where(eq(issueThreadInteractions.id, card.id));
+    await context.store.markIssueChanged(context.companyId, nodeId);
+    const restarted = workflowEngine(db, { wakeup: context.wakeup, cancelRun: context.cancelRun });
+    await restarted.recover();
+    await restarted.sweepPending();
+    const after = await context.read();
+    expect(after.status).toBe("running");
+    expect(after.nodes.execute).toMatchObject({ issueId: nodeId, attempt: before.nodes.execute.attempt, resumeGeneration: 1 });
+    expect(after.nodes.execute.delegatedWait).toBeUndefined();
+    expect((await service.getById(nodeId))!.status).toBe("todo");
+  });
+
+  it("keeps a human decision local even while a descendant is parked without its own card", async () => {
+    const context = await setup();
+    await context.engine.sweepPending();
+    const nodeId = (await context.read()).nodes.execute.issueId!;
+    const service = issueService(db);
+    const parked = await service.create(context.companyId, {
+      title: "Preserve the failed candidate", parentId: nodeId, status: "blocked", assigneeAgentId: context.executor,
+    });
+    const card = (await db.insert(issueThreadInteractions).values({
+      companyId: context.companyId, issueId: nodeId, kind: "ask_user_questions",
+      effectiveResolverPolicy: "human_only", payload: { version: 1, questions: [] },
+    }).returning())[0];
+    await service.update(nodeId, { status: "blocked", blockedByIssueIds: [parked.id] });
+    await context.store.markIssueChanged(context.companyId, nodeId);
+    await context.engine.sweepPending();
+    expect((await context.read()).nodes.execute.delegatedWait?.kind).toBe("human_interaction");
+    expect((await context.read()).status).toBe("running");
+    expect(context.cancelRun).not.toHaveBeenCalled();
+    await db.update(issueThreadInteractions).set({ status: "answered" }).where(eq(issueThreadInteractions.id, card.id));
+    await context.store.markIssueChanged(context.companyId, nodeId);
+    await context.engine.sweepPending();
+    expect((await context.read()).status).toBe("running");
+    expect((await context.read()).nodes.execute.delegatedWait?.kind).toBe("dependencies");
+    expect(context.cancelRun).not.toHaveBeenCalled();
+  });
+
+  it.each(["unaddressed", "cancelled", "other_company", "inactive"])("does not convert a %s question into indefinite automatic waiting", async (kind) => {
+    const context = await setup();
+    await context.engine.sweepPending();
+    const nodeId = (await context.read()).nodes.execute.issueId!;
+    await db.insert(issueThreadInteractions).values({
+      companyId: kind === "other_company" ? (await setup()).companyId : context.companyId,
+      issueId: nodeId, kind: "ask_user_questions",
+      addresseeAgentId: kind === "unaddressed" ? null : context.reviewer,
+      status: kind === "cancelled" ? "cancelled" : "pending",
+      payload: { version: 1, questions: [] },
+    });
+    if (kind === "inactive") await db.update(agents).set({ status: "paused" }).where(eq(agents.id, context.reviewer));
+    await issueService(db).update(nodeId, { status: "blocked" });
+    await context.store.markIssueChanged(context.companyId, nodeId);
+    await context.engine.sweepPending();
+    expect((await context.read()).status).toBe("waiting_human");
+  });
+
+  it("admits an explicitly approved local MCP tool without invoking it or spending a failed attempt", async () => {
+    const context = await setup();
+    const before = await context.read();
+    before.snapshot.definition.nodes.find(node => node.id === "execute")!.requiredTools = [
+      { applicationKey: "editor", toolName: "inspect", transport: "local_mcp" },
+    ];
+    await db.update(workflowRuns).set({ snapshot: before.snapshot }).where(eq(workflowRuns.id, before.id));
+    await context.engine.sweepPending();
+    const held = await context.read();
+    expect(held.status).toBe("waiting_human");
+    expect(held.nodes.execute.attempt).toBe(0);
+    await db.update(agents).set({ adapterConfig: { extraArgs: ["-c", "mcp_servers.editor.enabled=true",
+      "-c", 'mcp_servers.editor.tools.inspect.approval_mode="approve"'] } }).where(eq(agents.id, context.executor));
+    await context.engine.control(context.companyId, context.parent.id, {
+      action: "resume", expectedVersion: held.version, reason: "Exact local tool authorization configured",
+    }, context.userId);
+    await context.engine.sweepPending();
+    expect((await context.read()).nodes.execute.attempt).toBe(1);
+    expect(context.wakeup).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects stale handoffs and another agent parking an active owner", async () => {
+    const context = await setup();
+    const service = issueService(db);
+    const child = await service.create(context.companyId, {
+      title: "Single source owner", status: "in_progress", assigneeAgentId: context.executor,
+      originKind: "manual",
+    });
+    await service.update(child.id, { description: "New accepted plan" });
+    await expect(service.update(child.id, { status: "backlog", expectedUpdatedAt: child.updatedAt.toISOString() }))
+      .rejects.toMatchObject({ status: 409 });
+    const live = (await db.insert(heartbeatRuns).values({
+      companyId: context.companyId, agentId: context.executor, issueId: child.id, status: "running",
+    }).returning())[0];
+    await expect(service.update(child.id, { status: "backlog", actorAgentId: context.reviewer }))
+      .rejects.toMatchObject({ status: 409 });
+    expect((await service.getById(child.id))!.status).toBe("in_progress");
+    expect((await db.select().from(heartbeatRuns).where(eq(heartbeatRuns.id, live.id)))[0].status).toBe("running");
+    await db.update(heartbeatRuns).set({ status: "succeeded", finishedAt: new Date() }).where(eq(heartbeatRuns.id, live.id));
+    const fresh = (await service.getById(child.id))!;
+    await service.update(child.id, { status: "backlog", actorAgentId: context.reviewer, expectedUpdatedAt: fresh.updatedAt.toISOString() });
+    expect((await service.getById(child.id))!.status).toBe("backlog");
+  });
+
+  it("orders handoff revisions even when the wall clock does not advance", async () => {
+    const context = await setup();
+    const service = issueService(db);
+    const child = await service.create(context.companyId, {
+      title: "Stable clock", status: "todo", assigneeAgentId: context.executor, originKind: "manual",
+    });
+    const clock = vi.spyOn(Date, "now").mockReturnValue(child.updatedAt.getTime());
+    try {
+      const first = (await service.update(child.id, { title: "First handoff", expectedUpdatedAt: child.updatedAt.toISOString() }))!;
+      expect(first.updatedAt.getTime()).toBeGreaterThan(child.updatedAt.getTime());
+      await expect(service.update(child.id, { title: "Stale", expectedUpdatedAt: child.updatedAt.toISOString() }))
+        .rejects.toMatchObject({ status: 409 });
+      const next = (await service.update(child.id, { title: "Next", expectedUpdatedAt: first.updatedAt.toISOString() }))!;
+      expect(next.updatedAt.getTime()).toBeGreaterThan(first.updatedAt.getTime());
+    } finally { clock.mockRestore(); }
+  });
+
+  it("rejects a partially activated handoff before its parent can stop the workflow", async () => {
+    const context = await setup();
+    await context.engine.sweepPending();
+    const nodeId = (await context.read()).nodes.execute.issueId!;
+    const service = issueService(db);
+    const child = await service.create(context.companyId, {
+      title: "Not activated yet", parentId: nodeId, status: "backlog", assigneeAgentId: context.reviewer,
+    });
+    await expect(service.update(nodeId, { status: "blocked", blockedByIssueIds: [child.id] })).rejects.toMatchObject({ status: 409 });
+    expect((await service.getById(nodeId))!.status).toBe("todo");
+    await service.update(child.id, { status: "todo" });
+    await service.update(nodeId, { status: "blocked", blockedByIssueIds: [child.id] });
+    await context.store.markIssueChanged(context.companyId, nodeId);
+    await context.engine.sweepPending();
+    expect((await context.read()).status).toBe("running");
   });
 
   it("keeps a transitive QA dependency waiting but stops an external or cancelled blocker", async () => {

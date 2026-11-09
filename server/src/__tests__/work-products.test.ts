@@ -183,7 +183,7 @@ describe("workProductService", () => {
   it("uses a transaction when promoting an existing work product to primary", async () => {
     const existingRow = createWorkProductRow({ isPrimary: false });
 
-    const selectWhere = vi.fn(async () => [existingRow]);
+    const selectWhere = vi.fn(() => ({ for: vi.fn(async () => [existingRow]) }));
     const selectFrom = vi.fn(() => ({ where: selectWhere }));
     const txSelect = vi.fn(() => ({ from: selectFrom }));
 

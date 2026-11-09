@@ -562,6 +562,7 @@ export {
 export {
   createIssueWorkProductSchema,
   issueWorkProductMetadataSchema,
+  workProductVerificationSchema,
   updateIssueWorkProductSchema,
   attachmentArtifactWorkProductMetadataSchema,
   issueWorkProductTypeSchema,

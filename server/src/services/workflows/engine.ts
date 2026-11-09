@@ -779,6 +779,7 @@ export function workflowEngine(db: Db, effects: Effects) {
           await stop(context, run, `Node task missing: ${node.id}`);
           break;
         }
+        if (task.status !== "blocked") delete current.delegatedWait;
         if (current.agentId && task.status !== "done") {
           const [agent] = await tx
             .select({ status: agents.status })
@@ -814,6 +815,7 @@ export function workflowEngine(db: Db, effects: Effects) {
           .where(
             and(
               eq(heartbeatRuns.companyId, run.companyId),
+              current.agentId ? eq(heartbeatRuns.agentId, current.agentId) : undefined,
               or(
                 eq(heartbeatRuns.issueId, task.id),
                 eq(heartbeatRuns.nativeIssueId, task.id),
@@ -824,9 +826,14 @@ export function workflowEngine(db: Db, effects: Effects) {
           .orderBy(sql`${heartbeatRuns.createdAt} desc`)
           .limit(1);
         if (task.status === "blocked" && node.kind === "task") {
-          const dependencyWait = await workflowDependencyWait(tx as unknown as Db, run.companyId, task.id);
+          const dependencyWait = await workflowDependencyWait(tx as unknown as Db, run.companyId, task.id, current.delegatedWait);
           if (dependencyWait) {
-            current.result = "Waiting for delegated dependencies";
+            current.delegatedWait = dependencyWait.wait;
+            current.result = dependencyWait.wait.kind === "human_interaction"
+              ? "Waiting for a human decision; independent delegated work may continue"
+              : dependencyWait.wait.kind === "agent_interaction"
+                ? "Waiting for an addressed agent response"
+                : "Waiting for delegated dependencies";
             if (!dependencyWait.ready || (latestRun && ["running", "queued"].includes(latestRun.status))) continue;
             // A dependency continuation retains the node, task and attempt. It is not repair.
             current.resumeGeneration = (current.resumeGeneration ?? 0) + 1;
@@ -834,6 +841,7 @@ export function workflowEngine(db: Db, effects: Effects) {
             current.result = "Delegated dependencies settled; resuming the same attempt";
             await context.updateIssue(task.id, { status: "todo", companyGuard: run.companyId });
             task.status = "todo";
+            delete current.delegatedWait;
           }
         }
         if (["blocked", "cancelled"].includes(task.status)) {

@@ -1,7 +1,8 @@
-import { toolApplications, type Db } from "@paperclipai/db";
+import { agents, toolApplications, type Db } from "@paperclipai/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { isToolConnectionAttentionHealth, type WorkflowNode } from "@paperclipai/shared";
 import { toolAccessService } from "../tool-access.js";
+import { localMcpToolReadiness } from "./local-mcp-readiness.js";
 
 /** Configuration admission only: never invokes tools, resolves secrets or grants access. */
 export async function workflowToolReadiness(
@@ -11,6 +12,19 @@ export async function workflowToolReadiness(
   requirements: NonNullable<WorkflowNode["requiredTools"]>,
 ): Promise<string[]> {
   if (!requirements.length) return [];
+  const missing: string[] = [];
+  const local = requirements.filter(item => item.transport === "local_mcp");
+  if (local.length) {
+    const [agent] = await db.select({ adapterType: agents.adapterType, adapterConfig: agents.adapterConfig })
+      .from(agents).where(and(eq(agents.companyId, companyId), eq(agents.id, agentId)));
+    for (const item of local) {
+      const reason = agent ? localMcpToolReadiness(agent.adapterType, agent.adapterConfig, item.applicationKey, item.toolName)
+        : "agent is not available in this company";
+      if (reason) missing.push(`${item.applicationKey}/${item.toolName}: ${reason}`);
+    }
+  }
+  const profile = requirements.filter(item => item.transport !== "local_mcp");
+  if (!profile.length) return missing;
   const effective = await toolAccessService(db).getEffectiveProfilesForAgent(
     companyId,
     agentId,
@@ -21,7 +35,7 @@ export async function workflowToolReadiness(
     .where(and(
       eq(toolApplications.companyId, companyId),
       eq(toolApplications.status, "active"),
-      inArray(toolApplications.applicationKey, requirements.map(item => item.applicationKey)),
+      inArray(toolApplications.applicationKey, profile.map(item => item.applicationKey)),
     ));
   const applicationKeys = new Map(applications.map(application => [application.id, application.key]));
   const usableConnections = new Set(
@@ -30,7 +44,7 @@ export async function workflowToolReadiness(
         (connection.credentialPolicy === "per_user" || !isToolConnectionAttentionHealth(connection.healthStatus)))
       .map(connection => connection.id),
   );
-  return requirements
+  return [...missing, ...profile
     .filter(requirement => !effective.allowedTools.some(tool =>
       tool.entryKind === "tool" &&
       tool.applicationId &&
@@ -38,5 +52,5 @@ export async function workflowToolReadiness(
       tool.toolName === requirement.toolName &&
       usableConnections.has(tool.connectionId),
     ))
-    .map(requirement => `${requirement.applicationKey}/${requirement.toolName}`);
+    .map(requirement => `${requirement.applicationKey}/${requirement.toolName}`)];
 }

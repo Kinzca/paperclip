@@ -2052,6 +2052,7 @@ export {
   createIssueAttachmentMetadataSchema,
   createIssueWorkProductSchema,
   issueWorkProductMetadataSchema,
+  workProductVerificationSchema,
   updateIssueWorkProductSchema,
   attachmentArtifactWorkProductMetadataSchema,
   issueWorkProductTypeSchema,

@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { attachmentArtifactWorkProductMetadataSchema } from "./work-product.js";
+import { attachmentArtifactWorkProductMetadataSchema, issueWorkProductMetadataSchema } from "./work-product.js";
 
 describe("attachmentArtifactWorkProductMetadataSchema", () => {
+  it("binds runtime and viewing declarations to a revision without implying QA", () => {
+    const verification = { revision: "r1", execution: "scripted_runtime", viewing: "not_assessed" };
+    expect(issueWorkProductMetadataSchema.parse({ verification }).verification).toEqual(verification);
+    for (const patch of [{ revision: "" }, { viewing: "passed" }, { independentQaPassed: true },
+      { media: { sha256: "a".repeat(64), byteSize: 0, durationSeconds: 1, decodedFrames: 1, maxPtsErrorSeconds: 0, candidateLabel: "candidate" } }]) {
+      expect(issueWorkProductMetadataSchema.safeParse({ verification: { ...verification, ...patch } }).success).toBe(false);
+    }
+  });
   it("accepts the attachment-backed artifact metadata contract", () => {
     const parsed = attachmentArtifactWorkProductMetadataSchema.parse({
       attachmentId: "11111111-1111-4111-8111-111111111111",

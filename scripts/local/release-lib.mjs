@@ -3,6 +3,7 @@ import path from "node:path";
 import net from "node:net";
 import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { processIdentity } from "./process-identity.mjs";
 
 export const pins = {
   node: "24.22.2",
@@ -213,15 +214,12 @@ export function lock(localDir) {
     const owner = JSON.parse(previous);
     if (!Number.isInteger(owner.pid) || owner.pid <= 0)
       throw new Error(`部署锁损坏，请先核查 ${file}`);
-    try {
-      process.kill(owner.pid, 0);
-    } catch (error) {
-      if (error.code === "ESRCH" && fs.readFileSync(file, "utf8") === previous)
-        fs.unlinkSync(file);
-    }
+    const identity = processIdentity(owner.pid);
+    if ((identity === null || (owner.identity && identity !== owner.identity)) &&
+      fs.readFileSync(file, "utf8") === previous) fs.unlinkSync(file);
   }
   try {
-    fs.writeFileSync(file, JSON.stringify({ pid: process.pid, token }), {
+    fs.writeFileSync(file, JSON.stringify({ pid: process.pid, token, identity: processIdentity(process.pid) }), {
       flag: "wx",
     });
   } catch (error) {

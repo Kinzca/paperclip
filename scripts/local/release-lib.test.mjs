@@ -16,6 +16,16 @@ import {
   migrationLedger,
 } from "./release-lib.mjs";
 const ledger = [{ tag: "0001_example", hash: "hash-1" }];
+test("reclaims a reused PID deployment lock without signalling its current owner", t => {
+  const dir = fixture(t);
+  fs.writeFileSync(path.join(dir, "deployment.lock"), JSON.stringify({ pid: process.pid, identity: "older process birth", token: "old" }));
+  const release = lock(dir);
+  assert.equal(json(path.join(dir, "deployment.lock")).pid, process.pid);
+  assert.notEqual(json(path.join(dir, "deployment.lock")).token, "old");
+  release();
+  fs.writeFileSync(path.join(dir, "deployment.lock"), JSON.stringify({ pid: process.pid, token: "legacy-live" }));
+  assert.throws(() => lock(dir), /部署锁/);
+});
 const manifest = () => ({
   schema: 1,
   commit: "a".repeat(40),

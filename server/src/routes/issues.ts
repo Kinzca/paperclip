@@ -4527,7 +4527,10 @@ export function issueRoutes(
     }
 
     const contentPath = buildAttachmentContentPath(attachment.id);
-    return attachmentArtifactWorkProductMetadataSchema.parse({
+    if (normalizeContentType(attachment.contentType).startsWith("video/") && attachment.byteSize === 0) {
+      throw unprocessable("An empty video cannot be published as a deliverable", { code: "empty_video_artifact" });
+    }
+    const canonical = attachmentArtifactWorkProductMetadataSchema.parse({
       attachmentId: attachment.id,
       contentType: normalizeContentType(attachment.contentType),
       byteSize: attachment.byteSize,
@@ -4536,6 +4539,9 @@ export function issueRoutes(
       downloadPath: `${contentPath}?download=1`,
       originalFilename: attachment.originalFilename ?? null,
     });
+    // Keep the already schema-validated version evidence while deriving attachment
+    // identity and URLs exclusively from the server-owned row.
+    return { ...canonical, ...(input.metadata?.verification !== undefined ? { verification: input.metadata.verification } : {}) };
   }
 
   async function assertIssueEnvironmentSelection(
@@ -13591,6 +13597,17 @@ export function issueRoutes(
         { allowVisibleIssueWrite: true },
       );
       if (!issueMutationAccess) return;
+      if (req.body.expectedUpdatedAt !== undefined &&
+        existing.updatedAt.toISOString() !== req.body.expectedUpdatedAt) {
+        throw conflict("The task changed; reload before applying this handoff.", { code: "issue_changed" });
+      }
+      if (req.actor.type === "agent" && req.actor.agentId !== existing.assigneeAgentId &&
+        (req.body.status === "backlog" || req.body.status === "cancelled") &&
+        await resolveActiveIssueRun(existing)) {
+        throw conflict("The assigned worker is active. Coordinate release before parking or cancelling its task.", {
+          code: "active_task_owner_release_required",
+        });
+      }
       if (req.body.comment && !(await assertBoardCommentNotPaused(req, res, existing))) return;
       const issueMutationAuthorizationReason =
         req.actor.type === "agent"
