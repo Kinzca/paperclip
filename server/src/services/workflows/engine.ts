@@ -68,6 +68,12 @@ type CheckWork = {
   remainingSeconds: number;
 };
 type Transaction = Parameters<Parameters<Db["transaction"]>[0]>[0];
+
+function isUnstartedDependencyCancellation(run: typeof heartbeatRuns.$inferSelect) {
+  return run.status === "cancelled" && run.errorCode === "issue_dependencies_blocked" &&
+    run.startedAt === null && run.processStartedAt === null;
+}
+
 type Effects = {
   wakeup: (
     agentId: string,
@@ -415,6 +421,55 @@ export function workflowEngine(db: Db, effects: Effects) {
         companyGuard: run.companyId,
       });
     }
+    return true;
+  }
+
+  async function restoreDependencyGateAttempt(
+    context: WorkflowTransaction, run: Run, nodeId: string, userId: string, reason: string,
+  ) {
+    const node = run.nodes[nodeId];
+    if (!node.issueId || !node.agentId ||
+      run.snapshot.definition.nodes.find(item => item.id === nodeId)?.kind !== "task") return false;
+    const { tx } = context;
+    const scope = and(eq(heartbeatRuns.companyId, run.companyId),
+      eq(heartbeatRuns.agentId, node.agentId), or(eq(heartbeatRuns.issueId, node.issueId),
+        eq(heartbeatRuns.nativeIssueId, node.issueId), sql`${heartbeatRuns.contextSnapshot}->>'issueId' = ${node.issueId}`));
+    const [latest] = await tx.select().from(heartbeatRuns).where(scope)
+      .orderBy(sql`${heartbeatRuns.createdAt} desc`).limit(1);
+    if (!latest || !isUnstartedDependencyCancellation(latest) || !latest.error ||
+      latest.error !== node.result || !node.startedAt || latest.createdAt < new Date(node.startedAt)) return false;
+    const [active] = await tx.select({ id: heartbeatRuns.id }).from(heartbeatRuns)
+      .where(and(scope, inArray(heartbeatRuns.status, ["running", "queued"]))).limit(1);
+    if (active) throw conflict("The previous executor is still stopping; retry after it settles");
+    const [task] = await tx.select().from(issues).where(and(eq(issues.companyId, run.companyId), eq(issues.id, node.issueId)));
+    if (!task || task.assigneeAgentId !== node.agentId || task.assigneeUserId ||
+      ["done", "cancelled", "backlog"].includes(task.status)) return false;
+    const [attempt] = await tx.select().from(workflowNodeAttempts).where(and(
+      eq(workflowNodeAttempts.companyId, run.companyId), eq(workflowNodeAttempts.runId, run.id),
+      eq(workflowNodeAttempts.nodeId, nodeId), eq(workflowNodeAttempts.attempt, node.attempt),
+      eq(workflowNodeAttempts.issueId, node.issueId), eq(workflowNodeAttempts.status, "failed"),
+    ));
+    if (!attempt || attempt.evidence?.failure !== latest.error) return false;
+    const waiting = await workflowDependencyWait(tx as unknown as Db, run.companyId, task.id, node.delegatedWait);
+    if (!waiting) return false;
+    const recovery = { heartbeatRunId: latest.id, userId, reason, recoveredAt: new Date().toISOString(),
+      previousAttemptFinishedAt: attempt.finishedAt?.toISOString() ?? null, previousNodeFinishedAt: node.finishedAt };
+    await tx.update(workflowNodeAttempts).set({ status: "running", finishedAt: null,
+      evidence: { ...attempt.evidence, dependencyGateRecovery: recovery } }).where(eq(workflowNodeAttempts.id, attempt.id));
+    await context.activity({ companyId: run.companyId, actorType: "user", actorId: userId,
+      action: "workflow.dependency_gate_failure_corrected", entityType: "issue", entityId: run.issueId,
+      details: { workflowRunId: run.id, nodeId, attempt: node.attempt, previousFailure: node.result, ...recovery } });
+    const failure = run.runtime.repeatedFailures?.[nodeId];
+    if (failure?.lastAttempt === node.attempt && failure.reason === latest.error) delete run.runtime.repeatedFailures![nodeId];
+    node.status = "running";
+    node.finishedAt = null;
+    node.interrupted = false;
+    node.startedAt = new Date().toISOString();
+    node.resumeGeneration = (node.resumeGeneration ?? 0) + 1;
+    node.result = "Corrected an unstarted dependency gate cancellation; continuing the same attempt";
+    if (waiting.ready) delete node.delegatedWait;
+    else node.delegatedWait = waiting.wait;
+    await context.updateIssue(task.id, { status: waiting.ready ? "todo" : "blocked", companyGuard: run.companyId });
     return true;
   }
 
@@ -825,7 +880,10 @@ export function workflowEngine(db: Db, effects: Effects) {
           )
           .orderBy(sql`${heartbeatRuns.createdAt} desc`)
           .limit(1);
-        if (task.status === "blocked" && node.kind === "task") {
+        if (node.kind === "task" && (task.status === "blocked" ||
+          (latestRun && isUnstartedDependencyCancellation(latestRun) &&
+            (!current.resumeGeneration || !current.startedAt || latestRun.createdAt >= new Date(current.startedAt)) &&
+            ["todo", "in_progress"].includes(task.status)))) {
           const dependencyWait = await workflowDependencyWait(tx as unknown as Db, run.companyId, task.id, current.delegatedWait);
           if (dependencyWait) {
             current.delegatedWait = dependencyWait.wait;
@@ -834,7 +892,13 @@ export function workflowEngine(db: Db, effects: Effects) {
               : dependencyWait.wait.kind === "agent_interaction"
                 ? "Waiting for an addressed agent response"
                 : "Waiting for delegated dependencies";
-            if (!dependencyWait.ready || (latestRun && ["running", "queued"].includes(latestRun.status))) continue;
+            if (!dependencyWait.ready || (latestRun && ["running", "queued"].includes(latestRun.status))) {
+              if (task.status !== "blocked") {
+                await context.updateIssue(task.id, { status: "blocked", companyGuard: run.companyId });
+                task.status = "blocked";
+              }
+              continue;
+            }
             // A dependency continuation retains the node, task and attempt. It is not repair.
             current.resumeGeneration = (current.resumeGeneration ?? 0) + 1;
             current.startedAt = new Date().toISOString();
@@ -1867,6 +1931,7 @@ export function workflowEngine(db: Db, effects: Effects) {
               "The previous executor is still stopping; retry after it settles",
             );
           for (const [id, node] of Object.entries(run.nodes)) {
+            if (node.status === "failed" && await restoreDependencyGateAttempt(context, run, id, userId, input.reason)) continue;
             if (
               node.status === "failed" ||
               (input.action === "retry" &&

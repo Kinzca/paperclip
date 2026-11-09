@@ -705,6 +705,127 @@ suite("native workflow execution", () => {
     expect(context.cancelRun).not.toHaveBeenCalled();
   });
 
+  it("replaces withdrawn wait events without discarding the current addressed handoff", async () => {
+    const context = await setup();
+    await context.engine.sweepPending();
+    const nodeId = (await context.read()).nodes.execute.issueId!;
+    const service = issueService(db);
+    const old = (await db.insert(issueThreadInteractions).values({
+      companyId: context.companyId, issueId: nodeId, kind: "ask_user_questions",
+      effectiveResolverPolicy: "anyone", addresseeAgentId: context.reviewer,
+      payload: { version: 1, questions: [] },
+    }).returning())[0];
+    await service.update(nodeId, { status: "blocked" });
+    await context.store.markIssueChanged(context.companyId, nodeId);
+    await context.engine.sweepPending();
+    expect((await context.read()).nodes.execute.delegatedWait?.interactionIds).toContain(old.id);
+    await db.update(issueThreadInteractions).set({ status: "cancelled" }).where(eq(issueThreadInteractions.id, old.id));
+    const current = (await db.insert(issueThreadInteractions).values({
+      companyId: context.companyId, issueId: nodeId, kind: "ask_user_questions",
+      effectiveResolverPolicy: "human_only", payload: { version: 1, questions: [] },
+    }).returning())[0];
+    await context.store.markIssueChanged(context.companyId, nodeId);
+    await context.engine.sweepPending();
+    const waiting = await context.read();
+    expect(waiting.status).toBe("running");
+    expect(waiting.nodes.execute).toMatchObject({ attempt: 1, issueId: nodeId,
+      delegatedWait: { kind: "human_interaction", interactionIds: [current.id] } });
+    expect(context.cancelRun).not.toHaveBeenCalled();
+    expect((await db.select().from(issueThreadInteractions).where(eq(issueThreadInteractions.id, current.id)))[0].status).toBe("pending");
+  });
+
+  it("retains the attempt when a dependency gate cancels a queued continuation after resume", async () => {
+    const context = await setup();
+    await context.engine.sweepPending();
+    const before = await context.read();
+    const nodeId = before.nodes.execute.issueId!;
+    const service = issueService(db);
+    const child = await service.create(context.companyId, {
+      title: "Continue delegated production", parentId: nodeId, status: "in_progress", assigneeAgentId: context.reviewer,
+    });
+    await service.update(nodeId, { status: "blocked", blockedByIssueIds: [child.id] });
+    // A resumed node can race the dependency admission gate while its child is still active.
+    await db.update(issues).set({ status: "todo" }).where(eq(issues.id, nodeId));
+    await db.insert(heartbeatRuns).values({
+      companyId: context.companyId, agentId: context.executor, issueId: nodeId,
+      status: "cancelled", errorCode: "issue_dependencies_blocked",
+      error: "Internal dependency admission gate", finishedAt: new Date(),
+    });
+    await context.store.markIssueChanged(context.companyId, nodeId);
+    await context.engine.sweepPending();
+    const waiting = await context.read();
+    expect(waiting.status).toBe("running");
+    expect(waiting.nodes.execute).toMatchObject({ attempt: 1, issueId: nodeId, status: "running" });
+    expect((await service.getById(nodeId))?.status).toBe("blocked");
+    await service.update(child.id, { status: "done" });
+    await context.store.markIssueChanged(context.companyId, child.id);
+    await context.engine.sweepPending();
+    expect((await context.read()).nodes.execute).toMatchObject({ attempt: 1, issueId: nodeId, resumeGeneration: 1 });
+    expect((await context.read()).runtime.grants ?? []).toEqual([]);
+    const wakeCount = context.wakeup.mock.calls.length;
+    await context.store.markIssueChanged(context.companyId, nodeId);
+    await context.engine.sweepPending();
+    expect((await context.read()).nodes.execute.resumeGeneration).toBe(1);
+    expect(context.wakeup.mock.calls.length).toBe(wakeCount + 1);
+    expect(context.wakeup.mock.calls.at(-1)).toEqual(context.wakeup.mock.calls.at(-2));
+  });
+
+  it.each(["dependency_gate", "dependency_gate_waiting", "started_gate", "process_started", "real_failure", "cancelled_task", "other_agent", "active_executor", "missing_evidence"])(
+    "only restores an exhausted misclassified dependency gate on explicit resume: %s", async (kind) => {
+      const context = await setup();
+      await context.engine.sweepPending();
+      const before = await context.read();
+      const nodeId = before.nodes.execute.issueId!;
+      const reason = "Internal dependency admission gate";
+      before.snapshot.limits.maxAttempts = 1;
+      before.nodes.execute = { ...before.nodes.execute, status: "failed", result: reason, finishedAt: new Date().toISOString() };
+      await db.update(workflowRuns).set({ snapshot: before.snapshot, nodes: before.nodes,
+        status: "waiting_human", stopReason: `Retry limit reached: ${reason}` }).where(eq(workflowRuns.id, before.id));
+      await db.update(workflowNodeAttempts).set({ status: "failed", evidence: { failure: kind === "missing_evidence" ? "A different failure" : reason }, finishedAt: new Date() })
+        .where(and(eq(workflowNodeAttempts.runId, before.id), eq(workflowNodeAttempts.nodeId, "execute")));
+      const receipt = (await db.insert(heartbeatRuns).values({
+        companyId: context.companyId, agentId: kind === "other_agent" ? context.reviewer : context.executor,
+        issueId: nodeId, status: kind === "real_failure" ? "failed" : "cancelled",
+        errorCode: kind === "real_failure" ? "adapter_failed" : "issue_dependencies_blocked", error: reason,
+        startedAt: kind === "started_gate" ? new Date() : null, finishedAt: new Date(),
+        processStartedAt: kind === "process_started" ? new Date() : null,
+      }).returning())[0];
+      if (kind === "active_executor") await db.insert(heartbeatRuns).values({
+        companyId: context.companyId, agentId: context.executor, issueId: nodeId, status: "running",
+      });
+      if (kind === "dependency_gate_waiting") {
+        await db.insert(issueThreadInteractions).values({
+          companyId: context.companyId, issueId: nodeId, kind: "ask_user_questions",
+          effectiveResolverPolicy: "human_only", payload: { version: 1, questions: [] },
+        });
+        await db.update(issues).set({ status: "blocked" }).where(eq(issues.id, nodeId));
+      }
+      if (kind === "cancelled_task") await issueService(db).update(nodeId, { status: "cancelled" });
+      const input = { action: "resume" as const, expectedVersion: (await context.read()).version,
+        reason: "Operator authorizes correcting the dependency gate misclassification" };
+      if (kind !== "dependency_gate" && kind !== "dependency_gate_waiting") {
+        await expect(context.engine.control(context.companyId, context.parent.id, input, context.userId)).rejects.toThrow();
+        expect((await context.read()).nodes.execute.status).toBe("failed");
+        return;
+      }
+      await context.engine.control(context.companyId, context.parent.id, input, context.userId);
+      await context.engine.sweepPending();
+      const recovered = await context.read();
+      expect(recovered.status).toBe("running");
+      expect(recovered.snapshot).toEqual(before.snapshot);
+      expect(recovered.runtime.grants ?? []).toEqual([]);
+      expect(recovered.nodes.execute).toMatchObject({ status: "running", attempt: 1, issueId: nodeId });
+      if (kind === "dependency_gate_waiting") {
+        expect(recovered.nodes.execute.delegatedWait?.kind).toBe("human_interaction");
+        expect((await db.select().from(issueThreadInteractions).where(eq(issueThreadInteractions.issueId, nodeId)))[0].status).toBe("pending");
+      }
+      const [attempt] = await db.select().from(workflowNodeAttempts).where(eq(workflowNodeAttempts.runId, before.id));
+      expect(attempt.status).toBe("running");
+      expect(attempt.evidence).toMatchObject({ failure: reason, dependencyGateRecovery: { heartbeatRunId: receipt.id } });
+      expect((await db.select().from(heartbeatRuns).where(eq(heartbeatRuns.id, receipt.id)))[0].status).toBe("cancelled");
+    },
+  );
+
   it.each(["unaddressed", "cancelled", "other_company", "inactive"])("does not convert a %s question into indefinite automatic waiting", async (kind) => {
     const context = await setup();
     await context.engine.sweepPending();

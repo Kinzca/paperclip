@@ -40,7 +40,7 @@ export async function workflowDependencyWait(db: Db, companyId: string, issueId:
     if (task.status === "blocked") {
       const cards = interactions.filter(card => card.issueId === id && (
         card.status === "pending" || prior?.interactionIds.includes(card.id)
-      ));
+      ) && card.status !== "cancelled" && card.status !== "expired");
       for (const card of cards) {
         observedInteractions.add(card.id);
         if (card.status === "pending") {
