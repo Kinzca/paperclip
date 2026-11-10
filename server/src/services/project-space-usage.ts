@@ -53,7 +53,7 @@ export async function scanProjectDirectory(
           : [".cache", "cache", ".godot", ".vite", ".pytest_cache"].includes(normalized) ? "cache"
           : ["tmp", "temp", ".tmp"].includes(normalized) ? "temporary" : "other";
         const review = ["build", "dependencies", "cache", "temporary"].includes(kind);
-        groups.set(name, { path: path.join(rootPath, name), name, kind, bytes: 0,
+        groups.set(name, { path: path.join(rootPath, name), name, kind, bytes: 0, complete: false,
           protection: shared || active || !review ? "protected" : "rebuildable",
           reason: shared ? "Shared or overlapping registered directory; never clean from one project."
             : active ? "Project has unfinished or paused work; retain its files."
@@ -78,12 +78,13 @@ export async function scanProjectDirectory(
       throw error;
     }
   }
-  result.directories = [...groups.values()].sort((a, b) => b.bytes - a.bytes || a.name.localeCompare(b.name));
+  result.directories = [...groups.values()].map((group) => ({ ...group, complete: result.status === "measured" }))
+    .sort((a, b) => b.bytes - a.bytes || a.name.localeCompare(b.name));
   return result;
 }
 
 /** No file writes or cleanup operations are exposed by this inventory. */
-export async function companyProjectSpaceUsage(db: Db, companyId: string, readCondition: SQL): Promise<ProjectSpaceUsage> {
+export async function companyProjectSpaceUsage(db: Db, companyId: string, readCondition: SQL, options: { expanded?: boolean } = {}): Promise<ProjectSpaceUsage> {
   const [projectRows, workspaceRows, executionRows, activityRows, attachments, logs] = await Promise.all([
     db.select({ id: projects.id, name: projects.name, pausedAt: projects.pausedAt }).from(projects)
       .where(and(eq(projects.companyId, companyId), readCondition)).orderBy(projects.name),
@@ -113,7 +114,7 @@ export async function companyProjectSpaceUsage(db: Db, companyId: string, readCo
     unattributedRegisteredAttachmentBytes: attachments.filter((row) => !projectRows.some((project) => project.id === row.projectId)).reduce((sum, row) => sum + row.bytes, 0),
     unattributedRegisteredLogBytes: logs.filter((row) => !projectRows.some((project) => project.id === row.projectId)).reduce((sum, row) => sum + row.bytes, 0),
   };
-  const deadline = Date.now() + 6_000;
+  const deadline = Date.now() + (options.expanded ? 20_000 : 6_000);
   const sharedCounted: RootUsage[] = [];
   for (const project of projectRows) {
     const roots = [...new Set(registered.filter((row) => row.companyId === companyId && row.projectId === project.id).map((row) => row.cwd!))].sort((a, b) => a.length - b.length);
@@ -128,7 +129,8 @@ export async function companyProjectSpaceUsage(db: Db, companyId: string, readCo
       const covered = entry.roots.some((root) => within(rootPath, root.path));
       const usage = covered ? { path: rootPath, shared, bytes: 0, directories: [], status: "covered" as const }
         : Date.now() >= deadline ? { path: rootPath, shared, bytes: 0, directories: [], status: "partial" as const }
-        : await scanProjectDirectory(rootPath, shared, activeOrPaused, { maxEntries: 30_000, maxMs: Math.max(0, Math.min(2_000, deadline - Date.now())) });
+        : await scanProjectDirectory(rootPath, shared, activeOrPaused, { maxEntries: options.expanded ? 300_000 : 30_000,
+          maxMs: Math.max(0, Math.min(options.expanded ? 6_000 : 2_000, deadline - Date.now())) });
       entry.roots.push(usage);
       if (!["measured", "covered"].includes(usage.status)) result.complete = false;
       if (!covered) {

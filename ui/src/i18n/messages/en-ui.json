@@ -2138,5 +2138,9 @@
   "This task has active or paused execution.": "This task has active or paused execution.",
   "This task is unfinished.": "This task is unfinished.",
   "Candidate only. Deletion must recheck current state and other references.": "Candidate only. Deletion must recheck current state and other references.",
-  "Load more": "Load more"
+  "Load more": "Load more",
+  "Expand inventory (read-only)": "Expand inventory (read-only)",
+  "Expanded inventory is optional and bounded to 20 seconds per company. Missing or very large paths may remain partial.": "Expanded inventory is optional and bounded to 20 seconds per company. Missing or very large paths may remain partial.",
+  "Not fully measured": "Not fully measured",
+  "At least {{value0}}": "At least {{value0}}"
 }

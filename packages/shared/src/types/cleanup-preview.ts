@@ -40,6 +40,7 @@ export interface ProjectSpaceUsage {
         name: string;
         kind: "source" | "deliverables" | "build" | "dependencies" | "cache" | "temporary" | "other";
         bytes: number;
+        complete: boolean;
         protection: CleanupProtection;
         reason: string;
       }>;

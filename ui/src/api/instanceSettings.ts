@@ -12,7 +12,7 @@ import { api } from "./client";
 
 export const instanceSettingsApi = {
   getStorageUsage: () => api.get<StorageUsage>("/instance/storage"),
-  getProjectSpaceUsage: (companyId: string) => api.get<ProjectSpaceUsage>(`/companies/${companyId}/project-space`),
+  getProjectSpaceUsage: (companyId: string, expanded = false) => api.get<ProjectSpaceUsage>(`/companies/${companyId}/project-space${expanded ? "?scan=expanded" : ""}`),
   get: () =>
     api.get<InstanceSettings>("/instance/settings"),
   update: (patch: PatchInstanceSettings) =>

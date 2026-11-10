@@ -16,6 +16,7 @@ it("keeps source protected, treats caches as review-only and skips linked conten
   const result = await scanProjectDirectory(root, false, false);
   expect(result.bytes).toBe(9);
   expect(result.status).toBe("measured");
+  expect(result.directories.every((row) => row.complete)).toBe(true);
   expect(result.directories.find((row) => row.name === "src")?.protection).toBe("protected");
   expect(result.directories.find((row) => row.name === "cache")?.protection).toBe("rebuildable");
   expect(result.directories.some((row) => row.protection === "candidate")).toBe(false);

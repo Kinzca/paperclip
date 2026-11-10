@@ -32,9 +32,10 @@ function ProjectSpaceContent({ initialCompanyId }: { initialCompanyId: string })
   const { setBreadcrumbs } = useBreadcrumbs();
   const [companyId, setCompanyId] = useState(initialCompanyId);
   const [projectId, setProjectId] = useState("all");
+  const [expanded, setExpanded] = useState(false);
   const [preview, setPreview] = useState<ProjectUsage | null>(null);
   useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" }, { label: uiText("Company and project space") }]); }, [locale, setBreadcrumbs]);
-  const usage = useQuery({ queryKey: ["project-space", companyId], queryFn: () => instanceSettingsApi.getProjectSpaceUsage(companyId),
+  const usage = useQuery({ queryKey: ["project-space", companyId, expanded], queryFn: () => instanceSettingsApi.getProjectSpaceUsage(companyId, expanded),
     enabled: !!companyId, staleTime: 30_000, refetchOnWindowFocus: false, retry: false });
   const visible = (usage.data?.projects ?? []).filter((project) => projectId === "all" || project.id === projectId);
   return <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -44,7 +45,7 @@ function ProjectSpaceContent({ initialCompanyId }: { initialCompanyId: string })
     </header>
     <div className="flex flex-wrap items-center gap-3">
       <SelectField className="w-full sm:w-auto" value={companyId} aria-label={uiText("Company")}
-        onValueChange={(value) => { setCompanyId(value); setProjectId("all"); setPreview(null); }}
+        onValueChange={(value) => { setCompanyId(value); setProjectId("all"); setExpanded(false); setPreview(null); }}
         options={(companies ?? []).map((company) => ({ value: company.id, label: company.name }))} />
       <SelectField className="w-full sm:w-auto" value={projectId} onValueChange={setProjectId} aria-label={uiText("Project")}
         options={[{ value: "all", label: uiText("All projects") }, ...(usage.data?.projects ?? []).map((project) => ({ value: project.id, label: project.name }))]} />
@@ -67,7 +68,11 @@ function ProjectSpaceContent({ initialCompanyId }: { initialCompanyId: string })
         <div className="flex flex-col gap-1 rounded-lg border p-4"><span className="text-sm text-muted-foreground">{uiText("Shared project paths (deduplicated)")}</span><strong className="font-mono">{!usage.data.complete && uiText("At least ")}{formatBytes(usage.data.sharedBytes)}</strong></div>
         <div className="flex flex-col gap-1 rounded-lg border p-4"><span className="text-sm text-muted-foreground">{uiText("Registered projects")}</span><strong className="font-mono">{usage.data.projects.length}</strong></div>
       </div>
-      {!usage.data.complete && <p role="status" className="text-sm text-muted-foreground">{uiText("Partial scan or unavailable paths. Displayed file sizes are a lower bound, not zero usage for missing directories.")}</p>}
+      {!usage.data.complete && <div className="flex flex-wrap items-center gap-3">
+        <p role="status" className="text-sm text-muted-foreground">{uiText("Partial scan or unavailable paths. Displayed file sizes are a lower bound, not zero usage for missing directories.")}</p>
+        {!expanded && <Button size="sm" variant="outline" disabled={usage.isFetching} onClick={() => setExpanded(true)}>{uiText("Expand inventory (read-only)")}</Button>}
+        <p className="w-full text-xs text-muted-foreground">{uiText("Expanded inventory is optional and bounded to 20 seconds per company. Missing or very large paths may remain partial.")}</p>
+      </div>}
       <p className="text-xs text-muted-foreground">{uiText("Measured {{value0}}", { value0: formatDateTime(usage.data.measuredAt) })}</p>
       {visible.length === 0 && <p className="text-sm text-muted-foreground">{uiText("No registered projects match this selection.")}</p>}
       {visible.map((project) => <details key={project.id} className="rounded-lg border bg-card" open={visible.length === 1}>
@@ -95,7 +100,8 @@ function ProjectSpaceContent({ initialCompanyId }: { initialCompanyId: string })
                 <span className="min-w-0 flex-1 break-all font-mono">{directory.name}</span>
                 <span className="text-xs text-muted-foreground">{uiText(kinds[directory.kind])}</span>
                 <span className="rounded-md bg-muted px-2 py-1 text-xs" title={uiText(directory.reason)}>{uiText(levels[directory.protection])}</span>
-                <span className="font-mono">{formatBytes(directory.bytes)}</span>
+                <span className="font-mono">{directory.complete ? formatBytes(directory.bytes) : directory.bytes > 0
+                  ? uiText("At least {{value0}}", { value0: formatBytes(directory.bytes) }) : uiText("Not fully measured")}</span>
               </div>)}
             </div>
           </div>)}
@@ -114,7 +120,8 @@ function ProjectSpaceContent({ initialCompanyId }: { initialCompanyId: string })
         <div className="max-h-96 overflow-y-auto divide-y">
           {preview?.roots.flatMap((root) => root.directories.map((directory) => <div key={directory.path} className="flex flex-col gap-1 py-3">
             <p className="break-all font-mono text-xs">{directory.path}</p>
-            <p className="text-sm">{uiText(levels[directory.protection])} · <span className="font-mono">{formatBytes(directory.bytes)}</span></p>
+            <p className="text-sm">{uiText(levels[directory.protection])} · <span className="font-mono">{directory.complete ? formatBytes(directory.bytes)
+              : directory.bytes > 0 ? uiText("At least {{value0}}", { value0: formatBytes(directory.bytes) }) : uiText("Not fully measured")}</span></p>
             <p className="text-xs text-muted-foreground">{uiText(directory.reason)}</p>
           </div>))}
           {preview && !preview.roots.some((root) => root.directories.length) && <p className="py-3 text-sm text-muted-foreground">{uiText("No measured directories are available for cleanup preview.")}</p>}

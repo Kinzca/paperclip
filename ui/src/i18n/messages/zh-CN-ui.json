@@ -2139,5 +2139,9 @@
   "This task has active or paused execution.": "此任务存在正在运行或暂停的执行流程。",
   "This task is unfinished.": "此任务尚未完成。",
   "Candidate only. Deletion must recheck current state and other references.": "仅列为候选，删除前仍须重新检查当前状态及其他引用。",
-  "Load more": "加载更多"
+  "Load more": "加载更多",
+  "Expand inventory (read-only)": "扩大统计范围（只读）",
+  "Expanded inventory is optional and bounded to 20 seconds per company. Missing or very large paths may remain partial.": "扩大统计为可选操作，每家公司最多 20 秒；缺失或超大目录仍可能只得到部分结果。",
+  "Not fully measured": "未完整统计",
+  "At least {{value0}}": "至少 {{value0}}"
 }
