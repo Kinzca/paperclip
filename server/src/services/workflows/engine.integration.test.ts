@@ -627,6 +627,112 @@ suite("native workflow execution", () => {
   });
 
   it.each([
+    { status: "running", parkedFirst: true, identity: "issueId" },
+    { status: "running", parkedFirst: false, identity: "issueId" },
+    { status: "queued", parkedFirst: true, identity: "issueId" },
+    { status: "queued", parkedFirst: false, identity: "issueId" },
+    { status: "running", parkedFirst: true, identity: "nativeIssueId" },
+    { status: "running", parkedFirst: true, identity: "contextSnapshot" },
+  ] as const)("preserves a $status dependency ($identity) while a later review waits for backlog (parkedFirst=$parkedFirst)", async ({ status, parkedFirst, identity }) => {
+    const context = await setup();
+    await context.engine.sweepPending();
+    const before = await context.read();
+    const nodeId = before.nodes.execute.issueId!;
+    const service = issueService(db);
+    const implementation = await service.create(context.companyId, {
+      title: "Coordinate implementation", parentId: nodeId, status: "todo", assigneeAgentId: context.executor,
+    });
+    const worker = await service.create(context.companyId, {
+      title: "Prepare the implementation", parentId: implementation.id, status: "in_progress", assigneeAgentId: context.executor,
+    });
+    const capture = await service.create(context.companyId, {
+      title: "Capture after implementation", parentId: nodeId, status: "backlog", assigneeAgentId: context.executor,
+    });
+    const review = await service.create(context.companyId, {
+      title: "Review the future capture", parentId: nodeId, status: "todo", assigneeAgentId: context.reviewer,
+    });
+    await service.update(review.id, { status: "blocked", blockedByIssueIds: [capture.id] });
+    const live = (await db.insert(heartbeatRuns).values({
+      companyId: context.companyId, agentId: context.executor, status,
+      issueId: identity === "issueId" ? worker.id : null,
+      nativeIssueId: identity === "nativeIssueId" ? worker.id : null,
+      contextSnapshot: identity === "contextSnapshot" ? { issueId: worker.id } : {},
+    }).returning())[0];
+    await service.update(implementation.id, { status: "blocked", blockedByIssueIds: [worker.id] });
+    await service.update(nodeId, { status: "blocked", blockedByIssueIds: parkedFirst ? [review.id, implementation.id] : [implementation.id, review.id] });
+    await context.store.markIssueChanged(context.companyId, nodeId);
+    await context.engine.sweepPending();
+    expect((await context.read()).status).toBe("running");
+    expect((await context.read()).nodes.execute).toMatchObject({ attempt: before.nodes.execute.attempt, issueId: nodeId });
+    expect(context.cancelRun).not.toHaveBeenCalled();
+    expect((await db.select().from(heartbeatRuns).where(eq(heartbeatRuns.id, live.id)))[0].status).toBe(status);
+    await assertWorkflowIssueExecutionAllowed(db, context.companyId, worker.id);
+    expect((await service.listDependencyReadiness(context.companyId, [review.id])).get(review.id)?.isDependencyReady).toBe(false);
+    // Restart preserves this same wait, not an attempt or an authorization to open capture.
+    const restarted = workflowEngine(db, { wakeup: context.wakeup, cancelRun: context.cancelRun });
+    await restarted.recover();
+    await restarted.sweepPending();
+    expect((await context.read()).status).toBe("running");
+    expect((await service.getById(capture.id))!.status).toBe("backlog");
+    // A queued, dependency-ready parent continuation also preserves the handoff.
+    const continuation = (await db.insert(heartbeatRuns).values({
+      companyId: context.companyId, agentId: context.executor, issueId: implementation.id, status: "queued",
+    }).returning())[0];
+    await db.update(heartbeatRuns).set({ status: "succeeded", finishedAt: new Date() }).where(eq(heartbeatRuns.id, live.id));
+    await service.update(worker.id, { status: "done" });
+    await context.store.markIssueChanged(context.companyId, worker.id);
+    await restarted.sweepPending();
+    expect((await context.read()).status).toBe("running");
+    expect((await service.getById(implementation.id))!.status).toBe("blocked");
+    // Once actual work and its continuation settle, backlog alone is not a wait.
+    await db.update(heartbeatRuns).set({ status: "succeeded", finishedAt: new Date() }).where(eq(heartbeatRuns.id, continuation.id));
+    await service.update(implementation.id, { status: "done" });
+    await context.store.markIssueChanged(context.companyId, implementation.id);
+    await restarted.sweepPending();
+    expect((await context.read()).status).toBe("waiting_human");
+    expect((await context.read()).runtime.grants ?? []).toEqual([]);
+  });
+
+  it.each(["unrelated", "other_company", "other_agent", "paused_agent", "blocked", "cancelled", "backlog", "finished", "root_only"])(
+    "does not use %s execution to hide a parked dependency", async kind => {
+      const context = await setup();
+      await context.engine.sweepPending();
+      const nodeId = (await context.read()).nodes.execute.issueId!;
+      const service = issueService(db);
+      const capture = await service.create(context.companyId, {
+        title: "Unopened capture", parentId: nodeId, status: "backlog", assigneeAgentId: context.executor,
+      });
+      const review = await service.create(context.companyId, {
+        title: "Future review", parentId: nodeId, status: "todo", assigneeAgentId: context.reviewer,
+      });
+      await service.update(review.id, { status: "blocked", blockedByIssueIds: [capture.id] });
+      const coordinator = await service.create(context.companyId, {
+        title: "Coordinate implementation", parentId: nodeId, status: "todo", assigneeAgentId: context.executor,
+      });
+      const worker = await service.create(context.companyId, {
+        title: "Implementation", parentId: coordinator.id, status: "in_progress", assigneeAgentId: context.reviewer,
+      });
+      if (kind === "cancelled" || kind === "backlog") await service.update(worker.id, { status: kind });
+      if (kind === "blocked") await service.update(worker.id, { status: "blocked", blockedByIssueIds: [capture.id] });
+      await service.update(coordinator.id, { status: "blocked", blockedByIssueIds: [worker.id] });
+      if (kind === "paused_agent") await db.update(agents).set({ status: "paused" }).where(eq(agents.id, context.reviewer));
+      const foreign = kind === "other_company" ? await setup() : null;
+      await db.insert(heartbeatRuns).values({
+        companyId: foreign?.companyId ?? context.companyId,
+        agentId: foreign?.executor ?? (kind === "other_agent" || kind === "root_only" ? context.executor : context.reviewer),
+        issueId: foreign?.parent.id ?? (kind === "root_only" ? nodeId : worker.id),
+        status: kind === "finished" ? "succeeded" : "running",
+      });
+      await service.update(nodeId, {
+        status: "blocked", blockedByIssueIds: kind === "unrelated" ? [review.id] : [review.id, coordinator.id],
+      });
+      await context.store.markIssueChanged(context.companyId, nodeId);
+      await context.engine.sweepPending();
+      expect((await context.read()).status).toBe("waiting_human");
+    },
+  );
+
+  it.each([
     { policy: "anyone", kind: "ask_user_questions", responderStatus: "active" },
     { policy: "anyone", kind: "ask_user_questions", responderStatus: "error" },
     { policy: "human_only", kind: "ask_user_questions", responderStatus: "active" },

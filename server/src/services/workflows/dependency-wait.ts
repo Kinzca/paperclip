@@ -1,5 +1,5 @@
 import { and, eq, inArray, or } from "drizzle-orm";
-import { agents, issueThreadInteractions, type Db } from "@paperclipai/db";
+import { agents, heartbeatRuns, issueThreadInteractions, type Db } from "@paperclipai/db";
 import type { WorkflowNodeState } from "@paperclipai/shared";
 import { issueService } from "../issues.js";
 import { issueTreeControlService } from "../issue-tree-control.js";
@@ -30,10 +30,12 @@ export async function workflowDependencyWait(db: Db, companyId: string, issueId:
   let human = false;
   const visiting = new Set<string>();
   const checked = new Set<string>();
+  const reachable = new Set<string>();
   function isInternalWork(id: string): boolean {
     if (visiting.has(id)) return false;
     if (checked.has(id)) return true;
     const task = byId.get(id);
+    if (task) reachable.add(id);
     if (!task || task.status === "cancelled" || task.status === "backlog") return false;
     if (task.status === "done") return true;
     if (!task.assigneeAgentId || task.assigneeUserId) return false;
@@ -61,21 +63,43 @@ export async function workflowDependencyWait(db: Db, companyId: string, issueId:
         return true;
       }
       visiting.add(id);
-      const internal = blockers.every(isInternalWork);
+      // Visit every branch: an earlier parked review must not hide a live sibling.
+      const internal = blockers.map(isInternalWork).every(Boolean);
       visiting.delete(id);
       if (!internal) return false;
     }
     checked.add(id);
     return true;
   }
-  if (!isInternalWork(issueId)) return null;
+  const whollyInternal = isInternalWork(issueId);
+  if (!whollyInternal) {
+    // A future capture/review may intentionally be parked while implementation
+    // runs. Keep that actual dependency alive without admitting the parked path.
+    const activeRuns = await db.select({
+      issueId: heartbeatRuns.issueId, nativeIssueId: heartbeatRuns.nativeIssueId,
+      contextSnapshot: heartbeatRuns.contextSnapshot, agentId: heartbeatRuns.agentId,
+    }).from(heartbeatRuns).where(and(
+      eq(heartbeatRuns.companyId, companyId), inArray(heartbeatRuns.status, ["queued", "running"]),
+    ));
+    const liveDependency = activeRuns.some(run => {
+      const id = run.issueId ?? run.nativeIssueId ?? run.contextSnapshot?.issueId;
+      if (typeof id !== "string" || id === issueId || !reachable.has(id)) return false;
+      const task = byId.get(id)!;
+      const continuingParent = task.status === "blocked" && checked.has(id) &&
+        !interactions.some(card => card.issueId === id && card.status === "pending");
+      return task.assigneeAgentId === run.agentId && !task.assigneeUserId &&
+        availableAgents.has(run.agentId) && (["todo", "in_progress", "in_review"].includes(task.status) || continuingParent) &&
+        readiness.get(id)?.isDependencyReady === true;
+    });
+    if (!liveDependency) return null;
+  }
   const root = readiness.get(issueId)!;
   const kind: NonNullable<WorkflowNodeState["delegatedWait"]>["kind"] = human
     ? "human_interaction" : waitingInteractions.size ? "agent_interaction" : "dependencies";
   // Reuse the native finalize barrier; done does not mean restored to the reader's workspace.
   return {
-    ready: root.isDependencyReady && waitingInteractions.size === 0,
+    ready: whollyInternal && root.isDependencyReady && waitingInteractions.size === 0,
     blockerIssueIds: root.blockerIssueIds,
-    wait: { kind, issueIds: [...checked], interactionIds: [...observedInteractions] },
+    wait: { kind, issueIds: [...new Set([...checked, ...reachable])], interactionIds: [...observedInteractions] },
   };
 }
