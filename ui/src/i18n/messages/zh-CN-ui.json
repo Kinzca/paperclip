@@ -2143,5 +2143,8 @@
   "Expand inventory (read-only)": "扩大统计范围（只读）",
   "Expanded inventory is optional and bounded to 20 seconds per company. Missing or very large paths may remain partial.": "扩大统计为可选操作，每家公司最多 20 秒；缺失或超大目录仍可能只得到部分结果。",
   "Not fully measured": "未完整统计",
-  "At least {{value0}}": "至少 {{value0}}"
+  "At least {{value0}}": "至少 {{value0}}",
+  "Company project directories": "公司与项目目录",
+  "Includes {{value0}} registered company/project directories. Overlapping project and instance paths are counted only once.": "包含 {{value0}} 个已登记的公司与项目目录。项目与实例的重叠路径只统计一次。",
+  "Logical file sizes include instance data and registered local project directories. Symbolic links, unregistered folders, remote databases and cloud object storage are excluded. This does not measure reclaimable space.": "文件逻辑大小包含实例数据及已登记的本地项目目录。不包含符号链接、未登记目录、远程数据库和云端对象存储；不代表可回收空间。"
 }

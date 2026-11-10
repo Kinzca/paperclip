@@ -2142,5 +2142,8 @@
   "Expand inventory (read-only)": "Expand inventory (read-only)",
   "Expanded inventory is optional and bounded to 20 seconds per company. Missing or very large paths may remain partial.": "Expanded inventory is optional and bounded to 20 seconds per company. Missing or very large paths may remain partial.",
   "Not fully measured": "Not fully measured",
-  "At least {{value0}}": "At least {{value0}}"
+  "At least {{value0}}": "At least {{value0}}",
+  "Company project directories": "Company project directories",
+  "Includes {{value0}} registered company/project directories. Overlapping project and instance paths are counted only once.": "Includes {{value0}} registered company/project directories. Overlapping project and instance paths are counted only once.",
+  "Logical file sizes include instance data and registered local project directories. Symbolic links, unregistered folders, remote databases and cloud object storage are excluded. This does not measure reclaimable space.": "Logical file sizes include instance data and registered local project directories. Symbolic links, unregistered folders, remote databases and cloud object storage are excluded. This does not measure reclaimable space."
 }

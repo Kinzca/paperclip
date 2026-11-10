@@ -7,8 +7,9 @@ export interface StorageUsage {
   filesScanned: number;
   remoteStorageExcluded: boolean;
   externalDatabaseExcluded: boolean;
+  projectRootCount: number;
   categories: Array<{
-    key: "database" | "logs" | "files" | "workspaces" | "backups" | "other";
+    key: "database" | "logs" | "files" | "workspaces" | "backups" | "other" | "companyProjects";
     bytes: number;
   }>;
 }

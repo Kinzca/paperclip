@@ -131,7 +131,9 @@ export function instanceSettingsRoutes(db: Db, pluginWorkers?: PluginWorkerManag
   const router = Router();
   router.get("/instance/storage", async (req, res) => {
     assertCanManageInstanceSettings(req);
-    res.json(await instanceStorageUsage(loadConfig()));
+    const scan = z.object({ scan: z.enum(["standard", "expanded"]).default("standard") }).safeParse(req.query);
+    if (!scan.success) { res.status(400).json({ error: "Invalid inventory mode" }); return; }
+    res.json(await instanceStorageUsage(loadConfig(), db, scan.data.scan === "expanded"));
   });
   router.get("/companies/:companyId/project-space", async (req, res) => {
     assertCanManageInstanceSettings(req);

@@ -109,9 +109,9 @@ export function CompanySettingsSidebar() {
       <nav className="flex-1 min-h-0 overflow-y-auto scrollbar-auto-hide px-3 py-2">
         <div className="flex flex-col gap-0.5">
           <SidebarNavItem to="/company/settings" label={uiText("General")} icon={SlidersHorizontal} end />
+          <SidebarNavItem to={`${INSTANCE_SETTINGS_PATH_PREFIX}/project-space`} label={uiText("Company and project space")} icon={Building2} end />
           <SidebarNavItem to={`${INSTANCE_SETTINGS_PATH_PREFIX}/archived-chats`} label={uiText("Archived chats")} icon={Archive} end />
           <SidebarNavItem to={`${INSTANCE_SETTINGS_PATH_PREFIX}/storage`} label={uiText("Storage")} icon={HardDrive} end />
-          <SidebarNavItem to={`${INSTANCE_SETTINGS_PATH_PREFIX}/project-space`} label={uiText("Company and project space")} icon={Building2} end />
           {showPage("instance.profile") && (
             <SidebarNavItem
               to={`${INSTANCE_SETTINGS_PATH_PREFIX}/profile`}

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Archive, Building2, FolderOpen, HardDrive, RefreshCw } from "lucide-react";
 import { instanceSettingsApi } from "@/api/instanceSettings";
@@ -13,6 +13,7 @@ const categoryStyles = {
   database: { label: "Database", color: "bg-chart-1" },
   logs: { label: "Run logs", color: "bg-chart-2" },
   files: { label: "Attachments and files", color: "bg-chart-3" },
+  companyProjects: { label: "Company project directories", color: "bg-primary" },
   workspaces: { label: "Managed workspaces", color: "bg-chart-4" },
   backups: { label: "Backups", color: "bg-chart-5" },
   other: { label: "Other instance data", color: "bg-muted" },
@@ -21,8 +22,9 @@ const categoryStyles = {
 export function StorageSettings() {
   const locale = useUiLocale();
   const { setBreadcrumbs } = useBreadcrumbs();
+  const [expanded, setExpanded] = useState(false);
   useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" }, { label: uiText("Storage") }]); }, [setBreadcrumbs, locale]);
-  const usage = useQuery({ queryKey: ["instance-storage"], queryFn: instanceSettingsApi.getStorageUsage,
+  const usage = useQuery({ queryKey: ["instance-storage", expanded], queryFn: () => instanceSettingsApi.getStorageUsage(expanded),
     staleTime: 30_000, refetchOnWindowFocus: false, retry: false });
   return <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
     <header className="flex flex-col gap-2">
@@ -48,13 +50,16 @@ export function StorageSettings() {
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {usage.data.categories.map((category) => <div key={category.key} className="flex flex-col gap-1">
             <dt className="flex items-center gap-2 text-sm text-muted-foreground"><span className={`size-2 rounded-full ${categoryStyles[category.key].color}`} />{uiText(categoryStyles[category.key].label)}</dt>
-            <dd className="font-mono text-sm">{formatBytes(category.bytes)}</dd>
+            <dd className="font-mono text-sm">{usage.data.complete ? formatBytes(category.bytes) : category.bytes > 0
+              ? uiText("At least {{value0}}", { value0: formatBytes(category.bytes) }) : uiText("Not fully measured")}</dd>
           </div>)}
         </dl>
         <p className="break-all font-mono text-xs text-muted-foreground">{usage.data.rootPath}</p>
         <p className="text-xs text-muted-foreground">{uiText("Measured {{value0}}. Results are cached for 30 seconds.", { value0: formatDateTime(usage.data.measuredAt) })}</p>
         {!usage.data.complete && <p role="status" className="text-sm text-muted-foreground">{uiText("Partial inventory: the scan reached its time or entry limit, or some paths were unreadable. Values are a lower bound.")}</p>}
-        <p className="text-xs text-muted-foreground">{uiText("Logical file sizes only. Symbolic links, external project folders, remote databases and cloud object storage are excluded. This does not measure free disk space or reclaimable space.")}</p>
+        {!usage.data.complete && !expanded && <Button className="self-start" size="sm" variant="outline" onClick={() => setExpanded(true)}>{uiText("Expand inventory (read-only)")}</Button>}
+        <p className="text-xs text-muted-foreground">{uiText("Includes {{value0}} registered company/project directories. Overlapping project and instance paths are counted only once.", { value0: usage.data.projectRootCount })}</p>
+        <p className="text-xs text-muted-foreground">{uiText("Logical file sizes include instance data and registered local project directories. Symbolic links, unregistered folders, remote databases and cloud object storage are excluded. This does not measure reclaimable space.")}</p>
       </>}
     </section>
     <section className="divide-y rounded-lg border bg-card">
