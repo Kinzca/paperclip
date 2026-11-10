@@ -1,6 +1,10 @@
 import { trackIdleWork } from "../services/task-admission.js";
 import { loadConfig } from "../config.js";
 import { instanceStorageUsage } from "../services/storage-usage.js";
+import { companyProjectSpaceUsage } from "../services/project-space-usage.js";
+import { projectReadSqlCondition } from "../services/authorization.js";
+import { assertCompanyAccess } from "./authz.js";
+import { z } from "zod";
 import { Router, type Request } from "express";
 import { companies, type Db } from "@paperclipai/db";
 import {
@@ -128,6 +132,13 @@ export function instanceSettingsRoutes(db: Db, pluginWorkers?: PluginWorkerManag
   router.get("/instance/storage", async (req, res) => {
     assertCanManageInstanceSettings(req);
     res.json(await instanceStorageUsage(loadConfig()));
+  });
+  router.get("/companies/:companyId/project-space", async (req, res) => {
+    assertCanManageInstanceSettings(req);
+    const parsed = z.string().uuid().safeParse(req.params.companyId);
+    if (!parsed.success) { res.status(400).json({ error: "Invalid company ID" }); return; }
+    assertCompanyAccess(req, parsed.data);
+    res.json(await companyProjectSpaceUsage(db, parsed.data, await projectReadSqlCondition(db, req.actor)));
   });
   const svc = instanceSettingsService(db);
   const environments = environmentService(db);

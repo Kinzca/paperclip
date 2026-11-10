@@ -11752,6 +11752,36 @@ export function issueService(db: Db) {
       return withIssueLabels(db, rows);
     },
 
+    previewArchivedChatCleanup: async (
+      companyId: string, userId: string, ids: string[], readCondition?: SQL,
+    ) => {
+      if (!ids.length) return [];
+      const rows = await db.select({
+        id: issues.id, title: issues.title, identifier: issues.identifier, status: issues.status,
+        hasChildren: sql<boolean>`EXISTS (SELECT 1 FROM issues child WHERE child.parent_id = ${issues.id})`,
+        hasExecution: sql<boolean>`EXISTS (SELECT 1 FROM heartbeat_runs run WHERE run.company_id = ${companyId}
+          AND run.issue_id = ${issues.id} AND run.status IN ('queued', 'running'))`,
+        hasWorkflow: sql<boolean>`EXISTS (SELECT 1 FROM workflow_runs flow WHERE flow.company_id = ${companyId}
+          AND flow.issue_id = ${issues.id} AND flow.status NOT IN ('succeeded', 'failed', 'cancelled'))`,
+      }).from(issues).innerJoin(issueInboxArchives, eq(issueInboxArchives.issueId, issues.id))
+        .where(and(eq(issues.companyId, companyId), eq(issueInboxArchives.companyId, companyId),
+          eq(issueInboxArchives.userId, userId), inArray(issues.id, ids), visibleIssueCondition(), readCondition,
+          sql`NOT (${inboxVisibleForUserCondition(companyId, userId)})`));
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      return ids.map((id) => {
+        const row = byId.get(id);
+        const reason = !row ? "This chat is unavailable or is no longer archived by you."
+          : row.hasChildren ? "This task has subtasks."
+          : row.hasExecution || row.hasWorkflow ? "This task has active or paused execution."
+          : !["backlog", "done", "cancelled"].includes(row.status) ? "This task is unfinished."
+          : "Candidate only. Deletion must recheck current state and other references.";
+        return { id, title: row?.title ?? null, identifier: row?.identifier ?? null,
+          protection: row && !row.hasChildren && !row.hasExecution && !row.hasWorkflow
+            && ["backlog", "done", "cancelled"].includes(row.status) ? "candidate" as const : "protected" as const,
+          reason };
+      });
+    },
+
     remove: (id: string, archivedBy?: { companyId: string; userId: string }) =>
       db.transaction(async (tx) => {
         if (archivedBy) {

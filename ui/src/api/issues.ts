@@ -1,4 +1,5 @@
 import type { SetIssueTitle } from "@paperclipai/shared";
+import type { ArchivedChatCleanupPreview } from "@paperclipai/shared";
 import type { ExecutionReconciliation } from "@paperclipai/shared";
 import type {
   AcceptedPlanDecompositionSummary,
@@ -265,6 +266,8 @@ export const issuesApi = {
     return api.get<Issue[]>(`/companies/${companyId}/archived-chats?${params}`);
   },
   deleteArchivedChat: (id: string) => api.delete<Issue>(`/issues/${id}?archivedChat=true`),
+  previewArchivedChatCleanup: (companyId: string, input: { issueIds: string[] } | { filters: { q?: string; projectId?: string } }) =>
+    api.post<ArchivedChatCleanupPreview>(`/companies/${companyId}/archived-chats/cleanup-preview`, input),
   unarchiveFromInbox: (id: string) =>
     api.delete<{ id: string; archivedAt: Date } | { ok: true }>(
       `/issues/${id}/inbox-archive`,

@@ -1,5 +1,6 @@
 import type {
   StorageUsage,
+  ProjectSpaceUsage,
   InstanceExperimentalSettingsWithManaged,
   InstanceGeneralSettings,
   InstanceSettings,
@@ -11,6 +12,7 @@ import { api } from "./client";
 
 export const instanceSettingsApi = {
   getStorageUsage: () => api.get<StorageUsage>("/instance/storage"),
+  getProjectSpaceUsage: (companyId: string) => api.get<ProjectSpaceUsage>(`/companies/${companyId}/project-space`),
   get: () =>
     api.get<InstanceSettings>("/instance/settings"),
   update: (patch: PatchInstanceSettings) =>

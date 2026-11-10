@@ -2,6 +2,7 @@ import { uiText, useUiLocale } from "@/i18n/ui";
 import { useQuery } from "@tanstack/react-query";
 import {
   Archive,
+  Building2,
   HardDrive,
   ArrowLeft,
   Cpu,
@@ -112,6 +113,7 @@ export function CompanySettingsSidebar() {
           <SidebarNavItem to="/company/settings" label={uiText("General")} icon={SlidersHorizontal} end />
           <SidebarNavItem to={`${INSTANCE_SETTINGS_PATH_PREFIX}/archived-chats`} label={uiText("Archived chats")} icon={Archive} end />
           <SidebarNavItem to={`${INSTANCE_SETTINGS_PATH_PREFIX}/storage`} label={uiText("Storage")} icon={HardDrive} end />
+          <SidebarNavItem to={`${INSTANCE_SETTINGS_PATH_PREFIX}/project-space`} label={uiText("Company and project space")} icon={Building2} end />
           {showPage("instance.profile") && (
             <SidebarNavItem
               to={`${INSTANCE_SETTINGS_PATH_PREFIX}/profile`}

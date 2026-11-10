@@ -204,6 +204,34 @@ describeEmbeddedPostgres("inbox archive routes", () => {
     expect(await db.select().from(issueInboxArchives)).toHaveLength(0);
   });
 
+  it("previews an owned selection without deletion and hides unavailable records", async () => {
+    const seeded = await seed();
+    await db.update(issues).set({ status: "done" }).where(eq(issues.id, seeded.issueId));
+    await issueService(db).archiveInbox(seeded.companyId, seeded.issueId, seeded.responsibleUserId);
+    const actor: Express.Request["actor"] = { type: "board", source: "session", userId: seeded.responsibleUserId,
+      companyIds: [seeded.companyId], memberships: [{ companyId: seeded.companyId, membershipRole: "operator", status: "active" }], isInstanceAdmin: false };
+    const app = appFor(actor);
+    const unknown = randomUUID();
+    const response = await request(app).post(`/api/companies/${seeded.companyId}/archived-chats/cleanup-preview`)
+      .send({ issueIds: [seeded.issueId, unknown] }).expect(200);
+    expect(response.body).toMatchObject({ previewOnly: true, truncated: false, items: [
+      { id: seeded.issueId, protection: "candidate", title: "Archive me" }, { id: unknown, protection: "protected", title: null },
+    ] });
+    expect(await db.select().from(issues)).toHaveLength(1);
+    expect(await db.select().from(issueInboxArchives)).toHaveLength(1);
+    await request(appFor(agentActor(seeded))).post(`/api/companies/${seeded.companyId}/archived-chats/cleanup-preview`)
+      .send({ issueIds: [seeded.issueId] }).expect(403);
+    await request(app).post(`/api/companies/${randomUUID()}/archived-chats/cleanup-preview`)
+      .send({ issueIds: [seeded.issueId] }).expect(403);
+    await request(app).post(`/api/companies/${seeded.companyId}/archived-chats/cleanup-preview`)
+      .send({ issueIds: [seeded.issueId], filters: {} }).expect(400);
+    await db.update(heartbeatRuns).set({ issueId: seeded.issueId }).where(eq(heartbeatRuns.id, seeded.runId));
+    const protectedResult = await request(app).post(`/api/companies/${seeded.companyId}/archived-chats/cleanup-preview`)
+      .send({ filters: {} }).expect(200);
+    expect(protectedResult.body.items[0].protection).toBe("protected");
+    expect(protectedResult.body.items[0].reason).toContain("active or paused");
+  });
+
   it("preserves board idempotency and returns the resolved user", async () => {
     const seeded = await seed();
     const app = appFor({

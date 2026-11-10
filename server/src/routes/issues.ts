@@ -8269,6 +8269,26 @@ export function issueRoutes(
     res.json(result);
   });
 
+  router.post("/companies/:companyId/archived-chats/cleanup-preview", async (req, res) => {
+    assertBoard(req);
+    const companyId = req.params.companyId as string;
+    assertCompanyAccess(req, companyId);
+    if (req.actor.type !== "board" || !req.actor.userId) throw forbidden("Board user required");
+    const input = z.union([
+      z.object({ issueIds: z.array(z.string().uuid()).min(1).max(200) }).strict(),
+      z.object({ filters: z.object({ q: z.string().trim().max(200).optional(),
+        projectId: z.union([z.string().uuid(), z.literal("none")]).optional() }).strict() }).strict(),
+    ]).safeParse(req.body);
+    if (!input.success) { res.status(400).json({ error: "Invalid cleanup preview selection" }); return; }
+    const readCondition = await issueReadSqlCondition(db, req.actor);
+    const rows = "filters" in input.data
+      ? await svc.listArchivedChats(companyId, req.actor.userId, { ...input.data.filters, limit: 501, offset: 0, readCondition }) : null;
+    const ids = rows ? rows.slice(0, 500).map((row) => row.id)
+      : "issueIds" in input.data ? [...new Set(input.data.issueIds)] : [];
+    res.json({ previewOnly: true, measuredAt: new Date().toISOString(), truncated: (rows?.length ?? 0) > 500,
+      items: await svc.previewArchivedChatCleanup(companyId, req.actor.userId, ids, readCondition) });
+  });
+
   router.get("/companies/:companyId/archived-chats", async (req, res) => {
     assertBoard(req);
     const companyId = req.params.companyId as string;

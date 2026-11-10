@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ArchivedChats } from "./ArchivedChats";
 
-const api = vi.hoisted(() => ({ listArchivedChats: vi.fn(), deleteArchivedChat: vi.fn(), unarchiveFromInbox: vi.fn() }));
+const api = vi.hoisted(() => ({ listArchivedChats: vi.fn(), deleteArchivedChat: vi.fn(), unarchiveFromInbox: vi.fn(), previewArchivedChatCleanup: vi.fn() }));
 vi.mock("@/api/issues", () => ({ issuesApi: api }));
 vi.mock("@/api/auth", () => ({ authApi: { getSession: async () => ({ user: { id: "user-1" } }) } }));
 vi.mock("@/api/projects", () => ({ projectsApi: { list: async () => [] } }));
@@ -52,4 +52,16 @@ it("unarchives without calling delete or a task-resume API", async () => {
   await act(async () => button("Unarchive").click());
   await vi.waitFor(() => expect(api.unarchiveFromInbox).toHaveBeenCalledExactlyOnceWith("task-1"));
   expect(api.deleteArchivedChat).not.toHaveBeenCalled();
+});
+
+it("previews selected chats with protection reasons and never submits a deletion", async () => {
+  api.previewArchivedChatCleanup.mockResolvedValue({ previewOnly: true, truncated: false, measuredAt: new Date().toISOString(),
+    items: [{ id: task.id, title: task.title, identifier: task.identifier, protection: "protected", reason: "This task has subtasks." }] });
+  await act(async () => button("Select loaded chats (up to 200)").click());
+  await act(async () => button("Preview batch cleanup").click());
+  await vi.waitFor(() => expect(api.previewArchivedChatCleanup).toHaveBeenCalledExactlyOnceWith("company-1", { issueIds: [task.id] }));
+  expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain("This task has subtasks.");
+  expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain("No data has been deleted");
+  expect(api.deleteArchivedChat).not.toHaveBeenCalled();
+  expect(api.unarchiveFromInbox).not.toHaveBeenCalled();
 });

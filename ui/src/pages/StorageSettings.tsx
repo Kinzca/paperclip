@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Archive, FolderOpen, HardDrive, RefreshCw } from "lucide-react";
+import { Archive, Building2, FolderOpen, HardDrive, RefreshCw } from "lucide-react";
 import { instanceSettingsApi } from "@/api/instanceSettings";
 import { Button } from "@/components/ui/button";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
@@ -58,6 +58,12 @@ export function StorageSettings() {
       </>}
     </section>
     <section className="divide-y rounded-lg border bg-card">
+      <div className="flex items-center gap-4 p-4">
+        <Building2 className="size-5 shrink-0 text-muted-foreground" />
+        <div className="flex min-w-0 flex-1 flex-col gap-1"><h2 className="text-sm font-medium">{uiText("Company and project space")}</h2>
+          <p className="text-sm text-muted-foreground">{uiText("Inspect local directories by company and project, with cleanup protection levels.")}</p></div>
+        <Button variant="secondary" size="sm" asChild><Link to="/company/settings/instance/project-space">{uiText("Manage")}</Link></Button>
+      </div>
       <div className="flex items-center gap-4 p-4">
         <Archive className="size-5 shrink-0 text-muted-foreground" />
         <div className="flex min-w-0 flex-1 flex-col gap-1"><h2 className="text-sm font-medium">{uiText("Archived chats")}</h2>
