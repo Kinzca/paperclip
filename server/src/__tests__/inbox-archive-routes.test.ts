@@ -170,6 +170,40 @@ describeEmbeddedPostgres("inbox archive routes", () => {
     };
   }
 
+  it("lists only the current user's archived chats and rejects agents and other companies", async () => {
+    const seeded = await seed();
+    await issueService(db).archiveInbox(seeded.companyId, seeded.issueId, seeded.responsibleUserId);
+    const actor: Express.Request["actor"] = { type: "board", source: "session", userId: seeded.responsibleUserId,
+      companyIds: [seeded.companyId], memberships: [{ companyId: seeded.companyId, membershipRole: "operator", status: "active" }], isInstanceAdmin: false };
+    const app = appFor(actor);
+    const result = await request(app).get(`/api/companies/${seeded.companyId}/archived-chats`).expect(200);
+    expect(result.body.map((row: { id: string }) => row.id)).toEqual([seeded.issueId]);
+    await request(app).get(`/api/companies/${randomUUID()}/archived-chats`).expect(403);
+    await request(appFor(agentActor(seeded))).get(`/api/companies/${seeded.companyId}/archived-chats`).expect(403);
+    const other = appFor({ ...actor, userId: seeded.targetUserId });
+    expect((await request(other).get(`/api/companies/${seeded.companyId}/archived-chats`).expect(200)).body).toEqual([]);
+    expect((await request(app).get(`/api/companies/${seeded.companyId}/archived-chats?q=unmatched`).expect(200)).body).toEqual([]);
+  });
+
+  it("requires an owned archive and refuses unfinished tasks before deleting a completed leaf", async () => {
+    const seeded = await seed();
+    const svc = issueService(db);
+    const scope = { companyId: seeded.companyId, userId: seeded.responsibleUserId };
+    await expect(svc.remove(seeded.issueId, scope)).rejects.toThrow("currently archived by you");
+    await svc.archiveInbox(seeded.companyId, seeded.issueId, seeded.responsibleUserId);
+    await expect(svc.remove(seeded.issueId, scope)).rejects.toThrow("Finish or cancel");
+    await db.update(issues).set({ status: "done" }).where(eq(issues.id, seeded.issueId));
+    const childId = randomUUID();
+    await db.insert(issues).values({ id: childId, companyId: seeded.companyId, parentId: seeded.issueId, title: "Keep child", status: "done" });
+    await expect(svc.remove(seeded.issueId, scope)).rejects.toThrow("subtasks");
+    await db.delete(issues).where(eq(issues.id, childId));
+    await db.update(heartbeatRuns).set({ issueId: seeded.issueId }).where(eq(heartbeatRuns.id, seeded.runId));
+    await expect(svc.remove(seeded.issueId, scope)).rejects.toThrow("active or paused");
+    await db.update(heartbeatRuns).set({ status: "succeeded" }).where(eq(heartbeatRuns.id, seeded.runId));
+    expect((await svc.remove(seeded.issueId, scope))?.id).toBe(seeded.issueId);
+    expect(await db.select().from(issueInboxArchives)).toHaveLength(0);
+  });
+
   it("preserves board idempotency and returns the resolved user", async () => {
     const seeded = await seed();
     const app = appFor({

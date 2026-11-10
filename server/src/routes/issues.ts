@@ -8269,6 +8269,23 @@ export function issueRoutes(
     res.json(result);
   });
 
+  router.get("/companies/:companyId/archived-chats", async (req, res) => {
+    assertBoard(req);
+    const companyId = req.params.companyId as string;
+    assertCompanyAccess(req, companyId);
+    if (req.actor.type !== "board" || !req.actor.userId) throw forbidden("Board user required");
+    const query = z.object({
+      q: z.string().trim().max(200).optional(),
+      projectId: z.union([z.string().uuid(), z.literal("none")]).optional(),
+      limit: z.coerce.number().int().min(1).max(100).default(50),
+      offset: z.coerce.number().int().min(0).default(0),
+    }).safeParse(req.query);
+    if (!query.success) { res.status(400).json({ error: "Invalid archived chat filters" }); return; }
+    res.json(await svc.listArchivedChats(companyId, req.actor.userId, {
+      ...query.data, readCondition: await issueReadSqlCondition(db, req.actor),
+    }));
+  });
+
   router.get("/companies/:companyId/issues", async (req, res) => {
     const startedAt = Date.now();
     const companyId = req.params.companyId as string;
@@ -15818,6 +15835,12 @@ export function issueRoutes(
   );
 
   router.delete("/issues/:id", async (req, res) => {
+    const archiveQuery = z.object({ archivedChat: z.literal("true").optional() }).safeParse(req.query);
+    if (!archiveQuery.success) { res.status(400).json({ error: "Invalid deletion options" }); return; }
+    if (archiveQuery.data.archivedChat) {
+      assertBoard(req);
+      if (req.actor.type !== "board" || !req.actor.userId) throw forbidden("Board user required");
+    }
     const id = req.params.id as string;
     const existing = await getAccessibleResource(
       req,
@@ -15829,7 +15852,8 @@ export function issueRoutes(
     if (!(await assertAgentIssueMutationAllowed(req, res, existing))) return;
     const attachments = await svc.listAttachments(id);
 
-    const issue = await svc.remove(id);
+    const issue = await svc.remove(id, archiveQuery.data.archivedChat && req.actor.type === "board" && req.actor.userId
+      ? { companyId: existing.companyId, userId: req.actor.userId } : undefined);
     if (!issue) {
       res.status(404).json({ error: "Issue not found" });
       return;

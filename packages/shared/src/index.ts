@@ -2876,3 +2876,4 @@ export type { AgentLifecycleRequest, AgentLifecycleResult } from "./types/agent-
 
 export * from "./fast-response.js";
 export * from "./workflows.js";
+export type { StorageUsage } from "./types/storage-usage.js";

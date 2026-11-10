@@ -1,4 +1,6 @@
 import { trackIdleWork } from "../services/task-admission.js";
+import { loadConfig } from "../config.js";
+import { instanceStorageUsage } from "../services/storage-usage.js";
 import { Router, type Request } from "express";
 import { companies, type Db } from "@paperclipai/db";
 import {
@@ -123,6 +125,10 @@ function withTaskDrainTransition<T>(run: () => Promise<T>): Promise<T> {
 
 export function instanceSettingsRoutes(db: Db, pluginWorkers?: PluginWorkerManager, prepareIdleDatabaseBackup?: () => Promise<boolean>) {
   const router = Router();
+  router.get("/instance/storage", async (req, res) => {
+    assertCanManageInstanceSettings(req);
+    res.json(await instanceStorageUsage(loadConfig()));
+  });
   const svc = instanceSettingsService(db);
   const environments = environmentService(db);
   const heartbeat = heartbeatService(db);

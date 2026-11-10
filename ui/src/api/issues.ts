@@ -257,6 +257,14 @@ export const issuesApi = {
       `/issues/${id}/inbox-archive`,
       {},
     ),
+  listArchivedChats: (companyId: string, filters: { q?: string; projectId?: string; offset?: number; limit?: number }) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) {
+      if (value !== undefined && value !== "") params.set(key, String(value));
+    }
+    return api.get<Issue[]>(`/companies/${companyId}/archived-chats?${params}`);
+  },
+  deleteArchivedChat: (id: string) => api.delete<Issue>(`/issues/${id}?archivedChat=true`),
   unarchiveFromInbox: (id: string) =>
     api.delete<{ id: string; archivedAt: Date } | { ok: true }>(
       `/issues/${id}/inbox-archive`,

@@ -94,6 +94,8 @@ import { DesignGuide } from "./pages/DesignGuide";
 import { InstanceExperimentalSettings } from "./pages/InstanceExperimentalSettings";
 import { InstanceAccess } from "./pages/InstanceAccess";
 import { ProfileSettings } from "./pages/ProfileSettings";
+import { ArchivedChats } from "./pages/ArchivedChats";
+import { StorageSettings } from "./pages/StorageSettings";
 import { PluginManager } from "./pages/PluginManager";
 import { PluginSettings } from "./pages/PluginSettings";
 import { AdapterManager } from "./pages/AdapterManager";
@@ -245,6 +247,8 @@ function boardRoutes(streamlinedUiEnabled: boolean, combinedInboxTasksEnabled: b
       <Route path="apps/:connectionId" element={<Navigate to="permissions" replace />} />
       <Route path="apps/:connectionId/:tab" element={<AppDetail />} />
       <Route path="company/settings/instance" element={<Navigate to="/company/settings" replace />} />
+      <Route path="company/settings/instance/archived-chats" element={<ArchivedChats />} />
+      <Route path="company/settings/instance/storage" element={<StorageSettings />} />
       <Route element={<HiddenSettingsPageGate pageKey="instance.profile" />}>
         <Route path="company/settings/instance/profile" element={<ProfileSettings />} />
       </Route>

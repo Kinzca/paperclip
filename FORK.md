@@ -1,5 +1,7 @@
 # Paperclip 本地定制版
 
+设置新增已归档对话管理与只读存储统计；搜索、取消归档、永久删除的范围及保护条件见[说明](doc/ARCHIVED-CHATS-AND-STORAGE.zh-CN.md)。不自动清理文件或恢复暂停任务。
+
 内部问答等待、局部人工决定、交接并发保护、工具预检、候选版本与原生媒体校验、本地宿主监督见[执行可靠性说明](doc/UNATTENDED-EXECUTION-RELIABILITY.zh-CN.md)。不新增业务数据迁移、不自动解除原暂停或人工审批。
 
 此 Fork 基于官方 `v2026.1023.0`，定制分支是 **codex/native-workflow-engine**。为保持现有本地实例兼容，不直接追随上游 master 升级。

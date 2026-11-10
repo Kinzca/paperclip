@@ -11725,8 +11725,61 @@ export function issueService(db: Db) {
       return cleared;
     },
 
-    remove: (id: string) =>
+    listArchivedChats: async (
+      companyId: string,
+      userId: string,
+      filters: { q?: string; projectId?: string; limit: number; offset: number; readCondition?: SQL },
+    ) => {
+      const conditions = [
+        eq(issues.companyId, companyId),
+        eq(issueInboxArchives.companyId, companyId),
+        eq(issueInboxArchives.userId, userId),
+        visibleIssueCondition(),
+        sql`NOT (${inboxVisibleForUserCondition(companyId, userId)})`,
+      ];
+      if (filters.readCondition) conditions.push(filters.readCondition);
+      if (filters.projectId) conditions.push(filters.projectId === "none"
+        ? isNull(issues.projectId) : eq(issues.projectId, filters.projectId));
+      if (filters.q) {
+        const pattern = `%${filters.q.replace(/[\\%_]/g, "\\$&")}%`;
+        conditions.push(sql`(${issues.title} ILIKE ${pattern} OR ${issues.identifier} ILIKE ${pattern})`);
+      }
+      const rows = await db.select({ ...getTableColumns(issues), archivedAt: issueInboxArchives.archivedAt })
+        .from(issues).innerJoin(issueInboxArchives, eq(issueInboxArchives.issueId, issues.id))
+        .where(and(...conditions))
+        .orderBy(desc(issueInboxArchives.archivedAt), asc(issues.id))
+        .limit(filters.limit).offset(filters.offset);
+      return withIssueLabels(db, rows);
+    },
+
+    remove: (id: string, archivedBy?: { companyId: string; userId: string }) =>
       db.transaction(async (tx) => {
+        if (archivedBy) {
+          // Lock the task before checking its archive and execution state. New
+          // children/runs referencing it cannot race past the delete decision.
+          const [task] = await tx.select().from(issues)
+            .where(and(eq(issues.id, id), eq(issues.companyId, archivedBy.companyId)))
+            .for("update");
+          if (!task) return null;
+          const [archive] = await tx.select({ id: issues.id }).from(issues)
+            .innerJoin(issueInboxArchives, eq(issueInboxArchives.issueId, issues.id))
+            .where(and(eq(issues.id, id), eq(issueInboxArchives.companyId, archivedBy.companyId),
+              eq(issueInboxArchives.userId, archivedBy.userId),
+              sql`NOT (${inboxVisibleForUserCondition(archivedBy.companyId, archivedBy.userId)})`));
+          if (!archive) throw conflict("Only a chat currently archived by you can be deleted here.");
+          if (!["backlog", "done", "cancelled"].includes(task.status)) {
+            throw conflict("Finish or cancel this task before permanently deleting it.");
+          }
+          const [child] = await tx.select({ id: issues.id }).from(issues).where(eq(issues.parentId, id)).limit(1);
+          if (child) throw conflict("This task has subtasks. Manage those tasks before deleting it.");
+          const [activeRun] = await tx.select({ id: heartbeatRuns.id }).from(heartbeatRuns)
+            .where(and(eq(heartbeatRuns.companyId, archivedBy.companyId), eq(heartbeatRuns.issueId, id),
+              inArray(heartbeatRuns.status, ["queued", "running"]))).limit(1);
+          const [workflow] = await tx.select({ id: workflowRuns.id }).from(workflowRuns)
+            .where(and(eq(workflowRuns.companyId, archivedBy.companyId), eq(workflowRuns.issueId, id),
+              notInArray(workflowRuns.status, ["succeeded", "failed", "cancelled"]))).limit(1);
+          if (activeRun || workflow) throw conflict("This task still has an active or paused execution. It cannot be deleted.");
+        }
         const attachmentAssetIds = await tx
           .select({ assetId: issueAttachments.assetId })
           .from(issueAttachments)
