@@ -117,6 +117,7 @@ function ProjectSpaceContent({ initialCompanyId }: { initialCompanyId: string })
         <AlertDialogHeader><AlertDialogTitle>{uiText("Project cleanup preview")}</AlertDialogTitle>
           <AlertDialogDescription>{uiText("This preview never removes files. Rebuildability and unreferenced status must be verified before enabling cleanup.")}</AlertDialogDescription></AlertDialogHeader>
         <p className="text-sm font-medium">{preview?.name}</p>
+        <p className="text-sm">{uiText("Estimated local files reclaimable: 0 B (file cleanup is not enabled).")}</p>
         <div className="max-h-96 overflow-y-auto divide-y">
           {preview?.roots.flatMap((root) => root.directories.map((directory) => <div key={directory.path} className="flex flex-col gap-1 py-3">
             <p className="break-all font-mono text-xs">{directory.path}</p>

@@ -6712,6 +6712,12 @@ export async function readIssueCommentRunLogText(run: {
   return content;
 }
 
+function archivedChatRelatedCondition(id: string | SQL): SQL {
+  return sql`(EXISTS (SELECT 1 FROM issues linked WHERE linked.id = ${id} AND linked.parent_id IS NOT NULL)
+    OR EXISTS (SELECT 1 FROM issue_relations relation WHERE relation.issue_id = ${id} OR relation.related_issue_id = ${id})
+    OR EXISTS (SELECT 1 FROM issue_reference_mentions mention WHERE mention.source_issue_id = ${id} OR mention.target_issue_id = ${id}))`;
+}
+
 export function issueService(db: Db) {
   const instanceSettings = instanceSettingsService(db);
   const treeControlSvc = issueTreeControlService(db);
@@ -11753,11 +11759,17 @@ export function issueService(db: Db) {
     },
 
     previewArchivedChatCleanup: async (
-      companyId: string, userId: string, ids: string[], readCondition?: SQL,
+      companyId: string, userId: string, ids: string[], readCondition?: SQL, skipRelated = true,
     ) => {
       if (!ids.length) return [];
       const rows = await db.select({
         id: issues.id, title: issues.title, identifier: issues.identifier, status: issues.status,
+        hasRelated: sql<boolean>`(${archivedChatRelatedCondition(sql`${issues.id}`)})`,
+        localAttachmentBytes: sql<number>`COALESCE((SELECT sum(asset.byte_size) FROM issue_attachments attachment
+          JOIN assets asset ON asset.id = attachment.asset_id
+          WHERE attachment.issue_id = ${issues.id} AND asset.provider = 'local_disk'), 0)`.mapWith(Number),
+        databaseRecordBytes: sql<number>`pg_column_size(${issues}) + COALESCE((SELECT sum(pg_column_size(comment))
+          FROM issue_comments comment WHERE comment.issue_id = ${issues.id}), 0)`.mapWith(Number),
         hasChildren: sql<boolean>`EXISTS (SELECT 1 FROM issues child WHERE child.parent_id = ${issues.id})`,
         hasExecution: sql<boolean>`EXISTS (SELECT 1 FROM heartbeat_runs run WHERE run.company_id = ${companyId}
           AND run.issue_id = ${issues.id} AND run.status IN ('queued', 'running'))`,
@@ -11772,23 +11784,25 @@ export function issueService(db: Db) {
         const row = byId.get(id);
         const reason = !row ? "This chat is unavailable or is no longer archived by you."
           : row.hasChildren ? "This task has subtasks."
+          : skipRelated && row.hasRelated ? "This task has a parent, dependency or task reference."
           : row.hasExecution || row.hasWorkflow ? "This task has active or paused execution."
           : !["backlog", "done", "cancelled"].includes(row.status) ? "This task is unfinished."
           : "Candidate only. Deletion must recheck current state and other references.";
         return { id, title: row?.title ?? null, identifier: row?.identifier ?? null,
-          protection: row && !row.hasChildren && !row.hasExecution && !row.hasWorkflow
+          localAttachmentBytes: row?.localAttachmentBytes ?? 0, databaseRecordBytes: row?.databaseRecordBytes ?? 0,
+          protection: row && !row.hasChildren && !(skipRelated && row.hasRelated) && !row.hasExecution && !row.hasWorkflow
             && ["backlog", "done", "cancelled"].includes(row.status) ? "candidate" as const : "protected" as const,
           reason };
       });
     },
 
-    remove: (id: string, archivedBy?: { companyId: string; userId: string }) =>
+    remove: (id: string, archivedBy?: { companyId: string; userId: string; skipRelated?: boolean; readCondition?: SQL; audit?: Parameters<typeof logActivity>[1] }) =>
       db.transaction(async (tx) => {
         if (archivedBy) {
           // Lock the task before checking its archive and execution state. New
           // children/runs referencing it cannot race past the delete decision.
           const [task] = await tx.select().from(issues)
-            .where(and(eq(issues.id, id), eq(issues.companyId, archivedBy.companyId)))
+            .where(and(eq(issues.id, id), eq(issues.companyId, archivedBy.companyId), archivedBy.readCondition))
             .for("update");
           if (!task) return null;
           const [archive] = await tx.select({ id: issues.id }).from(issues)
@@ -11802,6 +11816,11 @@ export function issueService(db: Db) {
           }
           const [child] = await tx.select({ id: issues.id }).from(issues).where(eq(issues.parentId, id)).limit(1);
           if (child) throw conflict("This task has subtasks. Manage those tasks before deleting it.");
+          if (archivedBy.skipRelated) {
+            const [related] = await tx.select({ id: issues.id }).from(issues)
+              .where(and(eq(issues.id, id), archivedChatRelatedCondition(id))).limit(1);
+            if (related) throw conflict("This task has a parent, dependency or task reference.");
+          }
           const [activeRun] = await tx.select({ id: heartbeatRuns.id }).from(heartbeatRuns)
             .where(and(eq(heartbeatRuns.companyId, archivedBy.companyId), eq(heartbeatRuns.issueId, id),
               inArray(heartbeatRuns.status, ["queued", "running"]))).limit(1);
@@ -11858,6 +11877,7 @@ export function issueService(db: Db) {
         }
 
         if (!removedIssue) return null;
+        if (archivedBy?.audit) await logActivity(tx as unknown as Db, archivedBy.audit);
         const [enriched] = await withIssueLabels(tx, [removedIssue]);
         return enriched;
       }),

@@ -2,9 +2,13 @@ import { randomUUID } from "node:crypto";
 import express from "express";
 import request from "supertest";
 import { eq, sql } from "drizzle-orm";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   activityLog,
+  assets,
+  issueAttachments,
+  issueRelations,
+  issueReferenceMentions,
   agents,
   authUsers,
   companies,
@@ -40,6 +44,10 @@ describeEmbeddedPostgres("inbox archive routes", () => {
   }, 20_000);
 
   afterEach(async () => {
+    await db.delete(issueAttachments);
+    await db.delete(assets);
+    await db.delete(issueRelations);
+    await db.delete(issueReferenceMentions);
     await db.delete(issueComments);
     await db.delete(issueInboxArchives);
     await db.delete(activityLog);
@@ -57,14 +65,14 @@ describeEmbeddedPostgres("inbox archive routes", () => {
     await tempDb?.cleanup();
   });
 
-  function appFor(actor: Express.Request["actor"]) {
+  function appFor(actor: Express.Request["actor"], storage = {} as never) {
     const app = express();
     app.use(express.json());
     app.use((req, _res, next) => {
       req.actor = actor;
       next();
     });
-    app.use("/api", issueRoutes(db, {} as never));
+    app.use("/api", issueRoutes(db, storage));
     app.use(errorHandler);
     return app;
   }
@@ -230,6 +238,69 @@ describeEmbeddedPostgres("inbox archive routes", () => {
       .send({ filters: {} }).expect(200);
     expect(protectedResult.body.items[0].protection).toBe("protected");
     expect(protectedResult.body.items[0].reason).toContain("active or paused");
+  });
+
+  it("batch deletes only confirmed owned candidates, rechecks changed state, and reports failed file cleanup", async () => {
+    const seeded = await seed();
+    const other = await seed();
+    const svc = issueService(db);
+    const actor: Express.Request["actor"] = { type: "board", source: "session", userId: seeded.responsibleUserId,
+      companyIds: [seeded.companyId], memberships: [{ companyId: seeded.companyId, membershipRole: "operator", status: "active" }], isInstanceAdmin: false };
+    const deleteObject = vi.fn().mockRejectedValue(new Error("storage temporarily unavailable"));
+    const app = appFor(actor, { deleteObject } as never);
+    const endpoint = `/api/companies/${seeded.companyId}/archived-chats`;
+    const staleId = randomUUID();
+    const linkedId = randomUUID();
+    const parentId = randomUUID();
+    await db.update(issues).set({ status: "done" }).where(eq(issues.id, seeded.issueId));
+    await db.insert(issues).values([
+      { id: staleId, companyId: seeded.companyId, title: "Changed after preview", status: "done" },
+      { id: parentId, companyId: seeded.companyId, title: "Parent", status: "done" },
+      { id: linkedId, companyId: seeded.companyId, parentId, title: "Linked leaf", status: "done" },
+    ]);
+    for (const id of [seeded.issueId, staleId, linkedId]) await svc.archiveInbox(seeded.companyId, id, seeded.responsibleUserId);
+    const assetId = randomUUID();
+    await db.insert(assets).values({ id: assetId, companyId: seeded.companyId, provider: "local_disk", objectKey: "test-only-object",
+      contentType: "text/plain", byteSize: 1024, sha256: "fixture-no-digest-computed" });
+    await db.insert(issueAttachments).values({ companyId: seeded.companyId, issueId: seeded.issueId, assetId });
+    const preview = await request(app).post(`${endpoint}/cleanup-preview`).send({ issueIds: [seeded.issueId, staleId, linkedId] }).expect(200);
+    expect(preview.body.items[0]).toMatchObject({ localAttachmentBytes: 1024, protection: "candidate" });
+    expect(preview.body.items[0].databaseRecordBytes).toBeGreaterThan(0);
+    expect(preview.body.items[2].protection).toBe("protected");
+    const unfiltered = await request(app).post(`${endpoint}/cleanup-preview`).send({ issueIds: [linkedId], skipRelated: false }).expect(200);
+    expect(unfiltered.body.items[0].protection).toBe("candidate");
+    await expect(svc.remove(linkedId, { companyId: seeded.companyId, userId: seeded.responsibleUserId, skipRelated: true })).rejects.toThrow("parent, dependency");
+    await db.update(issues).set({ status: "in_progress" }).where(eq(issues.id, staleId));
+    await request(app).post(`${endpoint}/cleanup`).send({ issueIds: [seeded.issueId], skipRelated: true }).expect(400);
+    await request(appFor(agentActor(seeded))).post(`${endpoint}/cleanup`).send({ issueIds: [seeded.issueId], skipRelated: true, confirm: true }).expect(403);
+    await request(app).post(`/api/companies/${other.companyId}/archived-chats/cleanup`).send({ issueIds: [other.issueId], skipRelated: true, confirm: true }).expect(403);
+    const result = await request(app).post(`${endpoint}/cleanup`).send({ issueIds: [seeded.issueId, seeded.issueId, staleId, linkedId, other.issueId], skipRelated: true, confirm: true }).expect(200);
+    expect(result.body.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: seeded.issueId, status: "deleted", fileCleanupFailed: true }),
+      expect.objectContaining({ id: staleId, status: "skipped" }), expect.objectContaining({ id: linkedId, status: "skipped" }),
+      expect.objectContaining({ id: other.issueId, status: "skipped" }),
+    ]));
+    expect(result.body.items).toHaveLength(4);
+    expect(result.body.estimatedLocalBytesRemoved).toBe(0);
+    expect(deleteObject).toHaveBeenCalledExactlyOnceWith(seeded.companyId, "test-only-object");
+    expect((await db.select().from(activityLog)).some((row) => row.action === "issue.deleted" && row.entityId === seeded.issueId)).toBe(true);
+    expect(await svc.getById(staleId)).not.toBeNull();
+    expect(await svc.getById(other.issueId)).not.toBeNull();
+    const retry = await request(app).post(`${endpoint}/cleanup`).send({ issueIds: [seeded.issueId], skipRelated: true, confirm: true }).expect(200);
+    expect(retry.body.items[0].status).toBe("skipped");
+  });
+
+  it("excludes both ends of dependencies and task mentions unless explicitly unchecked", async () => {
+    const seeded = await seed();
+    const ids = [seeded.issueId, randomUUID(), randomUUID()];
+    await db.update(issues).set({ status: "done" }).where(eq(issues.id, ids[0]));
+    await db.insert(issues).values(ids.slice(1).map((id) => ({ id, companyId: seeded.companyId, title: "Linked", status: "done" })));
+    const svc = issueService(db);
+    for (const id of ids) await svc.archiveInbox(seeded.companyId, id, seeded.responsibleUserId);
+    await db.insert(issueRelations).values({ companyId: seeded.companyId, issueId: ids[0], relatedIssueId: ids[1], type: "blocks" });
+    await db.insert(issueReferenceMentions).values({ companyId: seeded.companyId, sourceIssueId: ids[1], targetIssueId: ids[2], sourceKind: "title" });
+    expect((await svc.previewArchivedChatCleanup(seeded.companyId, seeded.responsibleUserId, ids)).map((row) => row.protection)).toEqual(["protected", "protected", "protected"]);
+    expect((await svc.previewArchivedChatCleanup(seeded.companyId, seeded.responsibleUserId, ids, undefined, false)).map((row) => row.protection)).toEqual(["candidate", "candidate", "candidate"]);
   });
 
   it("preserves board idempotency and returns the resolved user", async () => {

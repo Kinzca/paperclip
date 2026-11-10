@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ArchivedChats } from "./ArchivedChats";
 
-const api = vi.hoisted(() => ({ listArchivedChats: vi.fn(), deleteArchivedChat: vi.fn(), unarchiveFromInbox: vi.fn(), previewArchivedChatCleanup: vi.fn() }));
+const api = vi.hoisted(() => ({ listArchivedChats: vi.fn(), deleteArchivedChat: vi.fn(), unarchiveFromInbox: vi.fn(), previewArchivedChatCleanup: vi.fn(), cleanupArchivedChats: vi.fn() }));
 vi.mock("@/api/issues", () => ({ issuesApi: api }));
 vi.mock("@/api/auth", () => ({ authApi: { getSession: async () => ({ user: { id: "user-1" } }) } }));
 vi.mock("@/api/projects", () => ({ projectsApi: { list: async () => [] } }));
@@ -20,6 +20,8 @@ const task = { id: "task-1", identifier: "DEMO-1", title: "Archived example", st
 beforeEach(async () => {
   vi.clearAllMocks();
   api.listArchivedChats.mockResolvedValue([task]);
+  api.previewArchivedChatCleanup.mockResolvedValue({ previewOnly: true, skipRelated: true, truncated: false,
+    items: [{ id: task.id, title: task.title, identifier: task.identifier, protection: "candidate", reason: "Candidate only.", localAttachmentBytes: 1024, databaseRecordBytes: 2048 }] });
   api.unarchiveFromInbox.mockResolvedValue({ ok: true });
   container = document.createElement("div"); document.body.append(container);
   client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
@@ -42,6 +44,7 @@ it("requires explicit confirmation, supports cancel, and keeps deletion failures
   await act(async () => button("Cancel").click());
   expect(document.querySelector('[role="alertdialog"]')).toBeNull();
   await act(async () => open());
+  await vi.waitFor(() => expect(button("Delete permanently").disabled).toBe(false));
   await act(async () => button("Delete permanently").click());
   await vi.waitFor(() => expect(document.querySelector('[role="alert"]')?.textContent).toContain("subtasks"));
   expect(api.deleteArchivedChat).toHaveBeenCalledExactlyOnceWith("task-1");
@@ -58,10 +61,31 @@ it("previews selected chats with protection reasons and never submits a deletion
   api.previewArchivedChatCleanup.mockResolvedValue({ previewOnly: true, truncated: false, measuredAt: new Date().toISOString(),
     items: [{ id: task.id, title: task.title, identifier: task.identifier, protection: "protected", reason: "This task has subtasks." }] });
   await act(async () => button("Select loaded chats (up to 200)").click());
-  await act(async () => button("Preview batch cleanup").click());
-  await vi.waitFor(() => expect(api.previewArchivedChatCleanup).toHaveBeenCalledExactlyOnceWith("company-1", { issueIds: [task.id] }));
+  await act(async () => button("Delete selected chats...").click());
+  await vi.waitFor(() => expect(api.previewArchivedChatCleanup).toHaveBeenCalledExactlyOnceWith("company-1", { issueIds: [task.id], skipRelated: true }));
   expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain("This task has subtasks.");
-  expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain("No data has been deleted");
+  expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain("No data has been deleted by this preview");
   expect(api.deleteArchivedChat).not.toHaveBeenCalled();
   expect(api.unarchiveFromInbox).not.toHaveBeenCalled();
+});
+
+it("shows space estimates and deletes candidates only after explicit confirmation", async () => {
+  api.cleanupArchivedChats.mockResolvedValue({ items: [{ id: task.id, status: "deleted", reason: "Deleted.", fileCleanupFailed: false }], estimatedLocalBytesRemoved: 1024 });
+  await act(async () => button("Select loaded chats (up to 200)").click());
+  await act(async () => button("Delete selected chats...").click());
+  await vi.waitFor(() => expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain("1 KB"));
+  expect(api.cleanupArchivedChats).not.toHaveBeenCalled();
+  await act(async () => button("Permanently delete 1 chats").click());
+  await vi.waitFor(() => expect(api.cleanupArchivedChats).toHaveBeenCalledExactlyOnceWith("company-1", { issueIds: [task.id], skipRelated: true, confirm: true }));
+  await vi.waitFor(() => expect(document.querySelector('[role="status"]')?.textContent).toContain("Deleted 1"));
+  expect(api.deleteArchivedChat).not.toHaveBeenCalled();
+});
+
+it("keeps the selected records when changing the linked-task filter", async () => {
+  await act(async () => button("Select loaded chats (up to 200)").click());
+  const option = document.querySelector<HTMLButtonElement>('label button[role="checkbox"]')!;
+  await act(async () => option.click());
+  await act(async () => button("Delete selected chats...").click());
+  await vi.waitFor(() => expect(api.previewArchivedChatCleanup).toHaveBeenCalledExactlyOnceWith("company-1", { issueIds: [task.id], skipRelated: false }));
+  expect(api.cleanupArchivedChats).not.toHaveBeenCalled();
 });

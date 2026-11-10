@@ -1,15 +1,23 @@
+export interface ArchivedChatCleanupResult {
+  items: Array<{ id: string; status: "deleted" | "skipped" | "failed"; reason: string; fileCleanupFailed: boolean }>;
+  estimatedLocalBytesRemoved: number;
+}
+
 export type CleanupProtection = "protected" | "rebuildable" | "candidate";
 
 export interface ArchivedChatCleanupPreview {
   previewOnly: true;
   measuredAt: string;
   truncated: boolean;
+  skipRelated: boolean;
   items: Array<{
     id: string;
     title: string | null;
     identifier: string | null;
     protection: "protected" | "candidate";
     reason: string;
+    localAttachmentBytes: number;
+    databaseRecordBytes: number;
   }>;
 }
 

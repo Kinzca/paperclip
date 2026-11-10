@@ -10,13 +10,13 @@ import { Link } from "@/lib/router";
 import { formatDateTime } from "@/lib/utils";
 
 const categoryStyles = {
-  database: { label: "Database", color: "bg-chart-1" },
-  logs: { label: "Run logs", color: "bg-chart-2" },
-  files: { label: "Attachments and files", color: "bg-chart-3" },
-  companyProjects: { label: "Company project directories", color: "bg-primary" },
-  workspaces: { label: "Managed workspaces", color: "bg-chart-4" },
-  backups: { label: "Backups", color: "bg-chart-5" },
-  other: { label: "Other instance data", color: "bg-muted" },
+  database: { label: "Database", color: "bg-storage-database" },
+  logs: { label: "Run logs", color: "bg-storage-logs" },
+  files: { label: "Attachments and files", color: "bg-storage-files" },
+  companyProjects: { label: "Company project directories", color: "bg-storage-projects" },
+  workspaces: { label: "Managed workspaces", color: "bg-storage-workspaces" },
+  backups: { label: "Backups", color: "bg-storage-backups" },
+  other: { label: "Other instance data", color: "bg-storage-other" },
 } as const;
 
 export function StorageSettings() {
@@ -26,7 +26,7 @@ export function StorageSettings() {
   useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" }, { label: uiText("Storage") }]); }, [setBreadcrumbs, locale]);
   const usage = useQuery({ queryKey: ["instance-storage", expanded], queryFn: () => instanceSettingsApi.getStorageUsage(expanded),
     staleTime: 30_000, refetchOnWindowFocus: false, retry: false });
-  return <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
+  return <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
     <header className="flex flex-col gap-2">
       <h1 className="flex items-center gap-2 text-lg font-semibold"><HardDrive className="size-5 text-muted-foreground" />{uiText("Storage")}</h1>
       <p className="text-sm text-muted-foreground">{uiText("Local storage on the device hosting this Paperclip instance, across all organizations.")}</p>
@@ -47,8 +47,8 @@ export function StorageSettings() {
             className={`basis-0 ${categoryStyles[category.key].color}`} style={{ flexGrow: category.bytes }}
             title={`${uiText(categoryStyles[category.key].label)}: ${formatBytes(category.bytes)}`} />)}
         </div>
-        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          {usage.data.categories.map((category) => <div key={category.key} className="flex flex-col gap-1">
+        <dl className="flex flex-nowrap gap-6 overflow-x-auto pb-2">
+          {usage.data.categories.map((category) => <div key={category.key} className="flex shrink-0 flex-1 flex-col gap-1 whitespace-nowrap">
             <dt className="flex items-center gap-2 text-sm text-muted-foreground"><span className={`size-2 rounded-full ${categoryStyles[category.key].color}`} />{uiText(categoryStyles[category.key].label)}</dt>
             <dd className="font-mono text-sm">{usage.data.complete ? formatBytes(category.bytes) : category.bytes > 0
               ? uiText("At least {{value0}}", { value0: formatBytes(category.bytes) }) : uiText("Not fully measured")}</dd>
