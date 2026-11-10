@@ -65,6 +65,7 @@ export function instanceStorageUsage(config: Config): Promise<StorageUsage> {
   const roots: Array<{ path: string; category: Category }> = [
     { path: rootPath, category: "other" },
     { path: resolveDefaultLogsDir(), category: "logs" },
+    { path: process.env.RUN_LOG_BASE_PATH ?? path.join(rootPath, "data", "run-logs"), category: "logs" },
     { path: config.databaseBackupDir, category: "backups" },
     { path: path.join(rootPath, "workspaces"), category: "workspaces" },
     { path: path.join(rootPath, "projects"), category: "workspaces" },

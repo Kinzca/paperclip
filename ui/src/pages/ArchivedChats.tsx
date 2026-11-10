@@ -85,7 +85,7 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
           placeholder={uiText("Search archived chats")} aria-label={uiText("Search archived chats")} />
       </div>
       <Button type="submit" variant="secondary">{uiText("Search")}</Button>
-      <SelectField value={projectId} onValueChange={setProjectId} aria-label={uiText("Project")}
+      <SelectField className="w-full sm:w-auto" value={projectId} onValueChange={setProjectId} aria-label={uiText("Project")}
         options={[{ value: "all", label: uiText("All projects") }, { value: "none", label: uiText("No project") },
           ...(projects.data ?? []).map((project) => ({ value: project.id, label: project.name }))]} />
     </form>
