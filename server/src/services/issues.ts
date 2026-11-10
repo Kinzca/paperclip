@@ -1,3 +1,5 @@
+import { buildArchiveCleanupPlan } from "./archive-cleanup-files.js";
+import { archiveCleanupJobs } from "@paperclipai/db";
 import { notifyChatPublicationWork } from "./chat-work-notifications.js";
 import { prepareWorkflowAdmission, persistWorkflowAdmission } from "./workflows/admission.js";
 import { workflowRuns, workflowNodeAttempts } from "@paperclipai/db";
@@ -11796,7 +11798,7 @@ export function issueService(db: Db) {
       });
     },
 
-    remove: (id: string, archivedBy?: { companyId: string; userId: string; skipRelated?: boolean; readCondition?: SQL; audit?: Parameters<typeof logActivity>[1] }) =>
+    remove: (id: string, archivedBy?: { companyId: string; userId: string; skipRelated?: boolean; readCondition?: SQL; audit?: Parameters<typeof logActivity>[1]; cleanupJobId?: string }) =>
       db.transaction(async (tx) => {
         if (archivedBy) {
           // Lock the task before checking its archive and execution state. New
@@ -11828,6 +11830,12 @@ export function issueService(db: Db) {
             .where(and(eq(workflowRuns.companyId, archivedBy.companyId), eq(workflowRuns.issueId, id),
               notInArray(workflowRuns.status, ["succeeded", "failed", "cancelled"]))).limit(1);
           if (activeRun || workflow) throw conflict("This task still has an active or paused execution. It cannot be deleted.");
+        }
+        if (archivedBy?.cleanupJobId) {
+          const [task] = await tx.select({ title: issues.title }).from(issues).where(eq(issues.id, id));
+          const plan = await buildArchiveCleanupPlan(tx as unknown as Db, archivedBy.companyId, id);
+          await tx.insert(archiveCleanupJobs).values({ id: archivedBy.cleanupJobId, companyId: archivedBy.companyId,
+            userId: archivedBy.userId, issueId: id, title: task.title, files: plan.files, retained: plan.retained });
         }
         const attachmentAssetIds = await tx
           .select({ assetId: issueAttachments.assetId })

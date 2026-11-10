@@ -1,9 +1,19 @@
+import { execFileSync } from "node:child_process";
+import { buildArchiveCleanupPlan, executeArchiveCleanupJob } from "../services/archive-cleanup-files.js";
+import * as configModule from "../config.js";
+import { mkdtemp, mkdir, writeFile, readFile, rm, symlink, stat, realpath, unlink } from "node:fs/promises";
+import path from "node:path";
+import os from "node:os";
 import { randomUUID } from "node:crypto";
 import express from "express";
 import request from "supertest";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
+  projects,
+  projectWorkspaces,
+  executionWorkspaces,
+  archiveCleanupJobs,
   activityLog,
   assets,
   issueAttachments,
@@ -44,6 +54,9 @@ describeEmbeddedPostgres("inbox archive routes", () => {
   }, 20_000);
 
   afterEach(async () => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+    await db.delete(archiveCleanupJobs);
     await db.delete(issueAttachments);
     await db.delete(assets);
     await db.delete(issueRelations);
@@ -57,6 +70,9 @@ describeEmbeddedPostgres("inbox archive routes", () => {
     await db.delete(principalPermissionGrants);
     await db.delete(companyMemberships);
     await db.delete(agents);
+    await db.delete(executionWorkspaces);
+    await db.delete(projectWorkspaces);
+    await db.delete(projects);
     await db.delete(companies);
     await db.delete(authUsers);
   });
@@ -247,7 +263,9 @@ describeEmbeddedPostgres("inbox archive routes", () => {
     const actor: Express.Request["actor"] = { type: "board", source: "session", userId: seeded.responsibleUserId,
       companyIds: [seeded.companyId], memberships: [{ companyId: seeded.companyId, membershipRole: "operator", status: "active" }], isInstanceAdmin: false };
     const deleteObject = vi.fn().mockRejectedValue(new Error("storage temporarily unavailable"));
-    const app = appFor(actor, { deleteObject } as never);
+    const originalConfig = configModule.loadConfig();
+    vi.spyOn(configModule, "loadConfig").mockReturnValue({ ...originalConfig, storageProvider: "s3" });
+    const app = appFor(actor, { provider: "s3", deleteObject } as never);
     const endpoint = `/api/companies/${seeded.companyId}/archived-chats`;
     const staleId = randomUUID();
     const linkedId = randomUUID();
@@ -260,11 +278,11 @@ describeEmbeddedPostgres("inbox archive routes", () => {
     ]);
     for (const id of [seeded.issueId, staleId, linkedId]) await svc.archiveInbox(seeded.companyId, id, seeded.responsibleUserId);
     const assetId = randomUUID();
-    await db.insert(assets).values({ id: assetId, companyId: seeded.companyId, provider: "local_disk", objectKey: "test-only-object",
+    await db.insert(assets).values({ id: assetId, companyId: seeded.companyId, provider: "s3", objectKey: `${seeded.companyId}/test-only-object`,
       contentType: "text/plain", byteSize: 1024, sha256: "fixture-no-digest-computed" });
     await db.insert(issueAttachments).values({ companyId: seeded.companyId, issueId: seeded.issueId, assetId });
     const preview = await request(app).post(`${endpoint}/cleanup-preview`).send({ issueIds: [seeded.issueId, staleId, linkedId] }).expect(200);
-    expect(preview.body.items[0]).toMatchObject({ localAttachmentBytes: 1024, protection: "candidate" });
+    expect(preview.body.items[0]).toMatchObject({ localAttachmentBytes: 0, protection: "candidate" });
     expect(preview.body.items[0].databaseRecordBytes).toBeGreaterThan(0);
     expect(preview.body.items[2].protection).toBe("protected");
     const unfiltered = await request(app).post(`${endpoint}/cleanup-preview`).send({ issueIds: [linkedId], skipRelated: false }).expect(200);
@@ -282,7 +300,13 @@ describeEmbeddedPostgres("inbox archive routes", () => {
     ]));
     expect(result.body.items).toHaveLength(4);
     expect(result.body.estimatedLocalBytesRemoved).toBe(0);
-    expect(deleteObject).toHaveBeenCalledExactlyOnceWith(seeded.companyId, "test-only-object");
+    expect(deleteObject).toHaveBeenCalledExactlyOnceWith(seeded.companyId, `${seeded.companyId}/test-only-object`);
+    const pending = await request(app).get(`${endpoint}/pending-cleanup`).expect(200);
+    expect(pending.body[0].files[0].status).toBe("failed");
+    deleteObject.mockResolvedValue(undefined);
+    await Promise.all([0, 1].map(() => request(app).post(`${endpoint}/pending-cleanup/${pending.body[0].id}/retry`).send({}).expect(200)));
+    expect(deleteObject).toHaveBeenCalledTimes(2);
+    expect((await request(app).get(`${endpoint}/pending-cleanup`).expect(200)).body).toEqual([]);
     expect((await db.select().from(activityLog)).some((row) => row.action === "issue.deleted" && row.entityId === seeded.issueId)).toBe(true);
     expect(await svc.getById(staleId)).not.toBeNull();
     expect(await svc.getById(other.issueId)).not.toBeNull();
@@ -301,6 +325,94 @@ describeEmbeddedPostgres("inbox archive routes", () => {
     await db.insert(issueReferenceMentions).values({ companyId: seeded.companyId, sourceIssueId: ids[1], targetIssueId: ids[2], sourceKind: "title" });
     expect((await svc.previewArchivedChatCleanup(seeded.companyId, seeded.responsibleUserId, ids)).map((row) => row.protection)).toEqual(["protected", "protected", "protected"]);
     expect((await svc.previewArchivedChatCleanup(seeded.companyId, seeded.responsibleUserId, ids, undefined, false)).map((row) => row.protection)).toEqual(["candidate", "candidate", "candidate"]);
+  });
+
+  it("physically cleans owned attachments and logs, retains linked files, and persists retryable jobs", async () => {
+    const folder = await mkdtemp(path.join(os.tmpdir(), "paperclip-archive-files-"));
+    try {
+      vi.stubEnv("PAPERCLIP_STORAGE_LOCAL_DIR", path.join(folder, "files"));
+      vi.stubEnv("RUN_LOG_BASE_PATH", path.join(folder, "logs"));
+      const seeded = await seed();
+      const svc = issueService(db);
+      await db.update(issues).set({ status: "done" }).where(eq(issues.id, seeded.issueId));
+      await svc.archiveInbox(seeded.companyId, seeded.issueId, seeded.responsibleUserId);
+      const actor: Express.Request["actor"] = { type: "board", source: "session", userId: seeded.responsibleUserId,
+        companyIds: [seeded.companyId], memberships: [{ companyId: seeded.companyId, membershipRole: "operator", status: "active" }], isInstanceAdmin: false };
+      const key = `${seeded.companyId}/asset.txt`;
+      const attachment = path.join(folder, "files", key);
+      const logRef = path.join(seeded.companyId, seeded.agentId, seeded.runId + ".ndjson");
+      const log = path.join(folder, "logs", logRef);
+      await mkdir(path.dirname(attachment), { recursive: true });
+      await mkdir(path.dirname(log), { recursive: true });
+      await writeFile(attachment, "asset"); await writeFile(log, "run log");
+      const assetId = randomUUID();
+      await db.insert(assets).values({ id: assetId, companyId: seeded.companyId, provider: "local_disk", objectKey: key,
+        contentType: "text/plain", byteSize: 5, sha256: "fixture-no-digest-computed" });
+      await db.insert(issueAttachments).values({ companyId: seeded.companyId, issueId: seeded.issueId, assetId });
+      await db.update(heartbeatRuns).set({ status: "succeeded", issueId: seeded.issueId, logStore: "local_file", logRef, logBytes: 7 }).where(eq(heartbeatRuns.id, seeded.runId));
+      const app = appFor(actor, { provider: "local_disk" } as never);
+      const endpoint = `/api/companies/${seeded.companyId}/archived-chats`;
+      const preview = await request(app).post(`${endpoint}/cleanup-preview`).send({ issueIds: [seeded.issueId] }).expect(200);
+      expect(preview.body.items[0].filePlan.localBytes).toBe(12);
+      const result = await request(app).post(`${endpoint}/cleanup`).send({ issueIds: [seeded.issueId], skipRelated: true, confirm: true }).expect(200);
+      expect(result.body.items[0]).toMatchObject({ status: "deleted", fileCleanupFailed: false });
+      expect(result.body.estimatedLocalBytesRemoved).toBe(12);
+      await expect(stat(attachment)).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(stat(log)).rejects.toMatchObject({ code: "ENOENT" });
+      const jobId = result.body.items[0].cleanupJobId;
+      const retry = await request(app).post(`${endpoint}/pending-cleanup/${jobId}/retry`).send({}).expect(200);
+      expect(retry.body.removedBytes).toBe(12);
+      expect((await request(app).get(`${endpoint}/pending-cleanup`).expect(200)).body).toEqual([]);
+      await request(appFor({ ...actor, userId: seeded.targetUserId })).post(`${endpoint}/pending-cleanup/${jobId}/retry`).send({}).expect(404);
+      expect((await db.select().from(archiveCleanupJobs)).find((row) => row.id === jobId)?.status).toBe("completed");
+      // Simulate an interrupted cleanup followed by replacement of the file at the same path.
+      const [saved] = await db.select().from(archiveCleanupJobs).where(eq(archiveCleanupJobs.id, jobId));
+      await writeFile(attachment, "new unconfirmed content");
+      await db.update(archiveCleanupJobs).set({ status: "pending", files: saved.files.map((file) => file.kind === "attachment" ? { ...file, status: "pending" as const } : file) }).where(eq(archiveCleanupJobs.id, jobId));
+      const changed = await request(app).post(`${endpoint}/pending-cleanup/${jobId}/retry`).send({}).expect(200);
+      expect(changed.body.files.find((file: { kind: string }) => file.kind === "attachment").status).toBe("failed");
+      expect(await readFile(attachment, "utf8")).toBe("new unconfirmed content");
+    } finally { await rm(folder, { recursive: true, force: true }); }
+  });
+
+  it("removes only a clean merged exclusive worktree and retains unregistered files", async () => {
+    const folder = await realpath(await mkdtemp(path.join(os.tmpdir(), "archive-worktree-")));
+    try {
+      const repo = path.join(folder, "repo"); const copy = path.join(folder, "copy");
+      await mkdir(repo);
+      const git = (...args: string[]) => execFileSync("git", ["-C", repo, "-c", "core.hooksPath=/dev/null", ...args], { stdio: "pipe" });
+      git("init", "-b", "main"); await writeFile(path.join(repo, "source.txt"), "preserved source"); git("add", "source.txt");
+      git("-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "fixture"); git("worktree", "add", "-b", "task-copy", copy);
+      const seeded = await seed(); const projectId = randomUUID(); const rootId = randomUUID(); const workspaceId = randomUUID();
+      await db.insert(projects).values({ id: projectId, companyId: seeded.companyId, name: "Disposable copy test" });
+      await db.insert(projectWorkspaces).values({ id: rootId, companyId: seeded.companyId, projectId, name: "Source", cwd: repo, isPrimary: true });
+      await db.insert(executionWorkspaces).values({ id: workspaceId, companyId: seeded.companyId, projectId, projectWorkspaceId: rootId,
+        sourceIssueId: seeded.issueId, mode: "isolated", strategyType: "git_worktree", providerType: "git_worktree", name: "Task copy",
+        status: "archived", cwd: copy, providerRef: copy, branchName: "task-copy", baseRef: "main", metadata: { createdByRuntime: true } });
+      await db.update(issues).set({ status: "done", projectId, executionWorkspaceId: workspaceId }).where(eq(issues.id, seeded.issueId));
+      await writeFile(path.join(copy, "unregistered.txt"), "keep this");
+      const protectedPlan = await buildArchiveCleanupPlan(db, seeded.companyId, seeded.issueId);
+      expect(protectedPlan.files.some((file) => file.kind === "workspace")).toBe(false);
+      await unlink(path.join(copy, "unregistered.txt"));
+      await writeFile(path.join(repo, ".git", "info", "exclude"), "secret.bin\n");
+      await writeFile(path.join(copy, "secret.bin"), "ignored but not disposable");
+      expect((await buildArchiveCleanupPlan(db, seeded.companyId, seeded.issueId)).files.some((file) => file.kind === "workspace")).toBe(false);
+      await unlink(path.join(copy, "secret.bin"));
+      const plan = await buildArchiveCleanupPlan(db, seeded.companyId, seeded.issueId);
+      expect(plan.files.some((file) => file.kind === "workspace")).toBe(true);
+      const svc = issueService(db); await svc.archiveInbox(seeded.companyId, seeded.issueId, seeded.responsibleUserId);
+      const jobId = randomUUID();
+      await svc.remove(seeded.issueId, { companyId: seeded.companyId, userId: seeded.responsibleUserId, cleanupJobId: jobId });
+      await db.update(executionWorkspaces).set({ status: "active" }).where(eq(executionWorkspaces.id, workspaceId));
+      const reopened = await executeArchiveCleanupJob(db, { provider: "local_disk" } as never, seeded.companyId, seeded.responsibleUserId, jobId);
+      expect(reopened.files.find((file) => file.kind === "workspace")?.status).toBe("failed");
+      expect((await stat(copy)).isDirectory()).toBe(true);
+      await db.update(executionWorkspaces).set({ status: "archived" }).where(eq(executionWorkspaces.id, workspaceId));
+      const result = await executeArchiveCleanupJob(db, { provider: "local_disk" } as never, seeded.companyId, seeded.responsibleUserId, jobId);
+      expect(result.files.find((file) => file.kind === "workspace")?.status).toBe("removed");
+      await expect(stat(copy)).rejects.toMatchObject({ code: "ENOENT" });
+      expect(await readFile(path.join(repo, "source.txt"), "utf8")).toBe("preserved source");
+    } finally { await rm(folder, { recursive: true, force: true }); }
   });
 
   it("preserves board idempotency and returns the resolved user", async () => {

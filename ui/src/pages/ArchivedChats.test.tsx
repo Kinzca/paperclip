@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ArchivedChats } from "./ArchivedChats";
 
-const api = vi.hoisted(() => ({ listArchivedChats: vi.fn(), deleteArchivedChat: vi.fn(), unarchiveFromInbox: vi.fn(), previewArchivedChatCleanup: vi.fn(), cleanupArchivedChats: vi.fn() }));
+const api = vi.hoisted(() => ({ listArchivedChats: vi.fn(), deleteArchivedChat: vi.fn(), unarchiveFromInbox: vi.fn(), previewArchivedChatCleanup: vi.fn(), cleanupArchivedChats: vi.fn(), pendingArchiveCleanup: vi.fn(), retryArchiveCleanup: vi.fn() }));
 vi.mock("@/api/issues", () => ({ issuesApi: api }));
 vi.mock("@/api/auth", () => ({ authApi: { getSession: async () => ({ user: { id: "user-1" } }) } }));
 vi.mock("@/api/projects", () => ({ projectsApi: { list: async () => [] } }));
@@ -20,14 +20,16 @@ const task = { id: "task-1", identifier: "DEMO-1", title: "Archived example", st
 beforeEach(async () => {
   vi.clearAllMocks();
   api.listArchivedChats.mockResolvedValue([task]);
+  api.pendingArchiveCleanup.mockResolvedValue([]);
   api.previewArchivedChatCleanup.mockResolvedValue({ previewOnly: true, skipRelated: true, truncated: false,
-    items: [{ id: task.id, title: task.title, identifier: task.identifier, protection: "candidate", reason: "Candidate only.", localAttachmentBytes: 1024, databaseRecordBytes: 2048 }] });
+    items: [{ id: task.id, title: task.title, identifier: task.identifier, protection: "candidate", reason: "Candidate only.", localAttachmentBytes: 1024, databaseRecordBytes: 2048, filePlan: { localBytes: 1024, files: [], retained: [] } }] });
   api.unarchiveFromInbox.mockResolvedValue({ ok: true });
   container = document.createElement("div"); document.body.append(container);
   client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   root = createRoot(container);
   await act(async () => root.render(<QueryClientProvider client={client}><ArchivedChats /></QueryClientProvider>));
   await vi.waitFor(() => expect(container.textContent).toContain(task.title));
+  await vi.waitFor(() => expect(button("Select loaded chats (up to 200)").disabled).toBe(false));
 });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); client.clear(); });
 function button(text: string) {
@@ -62,9 +64,9 @@ it("previews selected chats with protection reasons and never submits a deletion
     items: [{ id: task.id, title: task.title, identifier: task.identifier, protection: "protected", reason: "This task has subtasks." }] });
   await act(async () => button("Select loaded chats (up to 200)").click());
   await act(async () => button("Delete selected chats...").click());
-  await vi.waitFor(() => expect(api.previewArchivedChatCleanup).toHaveBeenCalledExactlyOnceWith("company-1", { issueIds: [task.id], skipRelated: true }));
+  await vi.waitFor(() => expect(api.previewArchivedChatCleanup).toHaveBeenLastCalledWith("company-1", { issueIds: [task.id], skipRelated: true }));
   expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain("This task has subtasks.");
-  expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain("No data has been deleted by this preview");
+  expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain("This cannot be undone");
   expect(api.deleteArchivedChat).not.toHaveBeenCalled();
   expect(api.unarchiveFromInbox).not.toHaveBeenCalled();
 });
@@ -85,7 +87,25 @@ it("keeps the selected records when changing the linked-task filter", async () =
   await act(async () => button("Select loaded chats (up to 200)").click());
   const option = document.querySelector<HTMLButtonElement>('label button[role="checkbox"]')!;
   await act(async () => option.click());
+  await vi.waitFor(() => expect(button("Delete selected chats...").disabled).toBe(false));
   await act(async () => button("Delete selected chats...").click());
-  await vi.waitFor(() => expect(api.previewArchivedChatCleanup).toHaveBeenCalledExactlyOnceWith("company-1", { issueIds: [task.id], skipRelated: false }));
+  await vi.waitFor(() => expect(api.previewArchivedChatCleanup).toHaveBeenLastCalledWith("company-1", { issueIds: [task.id], skipRelated: false }));
   expect(api.cleanupArchivedChats).not.toHaveBeenCalled();
+});
+
+it("selects eligible records only and disables protected rows before preview", async () => {
+  const blocked = { ...task, id: "task-2", title: "Linked task" };
+  api.listArchivedChats.mockResolvedValue([task, blocked]);
+  api.previewArchivedChatCleanup.mockImplementation(async (_company, input) => ({ previewOnly: true, skipRelated: input.skipRelated,
+    items: input.issueIds.map((id: string) => ({ id, title: id === task.id ? task.title : blocked.title,
+      protection: id === task.id ? "candidate" : "protected", reason: "This task has subtasks.", databaseRecordBytes: 1,
+      filePlan: { localBytes: 0, files: [], retained: [] } })) }));
+  await act(async () => { await client.invalidateQueries({ queryKey: ["archived-chats"] }); });
+  await vi.waitFor(() => expect(container.textContent).toContain("Linked task"));
+  await vi.waitFor(() => expect(container.querySelector<HTMLButtonElement>('button[aria-label="Select chat: Linked task"]')?.disabled).toBe(true));
+  await vi.waitFor(() => expect(button("Select loaded chats (up to 200)").disabled).toBe(false));
+  await act(async () => button("Select loaded chats (up to 200)").click());
+  expect(container.textContent).toContain("Selected 1");
+  await act(async () => button("Delete selected chats...").click());
+  await vi.waitFor(() => expect(api.previewArchivedChatCleanup).toHaveBeenLastCalledWith("company-1", { issueIds: [task.id], skipRelated: true }));
 });

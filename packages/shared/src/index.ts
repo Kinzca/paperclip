@@ -2877,4 +2877,4 @@ export type { AgentLifecycleRequest, AgentLifecycleResult } from "./types/agent-
 export * from "./fast-response.js";
 export * from "./workflows.js";
 export type { StorageUsage } from "./types/storage-usage.js";
-export type { ArchivedChatCleanupResult, ArchivedChatCleanupPreview, CleanupProtection, ProjectSpaceUsage } from "./types/cleanup-preview.js";
+export type { ArchivedChatCleanupFile, ArchivedChatCleanupPlan, ArchivedChatCleanupJob, ArchivedChatCleanupResult, ArchivedChatCleanupPreview, CleanupProtection, ProjectSpaceUsage } from "./types/cleanup-preview.js";

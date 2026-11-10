@@ -1,5 +1,32 @@
+export interface ArchivedChatCleanupFile {
+  kind: "attachment" | "run_log" | "workspace";
+  path: string;
+  provider?: string;
+  objectKey?: string;
+  runId?: string;
+  workspaceId?: string;
+  generation?: number;
+  bytes: number;
+  identity?: { dev: number; ino: number; size: number; mtimeMs: number };
+  status: "pending" | "removed" | "failed";
+  error?: string;
+}
+
+export interface ArchivedChatCleanupPlan {
+  files: ArchivedChatCleanupFile[];
+  retained: Array<{ path: string; reason: string }>;
+  localBytes: number;
+}
+
+export interface ArchivedChatCleanupJob {
+  id: string;
+  title: string;
+  files: ArchivedChatCleanupFile[];
+  removedBytes: number;
+}
+
 export interface ArchivedChatCleanupResult {
-  items: Array<{ id: string; status: "deleted" | "skipped" | "failed"; reason: string; fileCleanupFailed: boolean }>;
+  items: Array<{ id: string; status: "deleted" | "skipped" | "failed"; reason: string; fileCleanupFailed: boolean; cleanupJobId?: string }>;
   estimatedLocalBytesRemoved: number;
 }
 
@@ -18,6 +45,7 @@ export interface ArchivedChatCleanupPreview {
     reason: string;
     localAttachmentBytes: number;
     databaseRecordBytes: number;
+    filePlan: ArchivedChatCleanupPlan;
   }>;
 }
 

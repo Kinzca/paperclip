@@ -1,3 +1,5 @@
+import { archiveCleanupJobs } from "@paperclipai/db";
+import { buildArchiveCleanupPlan, executeArchiveCleanupJob } from "../services/archive-cleanup-files.js";
 import { parseObject } from "../adapters/utils.js";
 import { enqueueFastResponse } from "../services/fast-responses.js";
 import { hasRequiredWorkspaceRecovery, LEGACY_WORKSPACE_RECOVERY_SCHEMA } from "../services/workspace-restore-recovery-state.js";
@@ -8275,9 +8277,9 @@ export function issueRoutes(
     assertCompanyAccess(req, companyId);
     if (req.actor.type !== "board" || !req.actor.userId) throw forbidden("Board user required");
     const input = z.union([
-      z.object({ issueIds: z.array(z.string().uuid()).min(1).max(200), skipRelated: z.boolean().default(true) }).strict(),
+      z.object({ issueIds: z.array(z.string().uuid()).min(1).max(200), skipRelated: z.boolean().default(true), includeFiles: z.boolean().default(true) }).strict(),
       z.object({ filters: z.object({ q: z.string().trim().max(200).optional(),
-        projectId: z.union([z.string().uuid(), z.literal("none")]).optional() }).strict(), skipRelated: z.boolean().default(true) }).strict(),
+        projectId: z.union([z.string().uuid(), z.literal("none")]).optional() }).strict(), skipRelated: z.boolean().default(true), includeFiles: z.boolean().default(true) }).strict(),
     ]).safeParse(req.body);
     if (!input.success) { res.status(400).json({ error: "Invalid cleanup preview selection" }); return; }
     const readCondition = await issueReadSqlCondition(db, req.actor);
@@ -8285,10 +8287,57 @@ export function issueRoutes(
       ? await svc.listArchivedChats(companyId, req.actor.userId, { ...input.data.filters, limit: 501, offset: 0, readCondition }) : null;
     const ids = rows ? rows.slice(0, 500).map((row) => row.id)
       : "issueIds" in input.data ? [...new Set(input.data.issueIds)] : [];
+    const items = [];
+    for (const item of await svc.previewArchivedChatCleanup(companyId, req.actor.userId, ids, readCondition, input.data.skipRelated)) {
+      const filePlan = input.data.includeFiles && item.protection === "candidate"
+        ? await buildArchiveCleanupPlan(db, companyId, item.id) : { files: [], retained: [], localBytes: 0 };
+      items.push({ ...item, filePlan });
+    }
     res.json({ previewOnly: true, measuredAt: new Date().toISOString(), truncated: (rows?.length ?? 0) > 500,
-      skipRelated: input.data.skipRelated,
-      items: await svc.previewArchivedChatCleanup(companyId, req.actor.userId, ids, readCondition, input.data.skipRelated) });
+      skipRelated: input.data.skipRelated, items });
   });
+
+  async function cleanupArchivedSelection(req: Request, companyId: string, userId: string, ids: string[], skipRelated: boolean) {
+    const readCondition = await issueReadSqlCondition(db, req.actor);
+    const preview = await svc.previewArchivedChatCleanup(companyId, userId, [...new Set(ids)], readCondition, skipRelated);
+    const results: Array<{ id: string; status: "deleted" | "skipped" | "failed"; reason: string; fileCleanupFailed: boolean; cleanupJobId?: string }> = [];
+    let estimatedLocalBytesRemoved = 0;
+    const actor = getActorInfo(req);
+    for (const item of preview) {
+      if (item.protection !== "candidate") {
+        results.push({ id: item.id, status: "skipped", reason: item.reason, fileCleanupFailed: false }); continue;
+      }
+      const jobId = randomUUID();
+      let removed;
+      try {
+        removed = await svc.remove(item.id, { companyId, userId, skipRelated, readCondition, cleanupJobId: jobId,
+          audit: { companyId, actorType: actor.actorType, actorId: actor.actorId,
+            agentId: actor.agentId, runId: actor.runId, agentApiKeyId: actor.agentApiKeyId,
+            action: "issue.deleted", entityType: "issue", entityId: item.id,
+            details: { source: "archived_chat_cleanup", cleanupJobId: jobId } } });
+      } catch (error) {
+        const isConflict = error instanceof HttpError && error.status === 409;
+        if (!isConflict) logger.warn({ err: error, issueId: item.id }, "archive cleanup task deletion failed");
+        results.push({ id: item.id, status: isConflict ? "skipped" : "failed", reason: isConflict
+          ? error.message : "Deletion failed. No changes were committed for this task.", fileCleanupFailed: false }); continue;
+      }
+      if (!removed) {
+        results.push({ id: item.id, status: "skipped", reason: "This chat is unavailable or is no longer archived by you.", fileCleanupFailed: false }); continue;
+      }
+      try {
+        const job = await executeArchiveCleanupJob(db, storage, companyId, userId, jobId);
+        const failed = job.files.some((file) => file.status !== "removed");
+        estimatedLocalBytesRemoved += job.removedBytes;
+        results.push({ id: item.id, status: "deleted", fileCleanupFailed: failed, cleanupJobId: jobId,
+          reason: failed ? "Task deleted. Some files remain in the retryable cleanup list." : "Deleted." });
+      } catch (error) {
+        logger.warn({ err: error, cleanupJobId: jobId }, "archive file cleanup deferred for retry");
+        results.push({ id: item.id, status: "deleted", fileCleanupFailed: true, cleanupJobId: jobId,
+          reason: "Task deleted. Some files remain in the retryable cleanup list." });
+      }
+    }
+    return { items: results, estimatedLocalBytesRemoved };
+  }
 
   router.post("/companies/:companyId/archived-chats/cleanup", async (req, res) => {
     assertBoard(req);
@@ -8298,51 +8347,32 @@ export function issueRoutes(
     const input = z.object({ issueIds: z.array(z.string().uuid()).min(1).max(200),
       skipRelated: z.boolean(), confirm: z.literal(true) }).strict().safeParse(req.body);
     if (!input.success) { res.status(400).json({ error: "Invalid confirmed cleanup selection" }); return; }
-    const readCondition = await issueReadSqlCondition(db, req.actor);
-    const preview = await svc.previewArchivedChatCleanup(companyId, req.actor.userId,
-      [...new Set(input.data.issueIds)], readCondition, input.data.skipRelated);
-    const results: Array<{ id: string; status: "deleted" | "skipped" | "failed"; reason: string; fileCleanupFailed: boolean }> = [];
-    let estimatedLocalBytesRemoved = 0;
+    res.json(await cleanupArchivedSelection(req, companyId, req.actor.userId, input.data.issueIds, input.data.skipRelated));
+  });
+
+  router.get("/companies/:companyId/archived-chats/pending-cleanup", async (req, res) => {
+    assertBoard(req);
+    const companyId = req.params.companyId as string;
+    assertCompanyAccess(req, companyId);
+    if (req.actor.type !== "board" || !req.actor.userId) throw forbidden("Board user required");
+    res.json(await db.select({ id: archiveCleanupJobs.id, title: archiveCleanupJobs.title,
+      files: archiveCleanupJobs.files, removedBytes: archiveCleanupJobs.removedBytes }).from(archiveCleanupJobs)
+      .where(and(eq(archiveCleanupJobs.companyId, companyId), eq(archiveCleanupJobs.userId, req.actor.userId), eq(archiveCleanupJobs.status, "pending")))
+      .orderBy(desc(archiveCleanupJobs.createdAt)).limit(100));
+  });
+
+  router.post("/companies/:companyId/archived-chats/pending-cleanup/:jobId/retry", async (req, res) => {
+    assertBoard(req);
+    const companyId = req.params.companyId as string;
+    assertCompanyAccess(req, companyId);
+    if (req.actor.type !== "board" || !req.actor.userId) throw forbidden("Board user required");
+    const jobId = z.string().uuid().safeParse(req.params.jobId);
+    if (!jobId.success) { res.status(400).json({ error: "Invalid cleanup job" }); return; }
+    const result = await executeArchiveCleanupJob(db, storage, companyId, req.actor.userId, jobId.data);
     const actor = getActorInfo(req);
-    for (const item of preview) {
-      if (item.protection !== "candidate") {
-        results.push({ id: item.id, status: "skipped", reason: item.reason, fileCleanupFailed: false });
-        continue;
-      }
-      const attachments = await svc.listAttachments(item.id);
-      let removed;
-      try {
-        // The service locks and rechecks archive ownership, lifecycle and links for each deletion.
-        removed = await svc.remove(item.id, { companyId, userId: req.actor.userId,
-          skipRelated: input.data.skipRelated, readCondition,
-          audit: { companyId, actorType: actor.actorType, actorId: actor.actorId,
-            agentId: actor.agentId, runId: actor.runId, agentApiKeyId: actor.agentApiKeyId,
-            action: "issue.deleted", entityType: "issue", entityId: item.id, details: { source: "archived_chat_batch_cleanup" } } });
-      } catch (error) {
-        const isConflict = error instanceof HttpError && error.status === 409;
-        if (!isConflict) logger.warn({ err: error, issueId: item.id }, "batch cleanup task deletion failed");
-        results.push({ id: item.id, status: isConflict ? "skipped" : "failed", reason: isConflict
-          ? error.message : "Deletion failed. No changes were committed for this task.", fileCleanupFailed: false });
-        continue;
-      }
-      if (!removed) {
-        results.push({ id: item.id, status: "skipped", reason: "This chat is unavailable or is no longer archived by you.", fileCleanupFailed: false });
-        continue;
-      }
-      let fileCleanupFailed = false;
-      for (const attachment of attachments) {
-        try {
-          await storage.deleteObject(attachment.companyId, attachment.objectKey);
-          if (attachment.provider === "local_disk") estimatedLocalBytesRemoved += attachment.byteSize;
-        } catch (error) {
-          fileCleanupFailed = true;
-          logger.warn({ err: error, issueId: item.id, attachmentId: attachment.id }, "batch cleanup attachment deletion failed");
-        }
-      }
-      results.push({ id: item.id, status: "deleted", reason: fileCleanupFailed
-        ? "Task deleted, but some attachment files could not be removed." : "Deleted.", fileCleanupFailed });
-    }
-    res.json({ items: results, estimatedLocalBytesRemoved });
+    await logActivity(db, { companyId, actorType: actor.actorType, actorId: actor.actorId,
+      action: "issue.file_cleanup_retried", entityType: "archive_cleanup_job", entityId: jobId.data });
+    res.json(result);
   });
 
   router.get("/companies/:companyId/archived-chats", async (req, res) => {
@@ -15926,6 +15956,13 @@ export function issueRoutes(
     );
     if (!existing) return;
     if (!(await assertAgentIssueMutationAllowed(req, res, existing))) return;
+    if (archiveQuery.data.archivedChat && req.actor.type === "board" && req.actor.userId) {
+      const result = await cleanupArchivedSelection(req, existing.companyId, req.actor.userId, [id], false);
+      const outcome = result.items[0];
+      if (outcome.status !== "deleted") throw conflict(outcome.reason);
+      res.json({ ...existing, fileCleanupFailed: outcome.fileCleanupFailed, cleanupJobId: outcome.cleanupJobId });
+      return;
+    }
     const attachments = await svc.listAttachments(id);
 
     const issue = await svc.remove(id, archiveQuery.data.archivedChat && req.actor.type === "board" && req.actor.userId
