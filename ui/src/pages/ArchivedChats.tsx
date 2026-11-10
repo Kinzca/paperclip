@@ -136,13 +136,8 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
       <span className="text-sm text-muted-foreground">{uiText("Selected {{value0}}", { value0: selected.size })}</span>
       <Button size="sm" variant="secondary" disabled={!selected.size || busy}
         onClick={() => previewAction.mutate({ issueIds: [...selected] })}><Trash2 className="size-4" />{uiText("Delete selected chats...")}</Button>
-      <Button size="sm" variant="ghost" disabled={busy || chats.isPending || chats.isError}
-        onClick={() => previewAction.mutate({ filters: { q: query, projectId: projectId === "all" ? undefined : projectId } })}>
-        {uiText("Preview all filtered chats")}
-      </Button>
-      <label className="flex w-full items-center gap-2 text-sm"><Checkbox checked={skipRelated} disabled={busy}
+      <label className="ml-auto flex items-center gap-2 whitespace-nowrap text-sm"><Checkbox checked={skipRelated} disabled={busy}
         onCheckedChange={(checked) => setSkipRelated(checked === true)} />{uiText("Automatically exclude linked tasks")}</label>
-      <p className="w-full text-xs text-muted-foreground">{uiText("Excludes parent links, dependencies and task references. Subtasks and active, paused or unfinished work always remain protected.")}</p>
     </div>
     {actionError && !target && <p role="alert" className="text-sm text-destructive">{actionError}</p>}
     {chats.isError ? <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border p-4">
