@@ -832,6 +832,8 @@ function StreamlinedInbox({
   const { setBreadcrumbs } = useBreadcrumbs();
   const { openNewIssue } = useDialogActions();
   const { isMobile } = useSidebar();
+  const [nestingPreferenceEnabled, setNestingPreferenceEnabled] = useState(() => loadInboxNesting());
+  const nestingEnabled = resolveInboxNestingEnabled(nestingPreferenceEnabled, isMobile);
   const navigate = useNavigate();
   const { pushToast } = useToastActions();
   useUiLocale();
@@ -1495,8 +1497,6 @@ function StreamlinedInbox({
   );
 
   // --- Parent-child nesting for inbox issues ---
-  const [nestingPreferenceEnabled, setNestingPreferenceEnabled] = useState(() => loadInboxNesting());
-  const nestingEnabled = resolveInboxNestingEnabled(nestingPreferenceEnabled, isMobile);
   useEffect(() => {
     if (!shouldResetInboxWorkspaceGrouping(groupBy, isolatedWorkspacesEnabled, experimentalSettingsLoaded)) return;
     setGroupBy("none");
