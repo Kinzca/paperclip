@@ -1617,6 +1617,7 @@ suite("native workflow execution", () => {
     for (let index = 0; index < 3; index++) {
       const parent = await issueService(db).create(context.companyId, {
         title: `Regression scenario ${index}`,
+        workflow: { templateKey: "standard" },
         description: `Acceptance target ${index}`,
         status: "todo",
         assigneeAgentId: context.executor,
