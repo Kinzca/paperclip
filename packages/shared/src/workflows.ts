@@ -620,6 +620,22 @@ export const BUILT_IN_WORKFLOW_TEMPLATES: readonly WorkflowTemplate[] = [
       },
     ],
   }),
+  workflowTemplateSchema.parse({
+    key: "rapid-development",
+    category: "general",
+    name: "Rapid development",
+    description:
+      "Direct delivery by the executor, without automatic testing or independent review.",
+    nodes: [
+      {
+        id: "execute",
+        title: "Execute task",
+        kind: "task",
+        instructions:
+          "Complete the authorized objective and deliver directly. For reversible changes, use a brief code or configuration review; do not run tests or add independent review, scripts, sampling or evidence-only reports. Test only irreversible consequences or when the user explicitly requests tests, limited to that risk. Preserve authorization, role separation and user pauses. Never compute or compare delivery file or directory hashes. Reuse existing evidence and state what remains unverified; do not claim independent verification. If independent review is explicitly required, report that a review workflow must be selected before starting. For delegated internal dependencies, link child tasks with parentId and blockedByIssueIds, save the handoff and set the waiting task to blocked so the host can resume it.",
+      },
+    ],
+  }),
   ...[
     {
       key: "application-development",
@@ -760,7 +776,7 @@ export function resolveWorkflowPolicy(
   platform: WorkflowPolicy = {},
 ) {
   let enabled = platform.enabled ?? true;
-  let templateKey = platform.templateKey ?? "standard";
+  let templateKey = platform.templateKey ?? "rapid-development";
   let revision = platform.revision;
   const limits = { ...DEFAULT_WORKFLOW_LIMITS, ...platform.limits };
   let bindings = { ...platform.bindings };

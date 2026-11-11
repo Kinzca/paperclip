@@ -2,6 +2,9 @@ import { i18n } from "./index";
 
 // Keep this surface's copy together without changing the global UI catalog.
 const messages = {
+  "Rapid development": "快速开发",
+  "Direct delivery by the executor, without automatic testing or independent review.":
+    "由负责人完成后直接交付，不自动增加测试或独立审查阶段。",
   "Resume without a time limit": "取消时长上限并续跑",
   "Active execution minutes (blank means no time limit)": "累计执行时长（分钟，留空不设上限）",
   "No time limit": "不设时长上限",

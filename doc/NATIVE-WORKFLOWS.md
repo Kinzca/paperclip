@@ -5,7 +5,7 @@ inspect stages, controls and retained evidence. Background refreshes preserve th
 chosen disclosure state; changing tasks starts collapsed. Historical cancellation
 reasons use neutral styling and do not occupy the conversation by default.
 
-Paperclip owns a bounded execute / verify / review / repair loop. Adapters such as
+Paperclip owns native execution and optional verify / review / repair stages. Adapters such as
 `codex_local` provide tools, credentials and the inner coding loop; the server owns
 dependencies, retained evidence, recovery and stopping rules.
 
@@ -14,8 +14,15 @@ dependencies, retained evidence, recovery and stopping rules.
 Open **Task workflows** in the sidebar. Company/project defaults apply automatically
 to newly assigned standard root tasks, including initially unassigned tasks at
 first assignment. Existing assigned tasks are not retrofitted. Platform defaults
-enable `standard`: execute → retain a successful run receipt → independently
-review, with five attempts per node, no total execution time limit and two concurrent stages.
+select `rapid-development` (快速开发): one executor stage followed by direct
+delivery, with five attempts per node, no total execution time limit and two concurrent stages.
+Reversible work needs only a brief code or configuration review. Tests are limited
+to irreversible consequences or explicit user requests. No independent review or
+extra evidence-only stage is created by this template. Existing successful-run and
+handoff completion controls still apply; completion does not claim independent QA.
+The `standard` execute → evidence → independent review template remains selectable.
+Explicit company, project and task choices override the platform default; changing
+the default never rewrites existing task snapshots or resumes paused work.
 Native company budgets remain enforced; an additional workflow cost cap is optional.
 
 The board page is `/:companyPrefix/workflows` (for example, `/AIG/workflows`).
@@ -37,7 +44,7 @@ agent tasks. Saving a draft or browsing candidates does not start execution.
 Unsaved candidate edits block regression and publication until saved as a new
 revision. Publication retains the existing evidence and human-approval gates.
 
-默认提供通用任务、应用开发、问题修复、研究分析、文档编写五套模板。
+默认使用“快速开发”，另提供通用任务、应用开发、问题修复、研究分析、文档编写模板。
 游戏开发单独归入可选专业模板，仅在明确选择时加载。已有公司／项目的显式选择和历史任务快照保留，升级不会替用户改写它们。
 职责绑定属于公司／项目配置：可按阶段选择执行者、公司角色、具体成员或人工负责人；审批阶段保持人工，审查阶段仍执行独立性检查。
 完整通用化契约与操作步骤见 [通用工作流](GENERIC-WORKFLOWS.zh-CN.md)。

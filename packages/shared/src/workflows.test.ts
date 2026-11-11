@@ -279,10 +279,10 @@ describe("通用工作流交接契约", () => {
     expect(policy.limits.maxAttempts).toBe(2);
   });
   it("默认流程不加载游戏专业规则；研究与文档有独立的证据要求", () => {
-    expect(resolveWorkflowPolicy([]).templateKey).toBe("standard");
+    expect(resolveWorkflowPolicy([]).templateKey).toBe("rapid-development");
     expect(
       BUILT_IN_WORKFLOW_TEMPLATES.filter((item) => item.category === "general"),
-    ).toHaveLength(5);
+    ).toHaveLength(6);
     for (const key of ["standard", "research-analysis", "document-writing"]) {
       const template = BUILT_IN_WORKFLOW_TEMPLATES.find(
         (item) => item.key === key,

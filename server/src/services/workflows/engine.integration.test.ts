@@ -102,7 +102,7 @@ suite("native workflow execution", () => {
     const store = workflowStore(db);
     const parent = await issueService(db).create(companyId, {
       title: "Deliver a verified change",
-      workflow: { limits: { timeoutMinutes } },
+      workflow: { templateKey: "standard", limits: { timeoutMinutes } },
       description: "Keep the objective and acceptance criteria fixed.",
       status: "todo",
       assigneeAgentId: executor,
