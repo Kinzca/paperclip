@@ -55,14 +55,14 @@ const messages = {
   "Research and analysis": "研究分析",
   "Document writing": "文档编写",
   "Plan and execute": "规划与执行",
-  "Deliver an application change with functional evidence and independent review.":
-    "实现应用功能，保留实际运行证据并独立审查。",
-  "Reproduce a problem, repair its cause and check for regressions.":
-    "复现问题、修复原因，检查修复效果与关联回归。",
-  "Answer a research question with traceable sources and independent fact checking.":
-    "围绕研究问题收集可追溯来源，形成分析并独立核查。",
-  "Produce a document for its intended audience and verify coverage and consistency.":
-    "围绕目标读者编写文档，检查内容覆盖、事实和一致性。",
+  "Opt-in application implementation and independent review under shared execution instructions.":
+    "明确选用后安排应用开发及独立审查，遵循共享执行规则。",
+  "Opt-in problem repair and independent review under shared execution instructions.":
+    "明确选用后安排问题修复及独立审查，遵循共享执行规则。",
+  "Opt-in research and independent source review under shared execution instructions.":
+    "明确选用后安排研究及独立来源审查，遵循共享执行规则。",
+  "Opt-in document writing and independent editorial review under shared execution instructions.":
+    "明确选用后安排文档编写及独立审校，遵循共享执行规则。",
   "Effective execution context": "生效的执行上下文",
   "Templates define the work. Scope context supplies project conventions. Tasks supply goals and acceptance criteria.":
     "模板定义工作方式，公司／项目上下文提供规范，具体任务提供目标与验收条件。",
@@ -146,11 +146,11 @@ const messages = {
   "Independent review": "独立审查",
   "Human acceptance": "人工验收",
   "Execute, verify, review": "通用任务",
-  "Bounded execution with a recorded run receipt and independent review.":
-    "执行任务后核验证据，再由独立成员审查；失败时在既定限制内返工。",
+  "Opt-in execution and independent review; shared instructions govern testing.":
+    "明确选用后安排执行及独立审查；测试遵循共享执行规则。",
   "Game development": "游戏开发",
-  "Implementation followed by parallel code and playable-result verification.":
-    "完成游戏修改并保留产物后，并行开展代码审查与试玩验证，最后由你验收。",
+  "Opt-in game implementation, code review and playtesting with human acceptance.":
+    "明确选用后安排游戏开发、代码审查及试玩，最后由你验收。",
   "Execute task": "执行任务",
   "Check execution evidence": "核验执行证据",
   "Independent verification": "独立验证",

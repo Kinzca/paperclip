@@ -109,7 +109,9 @@ and late receipts can exceed it. Native company budget enforcement stays indepen
 
 A successful process receipt is **not** proof that tests passed. Evidence gates
 inspect server-owned heartbeat, attachment and work-product records. Independent
-review must exercise the objective with real tools. Task details retain results
+review uses existing evidence and inspection under the shared execution instructions.
+Selecting review does not itself request tests; tests are limited to irreversible
+consequences or explicit user requests. Task details retain results
 and attempt evidence. The game template additionally gates on retained deliverables.
 
 ### Declared tool requirements and frozen acceptance criteria

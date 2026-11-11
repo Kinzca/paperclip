@@ -30,8 +30,8 @@ describe("任务交接", () => {
       snapshot.definition.nodes[2],
     );
     expect(text).toContain("使用项目引用规范");
-    expect(text).toContain("report 对象");
-    expect(text).toContain("未验证");
+    expect(text).toContain("report object");
+    expect(text).toContain("unverified");
   });
   it("旧快照不追加新交接协议", () => {
     expect(

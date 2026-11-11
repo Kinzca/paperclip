@@ -539,37 +539,6 @@ function CompanyWorkflows({
             }}
           />
         )}
-        {preview.context.length > 0 && (
-          <details className="text-sm">
-            <summary className="cursor-pointer text-muted-foreground">
-              {uiText("Effective execution context")}
-            </summary>
-            <div className="flex flex-col gap-3 pt-3">
-              {preview.context.map((text, index) => (
-                <p key={index} className="whitespace-pre-wrap">
-                  {text}
-                </p>
-              ))}
-            </div>
-          </details>
-        )}
-        <details className="text-xs text-muted-foreground">
-          <summary className="cursor-pointer">
-            {uiText("How these rules apply")}
-          </summary>
-          <div className="flex max-w-3xl flex-col gap-2 pt-2">
-            <p>
-              {uiText(
-                "Templates define the work. Scope context supplies project conventions. Tasks supply goals and acceptance criteria.",
-              )}
-            </p>
-            <p>
-              {uiText(
-                "Standard root tasks inherit these rules when first assigned. Conversations, routine tasks and existing assigned tasks are excluded.",
-              )}
-            </p>
-          </div>
-        </details>
         {save.isSuccess && (
           <p role="status" className="flex items-center gap-2 text-sm">
             <Check aria-hidden="true" className="size-4" />

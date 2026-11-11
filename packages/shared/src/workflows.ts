@@ -591,14 +591,14 @@ export const BUILT_IN_WORKFLOW_TEMPLATES: readonly WorkflowTemplate[] = [
     handoffVersion: 1,
     name: "Execute, verify, review",
     description:
-      "Bounded execution with a recorded run receipt and independent review.",
+      "Opt-in execution and independent review; shared instructions govern testing.",
     nodes: [
       {
         id: "execute",
         title: "Execute task",
         kind: "task",
         instructions:
-          "Complete the parent's authorized objective. Retain inspectable deliverables and verification evidence; never change acceptance criteria to pass.",
+          "Complete the authorized objective under the shared execution instructions. Reuse existing evidence, identify the delivered revision and state what remains unverified. Keep the agreed acceptance criteria.",
       },
       {
         id: "verify",
@@ -616,13 +616,14 @@ export const BUILT_IN_WORKFLOW_TEMPLATES: readonly WorkflowTemplate[] = [
         onFailure: "execute",
         binding: { kind: "role", role: "qa" },
         instructions:
-          "Independently verify the exact delivered revision against the parent objective using real tools. Re-run relevant checks. Report concrete evidence and request changes when any required criterion fails. A successful agent process is not proof that tests passed.",
+          "Review the delivered revision against the objective using existing evidence and a brief inspection. Follow shared execution instructions for any tests; selecting this review workflow does not authorize extra tests. State unverified criteria and actionable findings without claiming unperformed checks.",
       },
     ],
   }),
   workflowTemplateSchema.parse({
     key: "rapid-development",
     category: "general",
+    handoffVersion: 1,
     name: "Rapid development",
     description:
       "Direct delivery by the executor, without automatic testing or independent review.",
@@ -632,7 +633,7 @@ export const BUILT_IN_WORKFLOW_TEMPLATES: readonly WorkflowTemplate[] = [
         title: "Execute task",
         kind: "task",
         instructions:
-          "Complete the authorized objective and deliver directly. For reversible changes, use a brief code or configuration review; do not run tests or add independent review, scripts, sampling or evidence-only reports. Test only irreversible consequences or when the user explicitly requests tests, limited to that risk. Preserve authorization, role separation and user pauses. Never compute or compare delivery file or directory hashes. Reuse existing evidence and state what remains unverified; do not claim independent verification. If independent review is explicitly required, report that a review workflow must be selected before starting. For delegated internal dependencies, link child tasks with parentId and blockedByIssueIds, save the handoff and set the waiting task to blocked so the host can resume it.",
+          "Complete the authorized objective and deliver directly under the shared execution instructions. Do not add testing or independent review stages. If the user explicitly requires independent review, report that a review workflow must be selected; do not silently change this workflow.",
       },
     ],
   }),
@@ -641,41 +642,41 @@ export const BUILT_IN_WORKFLOW_TEMPLATES: readonly WorkflowTemplate[] = [
       key: "application-development",
       name: "Application development",
       description:
-        "Deliver an application change with functional evidence and independent review.",
+        "Opt-in application implementation and independent review under shared execution instructions.",
       instructions:
-        "先根据任务目标列出交付物、验收条件和实现计划。采用项目已有技术栈实现应用功能，保留具体版本、运行方式、相关测试和用户操作证据。返修逐条回应问题编号；不要扩大范围或降低验收要求。",
+        "Implement the authorized application change using the existing stack and shared execution instructions. Identify the changed files or revision, reuse existing evidence and state remaining limitations. Do not expand scope or weaken acceptance criteria.",
       review:
-        "依据原始任务逐项核查交付版本，使用实际运行结果检查主要用户流程、接口、数据和回归风险。构建通过不能代替功能证据；未验证项不得标为通过。",
+        "Inspect the delivered application change against the agreed criteria and available evidence. Follow shared execution instructions; do not add tests or runtime sessions solely for review evidence. Identify concrete defects and unverified behavior.",
     },
     {
       key: "problem-solving",
       name: "Problem solving",
       description:
-        "Reproduce a problem, repair its cause and check for regressions.",
+        "Opt-in problem repair and independent review under shared execution instructions.",
       instructions:
-        "记录问题、复现条件、期望结果和现有证据。定位原因后实施有边界的修复，保留修改前后的证据及产物版本。逐条回应审查问题，无法复现或受外部条件阻塞时说明原因。",
+        "Use the reported symptoms and existing evidence to identify and repair the cause within scope. Follow shared execution instructions; do not create a reproduction or regression suite by default. Describe the fix, remaining uncertainty and any real blocker.",
       review:
-        "按原始问题和验收条件检查修复版本，核对复现步骤、修复效果及相关回归。检查是否仅掩盖症状、删掉检查或扩大范围。未验证的结论必须明确列出。",
+        "Inspect whether the repair addresses the reported cause without masking symptoms or expanding scope. Reuse available evidence and follow shared execution instructions for tests. State concrete findings and unverified outcomes.",
     },
     {
       key: "research-analysis",
       name: "Research and analysis",
       description:
-        "Answer a research question with traceable sources and independent fact checking.",
+        "Opt-in research and independent source review under shared execution instructions.",
       instructions:
-        "明确研究问题、范围、时效和交付形式，制定查证计划。优先收集原始来源，区分事实、推断与未知；交付带来源和版本标识的分析报告。返修时逐条补证或纠正，不编造引用。",
+        "Answer the research question within its scope and time requirements. Prefer primary sources, distinguish facts from inference and uncertainty, and cite supporting sources. Follow shared execution instructions and do not fabricate references.",
       review:
-        "逐项检查研究问题是否被回答，核对原始来源、引用与结论是否对应，识别时效问题、遗漏、反例和不确定性。记录实际查阅的证据；不要将代码构建或软件测试作为研究报告的默认验收要求。",
+        "Review whether the research answers the question and whether sources support its conclusions. Identify stale information, omissions and uncertainty. Follow shared execution instructions without adding software tests or evidence-only reports.",
     },
     {
       key: "document-writing",
       name: "Document writing",
       description:
-        "Produce a document for its intended audience and verify coverage and consistency.",
+        "Opt-in document writing and independent editorial review under shared execution instructions.",
       instructions:
-        "明确读者、用途、结构、事实来源和验收条件，列出写作计划。交付可访问且带版本标识的文档，说明覆盖范围、引用及未完成项，按问题编号返修。保留用户提供的专有名称和内容。",
+        "Write the requested document for its audience and purpose, preserving user-provided names and content. Cite factual sources where needed and state omissions. Follow shared execution instructions; use existing delivery mechanisms without extra verification stages.",
       review:
-        "对照目标读者和验收要求，检查文档完整性、事实依据、术语一致性、可执行性及可读性。指出具体段落和修改要求；代码任务以外不默认要求构建或测试命令。",
+        "Review the document for coverage, factual support, consistent terms and readability. Give specific passage-level findings under the shared execution instructions. Do not add builds, tests or separate evidence collection by default.",
     },
   ].map((task) =>
     workflowTemplateSchema.parse({
@@ -719,14 +720,14 @@ export const BUILT_IN_WORKFLOW_TEMPLATES: readonly WorkflowTemplate[] = [
     category: "specialist",
     name: "Game development",
     description:
-      "Implementation followed by parallel code and playable-result verification.",
+      "Opt-in game implementation, code review and playtesting with human acceptance.",
     nodes: [
       {
         id: "execute",
         title: "Implement game change",
         kind: "task",
         instructions:
-          "Implement the approved game change in the project workspace. Launch the game, exercise the changed behavior, retain screenshots and test evidence, and register work products. Do not choose a new engine or alter the agreed scope.",
+          "Implement the approved game change in the existing project and engine under the shared execution instructions. Deliver the changed assets or code and reuse existing evidence. Do not launch the game, record video or take screenshots unless the user explicitly requests that work.",
       },
       {
         id: "evidence",
@@ -747,7 +748,7 @@ export const BUILT_IN_WORKFLOW_TEMPLATES: readonly WorkflowTemplate[] = [
         onFailure: "execute",
         binding: { kind: "role", role: "engineer" },
         instructions:
-          "Review the exact delivered implementation and rerun relevant automated tests. Reject regressions and changes to acceptance checks made only to obtain a pass.",
+          "Inspect the delivered game implementation and available evidence under the shared execution instructions. Do not rerun tests merely because this is a review stage. Identify concrete defects without weakening acceptance criteria.",
       },
       {
         id: "playtest",
@@ -757,7 +758,7 @@ export const BUILT_IN_WORKFLOW_TEMPLATES: readonly WorkflowTemplate[] = [
         onFailure: "execute",
         binding: { kind: "role", role: "qa" },
         instructions:
-          "Launch the exact delivered game revision. Exercise the changed player journey, retain evidence, and check behavior, presentation and usability. Do not infer gameplay success from parse or build success. Escalate unresolved subjective direction to the human.",
+          "Perform the playtesting explicitly requested by selecting this workflow, limited to the agreed player journey. Follow shared execution instructions; do not add automated tests or recordings unless requested. Use the delivered revision, state unverified behavior and refer unresolved subjective decisions to the user.",
       },
       {
         id: "accept",
