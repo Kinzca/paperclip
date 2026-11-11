@@ -415,6 +415,11 @@ const refreshExternalObjectsSchema = z
 const inboxArchiveBodySchema = z
   .object({
     userId: z.string().trim().min(1).optional(),
+    includeDescendants: z.boolean().optional(),
+    undo: z.object({
+      archivedAt: z.string().datetime(),
+      issueIds: z.array(z.string().uuid()).min(1).max(10000),
+    }).strict().optional(),
 }).strict().default({});
 const externalObjectSummariesSchema = z.object({
   issueIds: z.array(z.string().uuid()).max(1000),
@@ -12075,16 +12080,21 @@ export function issueRoutes(
       if (!issue) return;
       const target = await resolveInboxArchiveTarget(req, issue);
       const actor = getActorInfo(req);
-      const archiveState = await svc.archiveInbox(
+      if (req.body.includeDescendants) assertBoard(req);
+      const attribution = {
+        archivedByActorType: req.actor.type === "agent" ? "agent" as const : "user" as const,
+        archivedByAgentId: actor.agentId,
+        archivedByRunId: actor.runId,
+      };
+      const archiveState = req.body.includeDescendants
+        ? await svc.archiveInboxTree(issue.companyId, issue.id, target.userId,
+          await issueReadSqlCondition(db, req.actor), attribution)
+        : await svc.archiveInbox(
         issue.companyId,
         issue.id,
         target.userId,
         new Date(),
-        {
-          archivedByActorType: req.actor.type === "agent" ? "agent" : "user",
-          archivedByAgentId: actor.agentId,
-          archivedByRunId: actor.runId,
-        },
+        attribution,
       );
       await logActivity(db, {
         companyId: issue.companyId,
@@ -12099,6 +12109,10 @@ export function issueRoutes(
         details: {
           userId: target.userId,
           archivedAt: archiveState.archivedAt,
+          ...(req.body.includeDescendants ? {
+            archivedIssueIds: "archivedIssueIds" in archiveState ? archiveState.archivedIssueIds : [],
+            skippedActiveCount: "skippedActiveCount" in archiveState ? archiveState.skippedActiveCount : 0,
+          } : {}),
           targetResolvedFrom: target.targetResolvedFrom,
           ...(target.policyMode ? { policyMode: target.policyMode } : {}),
         },
@@ -12120,7 +12134,11 @@ export function issueRoutes(
       );
       if (!issue) return;
       const target = await resolveInboxArchiveTarget(req, issue);
-      const removed = await svc.unarchiveInbox(
+      if (req.body.undo) assertBoard(req);
+      const removed = req.body.undo
+        ? await svc.undoInboxArchiveBatch(issue.companyId, target.userId, req.body.undo,
+          await issueReadSqlCondition(db, req.actor))
+        : await svc.unarchiveInbox(
         issue.companyId,
         issue.id,
         target.userId,
@@ -12138,6 +12156,7 @@ export function issueRoutes(
         entityId: issue.id,
         details: {
           userId: target.userId,
+          ...(req.body.undo ? { restoredIssueIds: removed && "restoredIssueIds" in removed ? removed.restoredIssueIds : [] } : {}),
           targetResolvedFrom: target.targetResolvedFrom,
           ...(target.policyMode ? { policyMode: target.policyMode } : {}),
         },

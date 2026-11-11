@@ -1,4 +1,5 @@
 import type { SetIssueTitle } from "@paperclipai/shared";
+import type { InboxArchiveResult, InboxArchiveUndo } from "@paperclipai/shared";
 import type { ArchivedChatCleanupPreview, ArchivedChatCleanupResult, ArchivedChatCleanupJob } from "@paperclipai/shared";
 import type { ExecutionReconciliation } from "@paperclipai/shared";
 import type {
@@ -253,10 +254,10 @@ export const issuesApi = {
     api.post<{ id: string; lastReadAt: Date }>(`/issues/${id}/read`, {}),
   markUnread: (id: string) =>
     api.delete<{ id: string; removed: boolean }>(`/issues/${id}/read`),
-  archiveFromInbox: (id: string) =>
-    api.post<{ id: string; archivedAt: Date }>(
+  archiveFromInbox: (id: string, includeDescendants = false) =>
+    api.post<InboxArchiveResult>(
       `/issues/${id}/inbox-archive`,
-      {},
+      includeDescendants ? { includeDescendants: true } : {},
     ),
   listArchivedChats: (companyId: string, filters: { q?: string; projectId?: string; offset?: number; limit?: number }) => {
     const params = new URLSearchParams();
@@ -272,9 +273,10 @@ export const issuesApi = {
     api.post<ArchivedChatCleanupResult>(`/companies/${companyId}/archived-chats/cleanup`, input),
   previewArchivedChatCleanup: (companyId: string, input: ({ issueIds: string[] } | { filters: { q?: string; projectId?: string } }) & { skipRelated?: boolean; includeFiles?: boolean }) =>
     api.post<ArchivedChatCleanupPreview>(`/companies/${companyId}/archived-chats/cleanup-preview`, input),
-  unarchiveFromInbox: (id: string) =>
-    api.delete<{ id: string; archivedAt: Date } | { ok: true }>(
+  unarchiveFromInbox: (id: string, undo?: InboxArchiveUndo) =>
+    api.delete<{ id: string; archivedAt: Date } | { ok: true; restoredIssueIds?: string[] }>(
       `/issues/${id}/inbox-archive`,
+      undo ? { undo } : undefined,
     ),
   setTitle: (id: string, data: SetIssueTitle) =>
     api.put<{ id: string; title: string; titleNeedsGeneration: boolean; changed: boolean }>(`/issues/${id}/title`, data),

@@ -1,6 +1,9 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { InboxArchiveUndo } from "@paperclipai/shared";
+import { uiText, useUiLocale } from "@/i18n/ui";
+import "@/i18n/inbox-archive";
 import { deriveOriginatingActor, INBOX_MINE_ISSUE_STATUS_FILTER, isHeartbeatRunVisibleInMine } from "@paperclipai/shared";
 import { usePublishSharedQueryData, useSharedPollingQuery } from "@/hooks/useSharedPolling";
 import { approvalsApi } from "../api/approvals";
@@ -831,6 +834,7 @@ function StreamlinedInbox({
   const { isMobile } = useSidebar();
   const navigate = useNavigate();
   const { pushToast } = useToastActions();
+  useUiLocale();
   const location = useLocation();
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -1078,16 +1082,17 @@ function StreamlinedInbox({
   });
   const currentUserId = session?.user.id ?? session?.session.userId ?? null;
   const [archivingIssueIds, setArchivingIssueIds] = useState<Set<string>>(new Set());
+  const archiveBatches = useRef(new Map<string, InboxArchiveUndo>());
   const [undoableArchiveIssueIds, setUndoableArchiveIssueIds] = useState<string[]>([]);
   const [unarchivingIssueIds, setUnarchivingIssueIds] = useState<Set<string>>(new Set());
   const guardedArchiveIssueIds = useLocalInboxArchiveIssueIds(selectedCompanyId);
   const locallyArchivedIssueIds = useMemo(() => {
     const issueIds = new Set(guardedArchiveIssueIds);
     for (const issueId of undoableArchiveIssueIds) issueIds.add(issueId);
-    for (const issueId of archivingIssueIds) issueIds.add(issueId);
+    if (!nestingEnabled) for (const issueId of archivingIssueIds) issueIds.add(issueId);
     for (const issueId of unarchivingIssueIds) issueIds.delete(issueId);
     return issueIds;
-  }, [archivingIssueIds, guardedArchiveIssueIds, undoableArchiveIssueIds, unarchivingIssueIds]);
+  }, [archivingIssueIds, guardedArchiveIssueIds, undoableArchiveIssueIds, unarchivingIssueIds, nestingEnabled]);
 
   const companyUserLabelMap = useMemo(
     () => buildCompanyUserLabelMap(companyMembers?.users),
@@ -1896,7 +1901,7 @@ function StreamlinedInbox({
   };
 
   const archiveIssueMutation = useMutation({
-    mutationFn: (id: string) => issuesApi.archiveFromInbox(id),
+    mutationFn: (id: string) => issuesApi.archiveFromInbox(id, nestingEnabled),
     onMutate: async (id) => {
       // Keep the sort pinned: archiving is engagement, so defer any idle re-sort.
       noteInboxSortInteraction();
@@ -1904,11 +1909,11 @@ function StreamlinedInbox({
       setArchivingIssueIds((prev) => new Set(prev).add(id));
 
       if (!selectedCompanyId) return { previousData: [] as InboxIssueCacheSnapshot };
-      beginLocalInboxArchive(selectedCompanyId, id);
+      if (!nestingEnabled) beginLocalInboxArchive(selectedCompanyId, id);
 
       await cancelInboxIssueQueries(queryClient, selectedCompanyId);
       const previousData = snapshotInboxIssueCaches(queryClient, selectedCompanyId);
-      removeIssueFromInboxCaches(queryClient, selectedCompanyId, id);
+      if (!nestingEnabled) removeIssueFromInboxCaches(queryClient, selectedCompanyId, id);
 
       return { companyId: selectedCompanyId, previousData };
     },
@@ -1933,43 +1938,72 @@ function StreamlinedInbox({
         return next;
       });
       if (!context?.companyId) return;
-      if (!error) boundLocalInboxArchive(context.companyId, id);
+      const archivedIds = _data?.archivedIssueIds ?? [id];
+      if (!error) for (const archivedId of archivedIds) boundLocalInboxArchive(context.companyId, archivedId);
       await invalidateInboxIssueQueries(queryClient, context.companyId);
       if (!error) {
-        const presence = getIssuePresenceInActiveInboxCaches(queryClient, context.companyId, id);
-        if (presence !== "unknown") confirmLocalInboxArchive(context.companyId, id);
+        for (const archivedId of archivedIds) {
+          const presence = getIssuePresenceInActiveInboxCaches(queryClient, context.companyId, archivedId);
+          if (presence !== "unknown") confirmLocalInboxArchive(context.companyId, archivedId);
+        }
       }
     },
-    onSuccess: (_data, id) => {
-      setUndoableArchiveIssueIds((prev) => [...prev.filter((issueId) => issueId !== id), id]);
+    onSuccess: (data, id, context) => {
+      if (data.undo && data.undo.issueIds.length > 0) archiveBatches.current.set(id, data.undo);
+      if (!data.undo) archiveBatches.current.delete(id);
+      if (data.archivedIssueIds && context?.companyId) {
+        for (const archivedId of data.archivedIssueIds) {
+          beginLocalInboxArchive(context.companyId, archivedId);
+          removeIssueFromInboxCaches(queryClient, context.companyId, archivedId);
+        }
+        pushToast({
+          title: uiText("Archived {{count}} conversations", { count: data.archivedIssueIds.length }),
+          body: data.skippedActiveCount
+            ? uiText("{{count}} unfinished sub-conversations were kept visible.", { count: data.skippedActiveCount })
+            : undefined,
+          tone: data.skippedActiveCount ? "warn" : "success",
+          action: data.undo && data.undo.issueIds.length > 0 ? {
+            label: uiText("Undo group archive"),
+            onClick: () => unarchiveIssueMutation.mutate({ id, undo: data.undo }),
+          } : undefined,
+        });
+      }
+      if (!data.archivedIssueIds || data.archivedIssueIds.length > 0)
+        setUndoableArchiveIssueIds((prev) => [...prev.filter((issueId) => issueId !== id), id]);
     },
   });
 
   const unarchiveIssueMutation = useMutation({
-    mutationFn: (id: string) => issuesApi.unarchiveFromInbox(id),
-    onMutate: (id) => {
+    mutationFn: ({ id, undo }: { id: string; undo?: InboxArchiveUndo }) => issuesApi.unarchiveFromInbox(id, undo),
+    onMutate: ({ id, undo }) => {
       setActionError(null);
-      setUnarchivingIssueIds((prev) => new Set(prev).add(id));
-      if (selectedCompanyId) clearLocalInboxArchive(selectedCompanyId, id);
-      return { companyId: selectedCompanyId };
+      const issueIds = [...new Set([id, ...(undo?.issueIds ?? [])])];
+      setUnarchivingIssueIds((prev) => new Set([...prev, ...issueIds]));
+      if (selectedCompanyId) for (const issueId of issueIds) clearLocalInboxArchive(selectedCompanyId, issueId);
+      return { companyId: selectedCompanyId, issueIds };
     },
-    onError: (err, id, context) => {
+    onError: (err, _input, context) => {
       setActionError(err instanceof Error ? err.message : "Failed to undo inbox archive");
-      if (context?.companyId) {
-        beginLocalInboxArchive(context.companyId, id);
-        boundLocalInboxArchive(context.companyId, id);
+      if (context?.companyId) for (const issueId of context.issueIds) {
+        beginLocalInboxArchive(context.companyId, issueId);
+        boundLocalInboxArchive(context.companyId, issueId);
       }
     },
-    onSuccess: (_data, id) => {
-      setUndoableArchiveIssueIds((prev) => {
-        const next = prev.filter((issueId) => issueId !== id);
-        return next;
+    onSuccess: (data, { id, undo }) => {
+      if (archiveBatches.current.get(id) === undo) {
+        archiveBatches.current.delete(id);
+        setUndoableArchiveIssueIds((prev) => prev.filter((issueId) => issueId !== id));
+      }
+      if (undo && "restoredIssueIds" in data) pushToast({
+        title: uiText("Restored {{count}} conversations", { count: data.restoredIssueIds?.length ?? 0 }),
+        body: data.restoredIssueIds?.length !== undo.issueIds.length ? uiText("More recent archives were kept.") : undefined,
+        tone: "success",
       });
     },
-    onSettled: (_data, _error, id) => {
+    onSettled: (_data, _error, _input, context) => {
       setUnarchivingIssueIds((prev) => {
         const next = new Set(prev);
-        next.delete(id);
+        for (const issueId of context?.issueIds ?? []) next.delete(issueId);
         return next;
       });
       invalidateInboxIssueQueryCaches();
@@ -2095,12 +2129,13 @@ function StreamlinedInbox({
 
   useEffect(() => {
     setUndoableArchiveIssueIds((prev) =>
-      prev.filter((issueId) => guardedArchiveIssueIds.has(issueId) || unarchivingIssueIds.has(issueId)),
+      prev.filter((issueId) => [issueId, ...(archiveBatches.current.get(issueId)?.issueIds ?? [])].some((id) => guardedArchiveIssueIds.has(id) || unarchivingIssueIds.has(id))),
     );
   }, [guardedArchiveIssueIds, unarchivingIssueIds]);
 
   useEffect(() => {
     setUndoableArchiveIssueIds([]);
+    archiveBatches.current.clear();
     setUnarchivingIssueIds(new Set());
   }, [selectedCompanyId]);
 
@@ -2134,7 +2169,7 @@ function StreamlinedInbox({
 
   const kbActionsRef = useRef({
     archiveIssue: (id: string) => archiveIssueMutation.mutate(id),
-    undoArchiveIssue: (id: string) => unarchiveIssueMutation.mutate(id),
+    undoArchiveIssue: (id: string) => unarchiveIssueMutation.mutate({ id, undo: archiveBatches.current.get(id) }),
     archiveNonIssue: handleArchiveNonIssue,
     markRead: (id: string) => markReadMutation.mutate(id),
     markUnreadIssue: (id: string) => markUnreadMutation.mutate(id),
@@ -2146,7 +2181,7 @@ function StreamlinedInbox({
   });
   kbActionsRef.current = {
     archiveIssue: (id: string) => archiveIssueMutation.mutate(id),
-    undoArchiveIssue: (id: string) => unarchiveIssueMutation.mutate(id),
+    undoArchiveIssue: (id: string) => unarchiveIssueMutation.mutate({ id, undo: archiveBatches.current.get(id) }),
     archiveNonIssue: handleArchiveNonIssue,
     markRead: (id: string) => markReadMutation.mutate(id),
     markUnreadIssue: (id: string) => markUnreadMutation.mutate(id),

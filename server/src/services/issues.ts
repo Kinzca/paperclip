@@ -8520,6 +8520,67 @@ export function issueService(db: Db) {
 
     archiveInbox,
 
+    archiveInboxTree: async (
+      companyId: string,
+      issueId: string,
+      userId: string,
+      readCondition: SQL,
+      attribution: Parameters<typeof archiveInbox>[4],
+    ) => db.transaction(async (tx) => {
+      const rows = await tx.select({ id: issues.id, status: issues.status })
+        .from(issues)
+        .where(and(
+          eq(issues.companyId, companyId), readCondition,
+          // Leave existing effective archives untouched, so undo cannot revive them.
+          inboxVisibleForUserCondition(companyId, userId),
+          sql`${issues.id} IN (
+            WITH RECURSIVE subtree(id) AS (
+              SELECT ${issues.id} FROM ${issues}
+              WHERE ${issues.companyId} = ${companyId} AND ${issues.id} = ${issueId}
+              UNION
+              SELECT ${issues.id} FROM ${issues} JOIN subtree ON ${issues.parentId} = subtree.id
+              WHERE ${issues.companyId} = ${companyId}
+            ) SELECT id FROM subtree
+          )`,
+        ))
+        .orderBy(asc(issues.id)).limit(10001).for("update");
+      if (rows.length > 10000) throw unprocessable("Too many conversations to archive together");
+      const archivedAt = new Date();
+      const archivedIssueIds: string[] = [];
+      let skippedActiveCount = 0;
+      for (const row of rows) {
+        if (row.id !== issueId && !["done", "cancelled"].includes(row.status)) {
+          skippedActiveCount++;
+          continue;
+        }
+        const archive = await archiveInbox(companyId, row.id, userId, archivedAt, attribution, tx);
+        if (archive.archivedAt.getTime() === archivedAt.getTime()) archivedIssueIds.push(row.id);
+      }
+      return {
+        id: issueId, archivedAt, archivedIssueIds, skippedActiveCount,
+        undo: { archivedAt: archivedAt.toISOString(), issueIds: archivedIssueIds },
+      };
+    }),
+
+    undoInboxArchiveBatch: async (
+      companyId: string,
+      userId: string,
+      batch: { archivedAt: string; issueIds: string[] },
+      readCondition: SQL,
+    ) => db.transaction(async (tx) => {
+      const readable = tx.select({ id: issues.id }).from(issues)
+        .where(and(eq(issues.companyId, companyId), readCondition));
+      const restored = await tx.delete(issueInboxArchives).where(and(
+        eq(issueInboxArchives.companyId, companyId),
+        eq(issueInboxArchives.userId, userId),
+        inArray(issueInboxArchives.issueId, batch.issueIds),
+        inArray(issueInboxArchives.issueId, readable),
+        // Do not undo a later independent archive of the same conversation.
+        eq(issueInboxArchives.archivedAt, new Date(batch.archivedAt)),
+      )).returning({ id: issueInboxArchives.issueId });
+      return { ok: true as const, restoredIssueIds: restored.map((row) => row.id) };
+    }),
+
     /**
      * Seed inbox archives for a batch of freshly imported issues so a company
      * import does not flood the importing user's inbox. Imported issues are
