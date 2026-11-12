@@ -1606,4 +1606,19 @@ describe("instance settings routes", () => {
       expect(mockCompanyService.update).not.toHaveBeenCalled();
     });
   });
+  it("denies agent and non-admin storage deletion before accessing files", async () => {
+    for (const actor of [{ type: "agent", agentId: "agent" }, { type: "board", source: "session", isInstanceAdmin: false }]) {
+      const app = createApp(actor);
+      expect((await request(app).post("/api/instance/storage/cleanup-preview").send({ ids: ["backups:old"] })).status).toBe(403);
+      expect((await request(app).post("/api/instance/storage/cleanup").send({ token: "00000000-0000-4000-8000-000000000000", confirm: true })).status).toBe(403);
+    }
+  });
+
+  it("rejects cleanup without a preview/explicit confirmation or with arbitrary paths", async () => {
+    const app = createApp({ type: "board", source: "local_implicit" });
+    for (const body of [{}, { token: "00000000-0000-4000-8000-000000000000" }, { token: "00000000-0000-4000-8000-000000000000", confirm: true, path: "/tmp/anything" }])
+      expect((await request(app).post("/api/instance/storage/cleanup").send(body)).status).toBe(400);
+    expect((await request(app).post("/api/instance/storage/cleanup-preview").send({ ids: [] })).status).toBe(400);
+  });
+
 });

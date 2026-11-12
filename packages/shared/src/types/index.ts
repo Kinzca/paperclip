@@ -1101,3 +1101,5 @@ export type { AgentInstructionCandidate } from "./agent.js";
 export * from "./skill-source.js";
 
 export * from "./agent-lifecycle.js";
+
+export type { StorageCleanupKind, StorageCleanupItem, StorageCleanupInventory, StorageCleanupPreview, StorageCleanupResult } from "./storage-usage.js";

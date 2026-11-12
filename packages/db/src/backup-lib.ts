@@ -1,4 +1,4 @@
-import { createReadStream, createWriteStream, existsSync, mkdirSync, readdirSync, statSync, unlinkSync } from "node:fs";
+import { createReadStream, createWriteStream, rmdirSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, unlinkSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { spawn } from "node:child_process";
@@ -528,7 +528,31 @@ export function createBufferedTextFileWriter(filePath: string, maxBufferedBytes 
   };
 }
 
+/** Shared by backup creation/pruning and explicit storage cleanup. Fail closed on an abandoned lock. */
+export async function withBackupDirectoryLock<T>(directory: string, action: () => Promise<T>): Promise<T> {
+  mkdirSync(directory, { recursive: true });
+  const lock = resolve(directory, ".storage-maintenance-lock");
+  try { mkdirSync(lock); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST")
+      throw new Error(`备份或清理正在运行，或上次操作中断留下锁。请先核查 ${lock}/owner.json，不自动移除锁。`);
+    throw error;
+  }
+  const ownerFile = resolve(lock, "owner.json");
+  try {
+    writeFileSync(ownerFile, JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString() }), { mode: 0o600 });
+    return await action();
+  } finally {
+    if (existsSync(ownerFile)) unlinkSync(ownerFile);
+    rmdirSync(lock);
+  }
+}
+
 export async function runDatabaseBackup(opts: RunDatabaseBackupOptions): Promise<RunDatabaseBackupResult> {
+  return withBackupDirectoryLock(opts.backupDir, () => writeDatabaseBackup(opts));
+}
+
+async function writeDatabaseBackup(opts: RunDatabaseBackupOptions): Promise<RunDatabaseBackupResult> {
   const filenamePrefix = opts.filenamePrefix ?? "paperclip";
   const retention = opts.retention;
   const connectTimeout = Math.max(1, Math.trunc(opts.connectTimeoutSeconds ?? 5));

@@ -15,7 +15,7 @@ export async function measureStorageUsage(
   rootPath: string,
   limits = { maxEntries: 50_000, maxMs: 3_000 },
 ): Promise<StorageUsage> {
-  const categories: StorageUsage["categories"] = ["database", "logs", "files", "companyProjects", "workspaces", "backups", "other"]
+  const categories: StorageUsage["categories"] = ["database", "logs", "files", "companyProjects", "workspaces", "backups", "releases", "checkpoints", "source", "tools", "maintenance", "other"]
     .map((key) => ({ key: key as Category, bytes: 0 }));
   const configured = roots.map((root) => ({ ...root, path: path.resolve(root.path) }))
     .sort((a, b) => b.path.length - a.path.length || Number(a.category === "companyProjects") - Number(b.category === "companyProjects"));
@@ -55,7 +55,7 @@ export async function measureStorageUsage(
       throw error;
     }
   }
-  return { rootPath, measuredAt: new Date().toISOString(), categories,
+  return { rootPath, roots: configured, measuredAt: new Date().toISOString(), categories,
     totalBytes: categories.reduce((sum, item) => sum + item.bytes, 0),
     complete, unreadableEntries, filesScanned, remoteStorageExcluded: false, externalDatabaseExcluded: false,
     projectRootCount: new Set(configured.filter((root) => root.category === "companyProjects").map((root) => root.path)).size };
@@ -77,6 +77,22 @@ export function instanceStorageUsage(config: Config, db: Db, expanded = false): 
   ];
   if (config.databaseMode === "embedded-postgres") roots.push({ path: config.embeddedPostgresDataDir, category: "database" });
   if (config.storageProvider === "local_disk") roots.push({ path: config.storageLocalDiskBaseDir, category: "files" });
+  const localDir = process.env.PAPERCLIP_LOCAL_DIR;
+  const sourceRoot = process.env.PAPERCLIP_SOURCE_ROOT;
+  if (localDir && path.isAbsolute(localDir)) {
+    roots.push({ path: localDir, category: "other" },
+      { path: path.join(localDir, "releases"), category: "releases" },
+      { path: path.join(localDir, "checkpoints"), category: "checkpoints" });
+    for (const name of ["build-tools", "dependency-kits", "build-sources", "plugins", "npm-cache", "pnpm-store", "pip-cache", "go-mod-cache", "node-gyp", "playwright-browsers"])
+      roots.push({ path: path.join(localDir, name), category: "tools" });
+  }
+  if (sourceRoot && path.isAbsolute(sourceRoot)) {
+    roots.push({ path: sourceRoot, category: "source" });
+    // The supported local workspace stores its maintenance material beside source/data.
+    if (localDir && path.dirname(localDir) === path.dirname(sourceRoot)) {
+      roots.push({ path: path.dirname(sourceRoot), category: "maintenance" });
+    }
+  }
   const value = (async () => {
     const [workspaceRows, executionRows] = await Promise.all([
       db.select({ cwd: projectWorkspaces.cwd }).from(projectWorkspaces).where(and(isNotNull(projectWorkspaces.cwd),
@@ -99,8 +115,8 @@ export function instanceStorageUsage(config: Config, db: Db, expanded = false): 
       }
     }
     const result = await measureStorageUsage(roots, rootPath,
-      { maxEntries: expanded ? 500_000 : 200_000, maxMs: expanded ? 10_000 : 3_000 });
-    return { ...result, complete: result.complete && !incompleteProjectRoots,
+      { maxEntries: expanded ? 3_000_000 : 200_000, maxMs: expanded ? 120_000 : 3_000 });
+    return { ...result, complete: result.complete && !incompleteProjectRoots && !!localDir && !!sourceRoot,
       remoteStorageExcluded: config.storageProvider !== "local_disk",
       externalDatabaseExcluded: config.databaseMode !== "embedded-postgres" };
   })();
@@ -109,3 +125,5 @@ export function instanceStorageUsage(config: Config, db: Db, expanded = false): 
   void value.catch(() => { if (cache.get(expanded)?.value === value) cache.delete(expanded); });
   return value;
 }
+
+export function invalidateStorageUsage() { cache.clear(); }

@@ -1,3 +1,4 @@
+import { storageCleanupInventory, previewStorageCleanup, executeStorageCleanup } from "../services/storage-cleanup.js";
 import { trackIdleWork } from "../services/task-admission.js";
 import { loadConfig } from "../config.js";
 import { instanceStorageUsage } from "../services/storage-usage.js";
@@ -134,6 +135,34 @@ export function instanceSettingsRoutes(db: Db, pluginWorkers?: PluginWorkerManag
     const scan = z.object({ scan: z.enum(["standard", "expanded"]).default("standard") }).safeParse(req.query);
     if (!scan.success) { res.status(400).json({ error: "Invalid inventory mode" }); return; }
     res.json(await instanceStorageUsage(loadConfig(), db, scan.data.scan === "expanded"));
+  });
+  router.get("/instance/storage/cleanup", async (req, res) => {
+    assertCanManageInstanceSettings(req);
+    if (isCloudManagedInstance()) throw forbidden("Storage cleanup is operator-managed on cloud instances");
+    res.json(await storageCleanupInventory(loadConfig(), db));
+  });
+  router.post("/instance/storage/cleanup-preview", async (req, res) => {
+    assertCanManageInstanceSettings(req);
+    if (isCloudManagedInstance()) throw forbidden("Storage cleanup is operator-managed on cloud instances");
+    const parsed = z.object({ ids: z.array(z.string().min(1).max(250)).min(1).max(200) }).strict().safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: "Invalid cleanup selection" }); return; }
+    const body = parsed.data;
+    res.json(await previewStorageCleanup(loadConfig(), db, body.ids, getActorInfo(req).actorId));
+  });
+  router.post("/instance/storage/cleanup", async (req, res) => {
+    assertCanManageInstanceSettings(req);
+    if (isCloudManagedInstance()) throw forbidden("Storage cleanup is operator-managed on cloud instances");
+    const parsed = z.object({ token: z.string().uuid(), confirm: z.literal(true) }).strict().safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: "A preview token and explicit confirmation are required" }); return; }
+    const body = parsed.data;
+    const actor = getActorInfo(req);
+    res.json(await trackIdleWork(executeStorageCleanup(loadConfig(), db, body.token, actor.actorId, async (phase, details) => {
+      const companyIds = await instanceSettingsService(db).listCompanyIds();
+      await Promise.all(companyIds.map(companyId => logActivity(db, {
+        companyId, actorType: actor.actorType, actorId: actor.actorId,
+        action: `instance.storage_cleanup.${phase}`, entityType: "instance", entityId: "storage", details,
+      })));
+    })));
   });
   router.get("/companies/:companyId/project-space", async (req, res) => {
     assertCanManageInstanceSettings(req);

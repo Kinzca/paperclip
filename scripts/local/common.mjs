@@ -43,6 +43,9 @@ export const cli = path.join(runtime, "node_modules/paperclipai/dist/index.js");
 export const port = process.env.PAPERCLIP_PORT || "3100";
 export const env = {
   ...process.env,
+  PAPERCLIP_LOCAL_DIR: localDir,
+  PAPERCLIP_SOURCE_ROOT: root,
+  PAPERCLIP_RELEASE_LIB: path.join(root, "scripts/local/release-lib.mjs"),
   PAPERCLIP_HOME: path.join(localDir, "home"),
   PAPERCLIP_CONFIG: path.join(localDir, "home/instances/default/config.json"),
   PAPERCLIP_INSTANCE_ID: "default",
