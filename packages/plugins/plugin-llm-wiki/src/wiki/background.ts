@@ -105,8 +105,8 @@ export async function backgroundStatus(ctx: PluginContext, companyId: string) {
 export async function resumeBackgroundSources(ctx: PluginContext, companyId: string, rootIssueIds: string[]) {
   const result = await ctx.db.execute("UPDATE " + table(ctx, "roots") +
     " SET status='pending',due_at=now(),last_error=NULL,updated_at=now()" +
-    " WHERE company_id=$1 AND root_issue_id=ANY($2::uuid[]) AND status='needs_review'",
-    [companyId, rootIssueIds]);
+    " WHERE company_id=$1 AND root_issue_id IN (" + rootIssueIds.map((_, index) => "$" + (index + 2)).join(",") + ") AND status='needs_review'",
+    [companyId, ...rootIssueIds]);
   return { requeued: result.rowCount };
 }
 async function activeScope(ctx: PluginContext, companyId: string, policy: BackgroundPolicy) {
