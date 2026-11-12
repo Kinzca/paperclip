@@ -73,7 +73,8 @@ export function normalizePolicy(input: unknown, previous: BackgroundPolicy, now:
   return policy;
 }
 export type SourcePiece = { reference: string; body: string };
-export function selectSources(pieces: SourcePiece[], maxCharacters: number) {
+export type SourceCursor = { version: string; piece: number; offset: number };
+export function selectSources(pieces: SourcePiece[], maxCharacters: number, cursor?: SourceCursor) {
   const unique = new Map<string, SourcePiece>();
   for (const piece of pieces) {
     if (!meaningful(piece.body)) continue;
@@ -82,13 +83,31 @@ export function selectSources(pieces: SourcePiece[], maxCharacters: number) {
   }
   const selected = [...unique].sort(([a], [b]) => a.localeCompare(b));
   const fingerprint = hash(JSON.stringify(selected.map(([body]) => body)));
+  // Cursor offsets address the original text, including formatting. Whitespace-only
+  // changes must restart a partial source rather than shift an existing offset.
+  const version = hash(JSON.stringify(selected.map(([, piece]) => piece)));
+  let pieceIndex = cursor?.version === version ? cursor.piece : 0;
+  let offset = cursor?.version === version ? cursor.offset : 0;
+  const start = { piece: pieceIndex, offset };
   let used = 0;
   const bounded: SourcePiece[] = [];
-  let clipped = false;
-  for (const [, piece] of selected) {
-    const cost = piece.body.length + piece.reference.length + 32;
-    if (used + cost > maxCharacters) { clipped = true; continue; }
-    bounded.push(piece); used += cost;
+  while (pieceIndex < selected.length) {
+    const piece = selected[pieceIndex]![1];
+    // Reserve space for a continuation label and source heading.
+    const room = maxCharacters - used - piece.reference.length - 128;
+    if (room < 2) break;
+    let end = Math.min(piece.body.length, offset + room);
+    if (end < piece.body.length && /[\uD800-\uDBFF]/.test(piece.body[end - 1]!)) end--;
+    const reference = offset || end < piece.body.length
+      ? `${piece.reference} (characters ${offset + 1}-${end} of ${piece.body.length})`
+      : piece.reference;
+    const body = piece.body.slice(offset, end);
+    bounded.push({ reference, body });
+    used += body.length + reference.length + 32;
+    if (end < piece.body.length) { offset = end; break; }
+    pieceIndex++; offset = 0;
   }
-  return { fingerprint, pieces: bounded, clipped, meaningful: bounded.length > 0 };
+  const complete = pieceIndex === selected.length;
+  return { fingerprint, pieces: bounded, clipped: !complete, meaningful: selected.length > 0,
+    window: { start, next: { version, piece: pieceIndex, offset }, complete } };
 }

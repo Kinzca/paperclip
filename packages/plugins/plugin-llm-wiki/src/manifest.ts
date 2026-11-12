@@ -82,7 +82,7 @@ Target space: default (slug: default). Paperclip-derived indexing currently writ
 const manifest: PaperclipPluginManifestV1 = {
   id: PLUGIN_ID,
   apiVersion: 1,
-  version: "0.1.4",
+  version: "0.1.5",
   displayName: "LLM Wiki",
   description: "Local-file LLM Wiki plugin for source ingestion, wiki browsing, query, lint, and maintenance workflows.",
   author: "Paperclip",

@@ -1,6 +1,6 @@
 import {
   backgroundStatus, configureBackground, observeBackgroundEvent,
-  processBackgroundCompany, registerBackgroundTools, tickBackground,
+  processBackgroundCompany, registerBackgroundTools, resumeBackgroundSources, tickBackground,
 } from "./wiki/background.js";
 import { BACKGROUND_JOB_KEY } from "./wiki/background-policy.js";
 import {
@@ -199,6 +199,15 @@ const plugin = definePlugin({
       configureBackground(ctx, readCompanyIdFromParams(params), params.policy));
     ctx.actions.register("background-tick", async params =>
       processBackgroundCompany(ctx, readCompanyIdFromParams(params)));
+    ctx.actions.register("resume-background-sources", async params => {
+      const companyId = readCompanyIdFromParams(params);
+      const ids = params.rootIssueIds;
+      if (!Array.isArray(ids) || !ids.length || ids.length > 25 || !ids.every(id =>
+        typeof id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) {
+        throw new Error("Select 1–25 background root issue IDs");
+      }
+      return resumeBackgroundSources(ctx, companyId, [...new Set(ids)]);
+    });
 
     for (const eventName of PAPERCLIP_EVENT_INGESTION_EVENTS) {
       ctx.events.on(eventName, async (event) => {

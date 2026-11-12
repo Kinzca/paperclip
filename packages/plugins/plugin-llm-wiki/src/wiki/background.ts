@@ -7,12 +7,13 @@ import {
 } from "./core.js";
 import {
   BACKGROUND_JOB_KEY, DEFAULT_BACKGROUND_POLICY, clock, hash, isBusinessRoot,
-  normalizePolicy, selectSources, type BackgroundPolicy, type SourcePiece,
+  normalizePolicy, selectSources, type BackgroundPolicy, type SourcePiece, type SourceCursor,
 } from "./background-policy.js";
 
 const ORIGIN = "plugin:paperclipai.plugin-llm-wiki:operation:background";
 const FOLDER = "wiki-root";
-type RootInput = { rootId: string; fingerprint: string; rawPath: string; title: string };
+type RootInput = { rootId: string; fingerprint: string; rawPath: string; title: string;
+  window?: { next: SourceCursor; complete: boolean } };
 type Batch = {
   id: string; timezone: string; kind: "distill" | "maintenance"; originId: string; issueId?: string;
   startedAt: string; roots: RootInput[]; before: Record<string, string | null>;
@@ -22,6 +23,7 @@ type Batch = {
 type Runtime = {
   active?: Batch | null; day?: string; runs?: number; scanOffsets?: Record<string, number>;
   maintenanceDay?: string; maintenanceHash?: string;
+  sourceWindows?: Record<string, SourceCursor>;
   lastOutcome?: Record<string, unknown>;
 };
 type CompanyRow = { policy: BackgroundPolicy; runtime: Runtime; version: number };
@@ -94,8 +96,18 @@ export async function backgroundStatus(ctx: PluginContext, companyId: string) {
   const row = await company(ctx, companyId);
   const counts = row ? await ctx.db.query<{ status: string; count: string }>(
     "SELECT status,count(*)::text AS count FROM " + table(ctx, "roots") + " WHERE company_id=$1 GROUP BY status", [companyId]) : [];
-  return { policy: row?.policy ?? DEFAULT_BACKGROUND_POLICY, runtime: row?.runtime ?? {}, queue: counts,
+  const blockedRoots = row ? await ctx.db.query<{ root_issue_id: string; last_error: string | null }>(
+    "SELECT root_issue_id,last_error FROM " + table(ctx, "roots") +
+    " WHERE company_id=$1 AND status='needs_review' ORDER BY due_at,root_issue_id LIMIT 25", [companyId]) : [];
+  return { policy: row?.policy ?? DEFAULT_BACKGROUND_POLICY, runtime: row?.runtime ?? {}, queue: counts, blockedRoots,
     jobKey: BACKGROUND_JOB_KEY, schedule: "*/5 * * * *", modelCallGate: "completed-root + useful-delta + idle-development" };
+}
+export async function resumeBackgroundSources(ctx: PluginContext, companyId: string, rootIssueIds: string[]) {
+  const result = await ctx.db.execute("UPDATE " + table(ctx, "roots") +
+    " SET status='pending',due_at=now(),last_error=NULL,updated_at=now()" +
+    " WHERE company_id=$1 AND root_issue_id=ANY($2::uuid[]) AND status='needs_review'",
+    [companyId, rootIssueIds]);
+  return { requeued: result.rowCount };
 }
 async function activeScope(ctx: PluginContext, companyId: string, policy: BackgroundPolicy) {
   if (!policy.enabled || !getDistillationAutoApplyRestriction().autoApplyAllowed) return null;
@@ -139,7 +151,7 @@ async function developmentBusy(ctx: PluginContext, companyId: string, wikiProjec
   return false;
 }
 async function collectRoot(ctx: PluginContext, companyId: string, issue: Issue, maxCharacters: number,
-  kinds: { issues: boolean; comments: boolean; documents: boolean }) {
+  kinds: { issues: boolean; comments: boolean; documents: boolean }, cursor?: SourceCursor) {
   const tree = await ctx.issues.getSubtree(issue.id, companyId, { includeRoot: true });
   if (tree.issues.some(i => !["done", "cancelled"].includes(i.status))) return { waiting: true as const };
   if (tree.issues.length > 50) return { oversized: true as const };
@@ -155,7 +167,7 @@ async function collectRoot(ctx: PluginContext, companyId: string, issue: Issue, 
     }
     if (documents.length > 25) return { oversized: true as const };
   }
-  const selected = selectSources(pieces, maxCharacters);
+  const selected = selectSources(pieces, maxCharacters, cursor);
   return { ...selected, waiting: false as const };
 }
 async function failBatch(ctx: PluginContext, companyId: string, batch: Batch, reason: string, now: Date) {
@@ -182,13 +194,21 @@ async function settleBatch(ctx: PluginContext, companyId: string, batch: Batch, 
   if (!issue) issue = (await ctx.issues.list({ companyId, originKind: ORIGIN, originId: batch.originId, includePluginOperations: true, limit: 1 }))[0] ?? null;
   if (issue?.status === "done" && batch.receipt) {
     for (const root of batch.roots) await ctx.db.execute("UPDATE " + table(ctx, "roots") +
-      " SET processed_hash=$3,status=CASE WHEN observed_at>$4::timestamptz THEN 'pending' ELSE 'processed' END," +
+      " SET processed_hash=CASE WHEN $5 THEN $3 ELSE processed_hash END," +
+      "status=CASE WHEN observed_at>$4::timestamptz OR NOT $5 THEN 'pending' ELSE 'processed' END," +
       "attempts=0,last_error=NULL,updated_at=now() WHERE company_id=$1 AND root_issue_id=$2",
-      [companyId, root.rootId, root.fingerprint, batch.startedAt]);
-    await runtimeUpdate(ctx, companyId, r => ({ ...r, active: null,
-      ...(batch.kind === "maintenance" ? { maintenanceDay: clock(now, batch.timezone).day, maintenanceHash: batch.maintenanceHash } : {}),
-      lastOutcome: { status: "processed", batchId: batch.id, issueId: issue!.id, receipt: batch.receipt, at: now.toISOString() },
-    }));
+      [companyId, root.rootId, root.fingerprint, batch.startedAt, !root.window || root.window.complete]);
+    await runtimeUpdate(ctx, companyId, r => {
+      const sourceWindows = { ...r.sourceWindows };
+      for (const root of batch.roots) {
+        if (root.window && !root.window.complete) sourceWindows[root.rootId] = root.window.next;
+        else delete sourceWindows[root.rootId];
+      }
+      return { ...r, active: null, sourceWindows,
+        ...(batch.kind === "maintenance" ? { maintenanceDay: clock(now, batch.timezone).day, maintenanceHash: batch.maintenanceHash } : {}),
+        lastOutcome: { status: "processed", batchId: batch.id, issueId: issue!.id, receipt: batch.receipt, at: now.toISOString() },
+      };
+    });
     return true;
   }
   if (issue && ["blocked", "cancelled"].includes(issue.status)) {
@@ -214,6 +234,7 @@ function batchPrompt(batch: Batch) {
     "First call wiki_background_batch with companyId and batchId to verify the active batch and read source paths.",
     "Read AGENTS.md and the installed wiki maintenance/distill skills, then existing project/concept pages and the immutable raw sources.",
     "Merge useful confirmed knowledge into EXISTING topic/project pages. Deduplicate semantically against existing pages. Do not create one page per task or dump status logs.",
+    "A large root may span multiple source windows. Process only the supplied raw files; preserve partial-context uncertainty and do not claim the remaining windows have been ingested.",
     "Use .md Wiki links and sourceRefs; cite the raw source path. Keep verified facts distinct from unverified assertions; flag contradictions rather than silently changing accepted decisions.",
     "Update relevant project standup/index, Wiki index and log only when needed. Never modify raw sources or business code; no subtask delegation, external publishing or approval-policy changes.",
     "For mechanical maintenance, repair broken index/links; flag ambiguous semantic conflicts for the responsible specialist, do not invent answers.",
@@ -289,9 +310,10 @@ export async function processBackgroundCompany(ctx: PluginContext, companyId: st
         await ctx.db.execute("UPDATE " + table(ctx, "roots") + " SET status='ineligible' WHERE company_id=$1 AND root_issue_id=$2", [companyId, queued.root_issue_id]);
         continue;
       }
-      const source = await collectRoot(ctx, companyId, root, policy.maxCharacters - 512, scope.sourceKinds);
+      const source = await collectRoot(ctx, companyId, root, policy.maxCharacters - 512, scope.sourceKinds,
+        row.runtime.sourceWindows?.[root.id]);
       if ("waiting" in source && source.waiting) continue;
-      if ("oversized" in source || ("clipped" in source && source.clipped)) {
+      if ("oversized" in source || ("pieces" in source && source.meaningful && !source.pieces.length)) {
         await ctx.db.execute("UPDATE " + table(ctx, "roots") +
           " SET status='needs_review',last_error='Source window exceeds configured bounds; no source cursor advanced' WHERE company_id=$1 AND root_issue_id=$2",
           [companyId, root.id]);
@@ -315,12 +337,16 @@ export async function processBackgroundCompany(ctx: PluginContext, companyId: st
       }
       const contents = "# Completed business root: " + root.identifier + " " + root.title +
         "\n\nSource task: " + root.identifier + "\nSource fingerprint: " + source.fingerprint +
+        (source.clipped || source.window.start.piece || source.window.start.offset
+          ? "\nPartial source window; remaining material is queued until its own receipt is accepted." : "") +
         "\n\n" + source.pieces.map(p => "## " + p.reference + "\n\n" + p.body).join("\n\n");
       if (characters + contents.length > policy.maxCharacters && inputs.length) break;
-      const rawPath = "raw/background/" + root.id + "/" + source.fingerprint + ".md";
+      const windowed = source.clipped || source.window.start.piece > 0 || source.window.start.offset > 0;
+      const suffix = windowed ? "-window-" + source.window.next.version + "-" + source.window.start.piece + "-" + source.window.start.offset : "";
+      const rawPath = "raw/background/" + root.id + "/" + source.fingerprint + suffix + ".md";
       let existingSource = true;
       let prefix = "raw";
-      for (const part of ["background", root.id, source.fingerprint + ".md"]) {
+      for (const part of ["background", root.id, source.fingerprint + suffix + ".md"]) {
         const listing = await ctx.localFolders.list(companyId, FOLDER, { relativePath: prefix, recursive: false, maxEntries: 10000 });
         const target = prefix + "/" + part;
         if (!listing.entries.some(entry => entry.path === target)) {
@@ -344,7 +370,8 @@ export async function processBackgroundCompany(ctx: PluginContext, companyId: st
           metadata: { rootIssueId: root.id, sourceHash: source.fingerprint, background: true },
         });
       }
-      inputs.push({ rootId: root.id, fingerprint: source.fingerprint, rawPath, title: root.title });
+      inputs.push({ rootId: root.id, fingerprint: source.fingerprint, rawPath, title: root.title,
+        ...(windowed ? { window: { next: source.window.next, complete: source.window.complete } } : {}) });
       characters += contents.length;
       if (inputs.length >= policy.maxRootsPerBatch) break;
     }
