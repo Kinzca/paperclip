@@ -1,3 +1,4 @@
+import { CleanupFeedbackDialog, type CleanupFeedbackState } from "@/components/CleanupFeedbackDialog";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw, Trash2 } from "lucide-react";
@@ -36,6 +37,19 @@ function StorageCleanupContent({ kind }: { kind: StorageCleanupKind }) {
     setResult(value); setSelected(new Set()); void inventory.refetch();
     void queryClient.invalidateQueries({ queryKey: ["instance-storage"] });
   } });
+  const failures = result?.results.filter(item => item.status === "failed") ?? [];
+  const feedback: CleanupFeedbackState | null = cleanup.isPending ? { phase: "cleaning" }
+    : result ? {
+      phase: failures.length || result.auditWarning ? "partial" : "complete",
+      completed: result.results.filter(item => item.status === "deleted").length,
+      attention: failures.length,
+      metric: { label: uiText("Files cleaned up"), value: storageSize(result.deletedLogicalBytes) },
+      secondaryMetric: result.availableBytesChange === null ? undefined : {
+        label: uiText("Filesystem available-space change"), value: storageSize(result.availableBytesChange) },
+      warning: result.auditWarning ?? uiText("Available-space changes may also include other activity on this filesystem."),
+      details: result.results.map(item => ({ label: item.path,
+        note: item.status === "deleted" ? uiText("Deleted") : item.reason ?? uiText("Retained / failed") })),
+    } : cleanup.isError ? { phase: "error", warning: cleanup.error.message } : null;
   const busy = prepare.isPending || cleanup.isPending;
   const visible = (inventory.data?.items ?? []).filter(item => item.kind === kind);
   const selectedBytes = visible.filter(item => selected.has(item.id)).reduce((sum, item) => sum + item.bytes, 0);
@@ -82,22 +96,19 @@ function StorageCleanupContent({ kind }: { kind: StorageCleanupKind }) {
       </div>
     </section>
 
-    <AlertDialog open={!!preview} onOpenChange={open => { if (!open && !cleanup.isPending) { setPreview(null); cleanup.reset(); } }}>
+    <AlertDialog open={!!preview && !feedback} onOpenChange={open => { if (!open && !cleanup.isPending) { setPreview(null); cleanup.reset(); } }}>
       <AlertDialogContent className="flex max-h-(--sz-85vh) flex-col overflow-hidden sm:max-w-3xl">
-        <AlertDialogHeader><AlertDialogTitle>{uiText(result ? "Cleanup results" : "Confirm permanent cleanup")}</AlertDialogTitle>
+        <AlertDialogHeader><AlertDialogTitle>{uiText("Confirm permanent cleanup")}</AlertDialogTitle>
           <AlertDialogDescription>{uiText("Only the paths listed below will be deleted. This cannot be undone. Protected resources and business data are retained.")}</AlertDialogDescription></AlertDialogHeader>
         <div className="flex min-h-0 flex-col gap-3 overflow-auto">
           <p className="text-sm">{uiText("Estimated file size: {{value0}}. Actual disk recovery can differ because of shared blocks and snapshots.", { value0: storageSize(preview?.estimatedBytes ?? 0) })}</p>
           {preview?.items.map(item => <div key={item.id} className="flex flex-col gap-1 border-b py-2"><p className="break-all font-mono text-xs">{item.path}</p><p className="text-sm">{uiText(categories[item.kind][0])} · {storageSize(item.bytes)}</p></div>)}
-          {cleanup.isError && <p role="alert" className="text-sm text-destructive">{cleanup.error.message}</p>}
-          {result?.auditWarning && <p role="alert" className="text-sm text-destructive">{result.auditWarning}</p>}
-          {result && <><p role="status" className="text-sm">{uiText("Deleted file size: {{value0}} · filesystem available-space change: {{value1}}", { value0: storageSize(result.deletedLogicalBytes), value1: result.availableBytesChange === null ? uiText("Unknown") : storageSize(result.availableBytesChange) })}</p>
-            <p className="text-xs text-muted-foreground">{uiText("Available-space changes may also include other activity on this filesystem.")}</p>
-            {result.results.map(item => <p key={item.id} className={`break-all text-xs ${item.status === "failed" ? "text-destructive" : "text-muted-foreground"}`}>{uiText(item.status === "deleted" ? "Deleted" : "Retained / failed")} · {item.path}{item.reason ? ` · ${item.reason}` : ""}</p>)}</>}
+
         </div>
-        <AlertDialogFooter className="shrink-0 sm:justify-between"><AlertDialogCancel disabled={cleanup.isPending}>{uiText(result ? "Close" : "Cancel")}</AlertDialogCancel>
+        <AlertDialogFooter className="shrink-0 sm:justify-between"><AlertDialogCancel disabled={cleanup.isPending}>{uiText("Cancel")}</AlertDialogCancel>
           {!result && <Button variant="destructive" disabled={cleanup.isPending || cleanup.isError || prepare.isPending} onClick={() => cleanup.mutate()}>{uiText(cleanup.isPending ? "Cleaning..." : "Permanently delete selected items")}</Button>}</AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+    <CleanupFeedbackDialog state={feedback} onClose={() => { setPreview(null); setResult(null); cleanup.reset(); }} />
   </div>;
 }

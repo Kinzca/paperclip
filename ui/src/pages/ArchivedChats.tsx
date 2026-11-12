@@ -1,7 +1,8 @@
+import { CleanupFeedbackDialog, type CleanupFeedbackState } from "@/components/CleanupFeedbackDialog";
 import { useEffect, useState } from "react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, ArchiveRestore, FolderOpen, Loader2, Search, Trash2 } from "lucide-react";
-import type { Issue, ArchivedChatCleanupPreview, ArchivedChatCleanupResult, ArchivedChatCleanupJob } from "@paperclipai/shared";
+import type { Issue, ArchivedChatCleanupPreview, ArchivedChatCleanupJob } from "@paperclipai/shared";
 import { Checkbox } from "@/components/ui/checkbox";
 import { authApi } from "@/api/auth";
 import { issuesApi } from "@/api/issues";
@@ -43,11 +44,11 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [retryTarget, setRetryTarget] = useState<ArchivedChatCleanupJob | null>(null);
   const [skipRelated, setSkipRelated] = useState(true);
-  const [batchResult, setBatchResult] = useState<ArchivedChatCleanupResult | null>(null);
+  const [feedback, setFeedback] = useState<CleanupFeedbackState | null>(null);
   const [preview, setPreview] = useState<ArchivedChatCleanupPreview | null>(null);
   const previewAction = useMutation({
     mutationFn: (input: { issueIds: string[] } | { filters: { q?: string; projectId?: string } }) => issuesApi.previewArchivedChatCleanup(companyId, { ...input, skipRelated }),
-    onMutate: () => { setActionError(null); setBatchResult(null); },
+    onMutate: () => setActionError(null),
     onSuccess: setPreview,
     onError: (error) => setActionError(error instanceof Error ? uiText(error.message) : uiText("The action failed. Please try again.")),
   });
@@ -57,14 +58,19 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
   const batchDelete = useMutation({
     mutationFn: () => issuesApi.cleanupArchivedChats(companyId, { issueIds: preview!.items
       .filter((item) => item.protection === "candidate").map((item) => item.id), skipRelated: preview!.skipRelated, confirm: true }),
-    onMutate: () => setActionError(null),
+    onMutate: () => { setActionError(null); setFeedback({ phase: "cleaning" }); },
     onSuccess: (result) => {
-      setBatchResult(result);
+      const attention = result.items.filter(item => item.status !== "deleted" || item.fileCleanupFailed).length;
+      setFeedback({ phase: attention ? "partial" : "complete", completed: result.items.length - attention, attention,
+        metric: { label: uiText("Estimated local files removed"), value: formatBytes(result.estimatedLocalBytesRemoved) },
+        details: result.items.map(item => ({ label: preview?.items.find(row => row.id === item.id)?.title ?? uiText("Unavailable record"),
+          note: uiText(item.reason) })),
+      });
       const deleted = new Set(result.items.filter((item) => item.status === "deleted").map((item) => item.id));
       setSelected((current) => new Set([...current].filter((id) => !deleted.has(id))));
       for (const id of deleted) client.removeQueries({ queryKey: queryKeys.issues.detail(id) });
     },
-    onError: (error) => setActionError(error instanceof Error ? uiText(error.message) : uiText("The action failed. Please try again.")),
+    onError: (error) => setFeedback({ phase: "error", warning: error.message }),
     onSettled: () => {
       void client.invalidateQueries({ queryKey: ["archived-chats", companyId] });
       void invalidateInboxIssueQueries(client, companyId);
@@ -80,16 +86,23 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
     queryFn: () => issuesApi.pendingArchiveCleanup(companyId), enabled: ready, refetchOnWindowFocus: false, retry: false });
   const retryFiles = useMutation({
     mutationFn: (jobId: string) => issuesApi.retryArchiveCleanup(companyId, jobId),
-    onMutate: () => setActionError(null),
-    onSuccess: () => setRetryTarget(null),
-    onError: (error) => setActionError(error instanceof Error ? uiText(error.message) : uiText("The action failed. Please try again.")),
+    onMutate: () => { setActionError(null); setFeedback({ phase: "cleaning" }); },
+    onSuccess: result => {
+      const attention = result.files.filter(file => file.status !== "removed").length;
+      setFeedback({ phase: attention ? "partial" : "complete", completed: result.files.length - attention, attention,
+        metric: { label: uiText("Total files removed"), value: formatBytes(result.removedBytes) },
+        details: result.files.map(file => ({ label: file.path, note: file.error ? uiText(file.error) : uiText(file.status === "removed" ? "Deleted" : "Pending file cleanup") })),
+      });
+      setRetryTarget(null);
+    },
+    onError: (error) => setFeedback({ phase: "error", warning: error.message }),
     onSettled: () => {
       void client.invalidateQueries({ queryKey: ["archived-chat-pending-files", companyId] });
       void client.invalidateQueries({ queryKey: ["instance-storage"] });
     },
   });
   useEffect(() => { setSelected(new Set()); setPreview(null); }, [query, projectId]);
-  useEffect(() => { setPreview(null); setBatchResult(null); }, [skipRelated]);
+  useEffect(() => { setPreview(null); }, [skipRelated]);
   useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" }, { label: uiText("Storage"), href: "/company/settings/instance/storage" }, { label: uiText("Archived chats") }]); }, [setBreadcrumbs, locale]);
   const chats = useInfiniteQuery({
     queryKey: ["archived-chats", companyId, userId, query, projectId],
@@ -104,11 +117,18 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
     queryFn: () => projectsApi.list(companyId, { includeArchived: true }) });
   const action = useMutation({
     mutationFn: async ({ task, remove }: { task: Issue; remove: boolean }) => {
-      if (remove) await issuesApi.deleteArchivedChat(task.id);
-      else await issuesApi.unarchiveFromInbox(task.id);
+      if (remove) return issuesApi.deleteArchivedChat(task.id);
+      return issuesApi.unarchiveFromInbox(task.id);
     },
-    onMutate: () => setActionError(null),
+    onMutate: ({ remove }) => { setActionError(null); if (remove) setFeedback({ phase: "cleaning" }); },
     onSuccess: (_result, { task, remove }) => {
+      if (remove) {
+        const pending = "fileCleanupFailed" in _result && _result.fileCleanupFailed;
+        setFeedback({ phase: pending ? "partial" : "complete", title: uiText("Chat deleted"),
+          description: uiText(pending ? "The chat was deleted. Some related files still need cleanup; review the unfinished file list." : "The chat and its task have been permanently deleted."),
+          completed: 1, attention: pending ? 1 : 0, details: [{ label: task.title }],
+        });
+      }
       setTarget(null);
       setSelected((current) => { const next = new Set(current); next.delete(task.id); return next; });
       void client.invalidateQueries({ queryKey: ["archived-chats", companyId] });
@@ -119,7 +139,10 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
       if (remove) client.removeQueries({ queryKey: queryKeys.issues.detail(task.id) });
       else void client.invalidateQueries({ queryKey: queryKeys.issues.detail(task.id) });
     },
-    onError: (error) => setActionError(error instanceof Error ? uiText(error.message) : uiText("The action failed. Please try again.")),
+    onError: (error, { remove }) => {
+      if (remove) setFeedback({ phase: "error", warning: error.message });
+      else setActionError(uiText(error.message));
+    },
   });
   const busy = previewAction.isPending || batchDelete.isPending || action.isPending || retryFiles.isPending;
   const rows = chats.data?.pages.flat() ?? [];
@@ -212,7 +235,7 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
         </div>
       </section>)}
     {chats.hasNextPage && <Button variant="outline" disabled={chats.isFetchingNextPage} onClick={() => void chats.fetchNextPage()}>{uiText("Load more")}</Button>}
-    <AlertDialog open={!!preview} onOpenChange={(open) => { if (!open && !batchDelete.isPending) { setPreview(null); setBatchResult(null); } }}>
+    <AlertDialog open={!!preview && !feedback} onOpenChange={(open) => { if (!open && !batchDelete.isPending) { setPreview(null); } }}>
       <AlertDialogContent className="flex max-h-(--sz-85vh) flex-col overflow-hidden sm:max-w-3xl">
         <div className="shrink-0 space-y-3">
           <AlertDialogHeader><AlertDialogTitle>{uiText("Batch cleanup preview")}</AlertDialogTitle>
@@ -236,21 +259,16 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
           {!!excluded.length && <details className="text-xs text-muted-foreground"><summary>{uiText("Excluded records ({{value0}})", { value0: excluded.length })}</summary>
             {excluded.map((item) => <p key={item.id} className="py-2">{item.title ?? uiText("Unavailable record")} · {uiText(item.reason)}</p>)}
           </details>}
-          {batchResult && <div role="status" className="rounded-md border p-3 text-sm">
-            <p>{uiText("Deleted {{value0}}; skipped or failed {{value1}}.", { value0: batchResult.items.filter((item) => item.status === "deleted").length, value1: batchResult.items.filter((item) => item.status !== "deleted").length })}</p>
-            <p>{uiText("Estimated local files removed: {{value0}}", { value0: formatBytes(batchResult.estimatedLocalBytesRemoved) })}</p>
-            {batchResult.items.filter((item) => item.status !== "deleted" || item.fileCleanupFailed).map((item) => <p key={item.id}>{preview?.items.find((row) => row.id === item.id)?.title ?? uiText("Unavailable record")}: {uiText(item.reason)}</p>)}
-          </div>}
           {actionError && <p role="alert" className="text-sm text-destructive">{actionError}</p>}
           <p className="text-xs text-muted-foreground">{uiText("Only registered exclusive attachments, terminal run logs and verified disposable worktrees are removed. Shared project source, deliverables, backups and unregistered files are retained. Failed file cleanup remains available for retry.")}</p>
         </div>
         <AlertDialogFooter className="shrink-0 sm:justify-between"><AlertDialogCancel disabled={batchDelete.isPending}>{uiText("Close preview")}</AlertDialogCancel>
-          {!batchResult && <Button variant="destructive" disabled={!candidates.length || candidates.length > 200 || batchDelete.isPending}
-            onClick={() => batchDelete.mutate()}>{batchDelete.isPending && <Loader2 className="size-4 animate-spin" />}{uiText("Permanently delete {{value0}} chats", { value0: candidates.length })}</Button>}
+          <Button variant="destructive" disabled={!candidates.length || candidates.length > 200 || batchDelete.isPending}
+            onClick={() => batchDelete.mutate()}>{batchDelete.isPending && <Loader2 className="size-4 animate-spin" />}{uiText("Permanently delete {{value0}} chats", { value0: candidates.length })}</Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-    <AlertDialog open={!!retryTarget} onOpenChange={(open) => { if (!open && !retryFiles.isPending) setRetryTarget(null); }}>
+    <AlertDialog open={!!retryTarget && !feedback} onOpenChange={(open) => { if (!open && !retryFiles.isPending) setRetryTarget(null); }}>
       <AlertDialogContent className="flex max-h-(--sz-85vh) flex-col overflow-hidden sm:max-w-2xl">
         <AlertDialogHeader className="shrink-0"><AlertDialogTitle>{uiText("Retry file cleanup?")}</AlertDialogTitle>
           <AlertDialogDescription>{uiText("Only the previously confirmed files below will be retried. Files changed or shared since confirmation are retained.")}</AlertDialogDescription></AlertDialogHeader>
@@ -263,7 +281,7 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
           <Button variant="destructive" disabled={retryFiles.isPending} onClick={() => retryTarget && retryFiles.mutate(retryTarget.id)}>{uiText("Confirm file cleanup")}</Button></AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-    <AlertDialog open={!!target} onOpenChange={(open) => { if (!open && !action.isPending) setTarget(null); }}>
+    <AlertDialog open={!!target && !feedback} onOpenChange={(open) => { if (!open && !action.isPending) setTarget(null); }}>
       <AlertDialogContent className="max-h-(--sz-85vh) overflow-y-auto sm:max-w-2xl">
         <AlertDialogHeader><AlertDialogTitle>{uiText("Permanently delete this chat and task?")}</AlertDialogTitle>
           <AlertDialogDescription>{uiText("This permanently deletes the task, comments and documents and cleans the verified exclusive files listed below. Shared project originals and retained files are preserved. This cannot be undone.")}</AlertDialogDescription>
@@ -294,5 +312,8 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+    <CleanupFeedbackDialog state={feedback} onClose={() => {
+      setFeedback(null); setPreview(null); setTarget(null); setRetryTarget(null); setActionError(null);
+    }} />
   </div>;
 }

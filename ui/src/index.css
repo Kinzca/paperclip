@@ -73,6 +73,7 @@
   --color-storage-source: var(--storage-source);
   --color-storage-tools: var(--storage-tools);
   --color-storage-maintenance: var(--storage-maintenance);
+  --color-cleanup-success: var(--status-task-done);
   --color-storage-other: var(--storage-other);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -3475,4 +3476,27 @@ span.paperclip-mention-chip[data-mention-kind="external-object"] {
   @media (pointer: coarse) {
     .plugin-sidebar-legacy a[href] { @apply py-1!; }
   }
+}
+
+/* Cleanup lifecycle: truthful indeterminate activity followed by a compact result. */
+:root {
+  --motion-cleanup-arrive: var(--motion-duration-base);
+  --motion-cleanup-sweep: 1600ms;
+}
+@keyframes cleanup-feedback-arrive {
+  from { opacity: 0; transform: translateY(0.5rem) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes cleanup-progress-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(400%); }
+}
+.cleanup-feedback-enter {
+  animation: cleanup-feedback-arrive var(--motion-cleanup-arrive) var(--motion-ease-out-expo) both;
+}
+.cleanup-progress-sweep {
+  animation: cleanup-progress-sweep var(--motion-cleanup-sweep) ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cleanup-feedback-enter, .cleanup-progress-sweep { animation: none; }
 }

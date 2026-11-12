@@ -266,7 +266,7 @@ export const issuesApi = {
     }
     return api.get<Issue[]>(`/companies/${companyId}/archived-chats?${params}`);
   },
-  deleteArchivedChat: (id: string) => api.delete<Issue>(`/issues/${id}?archivedChat=true`),
+  deleteArchivedChat: (id: string) => api.delete<Issue & { fileCleanupFailed?: boolean; cleanupJobId?: string }>(`/issues/${id}?archivedChat=true`),
   pendingArchiveCleanup: (companyId: string) => api.get<ArchivedChatCleanupJob[]>(`/companies/${companyId}/archived-chats/pending-cleanup`),
   retryArchiveCleanup: (companyId: string, jobId: string) => api.post<ArchivedChatCleanupJob>(`/companies/${companyId}/archived-chats/pending-cleanup/${jobId}/retry`, {}),
   cleanupArchivedChats: (companyId: string, input: { issueIds: string[]; skipRelated: boolean; confirm: true }) =>
