@@ -1,3 +1,4 @@
+import { getUiLocale } from "@/i18n/ui";
 import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -109,7 +110,7 @@ export function WorkflowImprovements({
             { path: result.error.issues[0].path.join(".") || "definition" },
           ),
         };
-  }, [definition, locale]);
+  }, [definition, locale, getUiLocale()]);
   const evaluations = useQuery({
     queryKey: ["workflow-evaluations", companyId, accountId, revisionId],
     queryFn: ({ signal }) =>

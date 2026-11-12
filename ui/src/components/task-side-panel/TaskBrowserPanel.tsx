@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type BrowserUseControl, type TaskBrowser } from "@paperclipai/shared";
@@ -20,6 +21,7 @@ export function TaskBrowserPanel({
   active?: boolean;
   onOpenActiveBrowser?: () => void;
 }) {
+  useUiLocale();
   const cache = useQueryClient();
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -185,7 +187,7 @@ export function TaskBrowserPanel({
           <iframe
             ref={frameRef}
             key={refresh}
-            title="Live Browser Use browser"
+            title={uiText("Live Browser Use browser")}
             src={url}
             onLoad={() => setViewerLoad("loaded")}
             referrerPolicy="no-referrer"
@@ -203,24 +205,17 @@ export function TaskBrowserPanel({
                     className="size-5 animate-spin text-muted-foreground motion-reduce:animate-none"
                     aria-hidden="true"
                   />
-                  <p className="text-sm">Connecting to browser…</p>
+                  <p className="text-sm">{uiText("Connecting to browser…")}</p>
                 </>
               ) : (
                 <>
-                  <p className="text-sm font-medium">
-                    The live view did not load
-                  </p>
-                  <p className="max-w-sm text-sm text-muted-foreground">
-                    Reconnect the view or open this task in another browser. The
-                    remote browser is still running.
-                  </p>
+                  <p className="text-sm font-medium">{uiText("The live view did not load")}</p>
+                  <p className="max-w-sm text-sm text-muted-foreground">{uiText("Reconnect the view or open this task in another browser. The remote browser is still running.")}</p>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={reconnect}
-                  >
-                    Reconnect view
-                  </Button>
+                  >{uiText("Reconnect view")}</Button>
                 </>
               )}
             </div>
@@ -248,21 +243,19 @@ export function TaskBrowserPanel({
               {message ??
                 (browser?.status === "closed"
                   ? onOpenActiveBrowser
-                    ? "Another browser is still open on this task."
-                    : "Send a task message to ask the agent to open another browser."
+                    ? uiText("Another browser is still open on this task.")
+                    : uiText("Send a task message to ask the agent to open another browser.")
                   : browser?.status === "starting"
-                    ? "The live view will appear here when it is ready."
+                    ? uiText("The live view will appear here when it is ready.")
                     : browser?.status === "stopping"
-                      ? "Waiting for Browser Use to confirm shutdown."
+                      ? uiText("Waiting for Browser Use to confirm shutdown.")
                       : !viewable
-                        ? "Ask the agent to browse a website in a task message."
+                        ? uiText("Ask the agent to browse a website in a task message.")
                         : null)}
             </p>
           </div>
           {browser?.status === "closed" && !accessError && onOpenActiveBrowser && (
-            <Button variant="outline" size="sm" onClick={onOpenActiveBrowser}>
-              Open active browser
-            </Button>
+            <Button variant="outline" size="sm" onClick={onOpenActiveBrowser}>{uiText("Open active browser")}</Button>
           )}
         </div>
       )}
@@ -272,10 +265,7 @@ export function TaskBrowserPanel({
         </p>
       )}
       {viewable && presenceError && (
-        <p role="alert" className="px-3 py-2 text-xs text-destructive">
-          Could not keep this browser open. Check your connection before the
-          timer runs out.
-        </p>
+        <p role="alert" className="px-3 py-2 text-xs text-destructive">{uiText("Could not keep this browser open. Check your connection before the timer runs out.")}</p>
       )}
       {viewable && viewport.error && (
         <p role="alert" className="px-3 py-2 text-xs text-destructive">

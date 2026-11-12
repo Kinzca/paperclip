@@ -678,6 +678,7 @@ function ActorIdentity({
     import("../lib/company-members").CompanyUserProfile
   >;
 }) {
+  useUiLocale();
   const id = evt.actorId;
   if (evt.actorType === "agent") {
     const agent = agentMap.get(id);
@@ -839,11 +840,11 @@ function IssueAttributionByline({
         data-testid="issue-attribution-avatar-stack"
       >
         {assignee ? (
-          <AttributionAvatar label="Assignee" actor={assignee} />
+          <AttributionAvatar label={uiText("Assignee")} actor={assignee} />
         ) : null}
         {originator ? (
           <AttributionAvatar
-            label="Originating"
+            label={uiText("Originating")}
             actor={originator}
             via={originatorVia}
           />
@@ -860,6 +861,7 @@ function IssueSectionSkeleton({
   titleWidth?: string;
   rows?: number;
 }) {
+  useUiLocale();
   return (
     <div className="space-y-3 rounded-lg border border-border p-3">
       <Skeleton className={cn("h-4", titleWidth)} />
@@ -885,6 +887,7 @@ function ChatBubbleSkeleton({
   side: "agent" | "human";
   className?: string;
 }) {
+  useUiLocale();
   const isHuman = side === "human";
   return (
     <div
@@ -916,6 +919,7 @@ function ChatBubbleSkeleton({
  * foot of the loading state matches the real chat shell.
  */
 function IssueChatComposerSkeleton({ className }: { className?: string }) {
+  useUiLocale();
   return (
     <div
       className={cn("rounded-xl border border-input bg-card p-2", className)}
@@ -941,6 +945,7 @@ function IssueChatComposerSkeleton({ className }: { className?: string }) {
  * rather than the pre-chat bordered card it replaced.
  */
 function IssueChatSkeleton() {
+  useUiLocale();
   return (
     <div className="flex flex-col gap-3" data-testid="issue-chat-skeleton">
       <ChatBubbleSkeleton side="agent" className="h-16 w-3/4" />
@@ -2962,7 +2967,8 @@ function IssueDetailActivityTab({
   );
 }
 
-export function IssueDetail({ tasksTab }: { tasksTab?: TaskSidePanelProps["tasksTab"] }) { return <TaskDetailSurface tasksTab={tasksTab} />; }
+export function IssueDetail({ tasksTab }: { tasksTab?: TaskSidePanelProps["tasksTab"] }) {
+  useUiLocale(); return <TaskDetailSurface tasksTab={tasksTab} />; }
 
 /** One controller and surface for both task URLs and agent conversations. */
 export function TaskDetailSurface({ conversation, tasksTab }: { tasksTab?: TaskSidePanelProps["tasksTab"]; conversation?: {
@@ -5582,8 +5588,7 @@ export function TaskDetailSurface({ conversation, tasksTab }: { tasksTab?: TaskS
     sourceBreadcrumb.href,
     sourceBreadcrumb.label,
     breadcrumbStatusLeading,
-    breadcrumbStatusKey,
-  , getUiLocale()]);
+    breadcrumbStatusKey, getUiLocale()]);
 
   useEffect(() => {
     if (!streamlinedTaskDetailEnabled || !taskChatShellEnabled || !issue?.id) {
@@ -6487,8 +6492,7 @@ export function TaskDetailSurface({ conversation, tasksTab }: { tasksTab?: TaskS
     [
       stopAndFinalizeRun.isPending,
       stopAndFinalizeRun.mutateAsync,
-      stopAndFinalizeRun.variables?.status,
-    ],
+      stopAndFinalizeRun.variables?.status, getUiLocale()],
   );
   const handleAcceptInteraction = useCallback(
     async (
@@ -8486,6 +8490,7 @@ function IssueFileViewer({
   onPromptOpenChange: (next: boolean) => void;
   useSidePanel?: boolean;
 }) {
+  useUiLocale();
   const viewer = useRequiredFileViewer();
 
   useEffect(() => {

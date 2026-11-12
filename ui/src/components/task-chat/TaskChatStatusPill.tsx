@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ChevronRight, Loader2, ShieldQuestion, OctagonX, Ban, Scissors } from "lucide-react";
@@ -74,6 +75,7 @@ function LiveSelfTalkLine({
   streaming: boolean;
   leaving?: boolean;
 }) {
+  useUiLocale();
   const innerRef = useRef<HTMLSpanElement | null>(null);
   const [offset, setOffset] = useState(0);
   const [entered, setEntered] = useState(false);
@@ -289,6 +291,7 @@ export function TaskChatStatusPill({
   chevronOpen,
   onToggle,
 }: TaskChatStatusPillProps) {
+  useUiLocale();
   const { Icon, spin, tone } = CONFIG[item.status];
   const awaiting = item.status === "awaiting_approval";
   const live = item.status === "running" || item.status === "working";
@@ -356,8 +359,7 @@ export function TaskChatStatusPill({
           ) : null}
           {item.tokens ? (
             <span className="ml-auto shrink-0 font-mono text-(length:--text-micro)">
-              {item.tokens.used.toLocaleString()}/{item.tokens.size.toLocaleString()} ctx
-            </span>
+              {item.tokens.used.toLocaleString()}/{item.tokens.size.toLocaleString()}{uiText(" ctx")}</span>
           ) : null}
         </span>
       </div>
@@ -422,8 +424,7 @@ export function TaskChatStatusPill({
           {elapsed ? <span>{elapsed}</span> : null}
           {item.tokens ? (
             <span>
-              {item.tokens.used.toLocaleString()}/{item.tokens.size.toLocaleString()} ctx
-            </span>
+              {item.tokens.used.toLocaleString()}/{item.tokens.size.toLocaleString()}{uiText(" ctx")}</span>
           ) : null}
         </span>
       </div>

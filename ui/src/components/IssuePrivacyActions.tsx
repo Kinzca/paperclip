@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Globe, Lock, Users } from "lucide-react";
@@ -52,6 +53,7 @@ export function IssuePrivacyActions({
   implicitPrincipals?: ShareSheetImplicitPrincipal[];
   children: (menuItems: React.ReactNode) => React.ReactNode;
 }) {
+  useUiLocale();
   const queryClient = useQueryClient();
   const { pushToast } = useToastActions();
   const [shareOpen, setShareOpen] = useState(false);
@@ -119,8 +121,7 @@ export function IssuePrivacyActions({
                 setShareOpen(true);
               }}
             >
-              <Users className="h-4 w-4" aria-hidden="true" /> Share…
-            </button>,
+              <Users className="h-4 w-4" aria-hidden="true" />{uiText(" Share…")}</button>,
           )}
           {withTooltip(
             <button
@@ -132,14 +133,13 @@ export function IssuePrivacyActions({
                 setMakePublicOpen(true);
               }}
             >
-              <Globe className="h-4 w-4" aria-hidden="true" /> Make public
-            </button>,
+              <Globe className="h-4 w-4" aria-hidden="true" />{uiText(" Make public")}</button>,
             publicBlockedReason,
           )}
           {canManage && constraintsQuery.isError ? (
             <button type="button" className={MENU_ITEM_CLASS} onClick={() => {
               void constraintsQuery.refetch();
-            }}>Retry access check</button>
+            }}>{uiText("Retry access check")}</button>
           ) : null}
         </>
       ) : (
@@ -153,8 +153,7 @@ export function IssuePrivacyActions({
               visibilityMutation.mutate("private");
             }}
           >
-            <Lock className="h-4 w-4" aria-hidden="true" /> Make private
-          </button>,
+            <Lock className="h-4 w-4" aria-hidden="true" />{uiText(" Make private")}</button>,
         )
       ))}
 
@@ -170,17 +169,15 @@ export function IssuePrivacyActions({
       <AlertDialog open={makePublicOpen} onOpenChange={setMakePublicOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Make this task public?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Everyone in the company will be able to read this task, its comments, documents, and
-              run history. Existing private subtasks keep their privacy.{" "}
+            <AlertDialogTitle>{uiText("Make this task public?")}</AlertDialogTitle>
+            <AlertDialogDescription>{uiText("Everyone in the company will be able to read this task, its comments, documents, and run history. Existing private subtasks keep their privacy.")}{" "}
               {constraintsQuery.data?.leavesPersonalProject
-                ? "This task will also leave its personal project. " : null}
-              <span className="font-semibold text-foreground">Content already seen by others cannot be taken back.</span>
+                ? uiText("This task will also leave its personal project. ") : null}
+              <span className="font-semibold text-foreground">{uiText("Content already seen by others cannot be taken back.")}</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep private</AlertDialogCancel>
+            <AlertDialogCancel>{uiText("Keep private")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={(event) => {
@@ -189,7 +186,7 @@ export function IssuePrivacyActions({
               }}
               disabled={visibilityMutation.isPending || Boolean(publicBlockedReason)}
             >
-              {visibilityMutation.isPending ? "Making public…" : "Make public"}
+              {visibilityMutation.isPending ? uiText("Making public…") : uiText("Make public")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

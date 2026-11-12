@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { SelectField } from "@/components/ui/select-field";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,22 +17,24 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 export function AggregatorAppManager({ app, connections, initialConnectionId, onClose }: {
   app: AggregatorAppCatalogEntry; connections: ToolConnection[]; initialConnectionId?: string; onClose: () => void;
 }) {
+  useUiLocale();
   const [connectionId, setConnectionId] = useState(initialConnectionId ?? connections[0]?.id ?? "");
   const connection = connections.find(candidate => candidate.id === connectionId);
   const provider = connection?.config?.sourceTemplateKey;
   return <Dialog open onOpenChange={open => { if (!open) onClose(); }}><DialogContent>
-    <DialogHeader><DialogTitle>Manage {app.name}</DialogTitle>
-      <DialogDescription>Accounts and sign-in are managed in {isAppAggregator(provider) ? AGGREGATOR_NAMES[provider] : "the provider"}.</DialogDescription>
+    <DialogHeader><DialogTitle>{uiText("Manage ")}{app.name}</DialogTitle>
+      <DialogDescription>{uiText("Accounts and sign-in are managed in ")}{isAppAggregator(provider) ? AGGREGATOR_NAMES[provider] : uiText("the provider")}.</DialogDescription>
     </DialogHeader>
-    {connections.length > 1 ? <div className="space-y-2"><Label htmlFor="manage-aggregator-gateway">Connection</Label>
+    {connections.length > 1 ? <div className="space-y-2"><Label htmlFor="manage-aggregator-gateway">{uiText("Connection")}</Label>
       <SelectField id="manage-aggregator-gateway" className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" value={connectionId} onValueChange={optionValue => setConnectionId(optionValue)}>
         {connections.map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}
       </SelectField></div> : null}
-    {connection ? <AccountObservations key={connection.id} app={app} connection={connection} onClose={onClose} /> : <p role="alert">This connection is no longer available.</p>}
+    {connection ? <AccountObservations key={connection.id} app={app} connection={connection} onClose={onClose} /> : <p role="alert">{uiText("This connection is no longer available.")}</p>}
   </DialogContent></Dialog>;
 }
 
 function AccountObservations({ app, connection, onClose }: { app: AggregatorAppCatalogEntry; connection: ToolConnection; onClose: () => void }) {
+  useUiLocale();
   const queries = useQueryClient();
   const { userId, settled } = useAccountIdentity();
   const key = queryKeys.tools.aggregatorApps(connection.id, userId);
@@ -43,17 +46,17 @@ function AccountObservations({ app, connection, onClose }: { app: AggregatorAppC
   const name = provider ? AGGREGATOR_NAMES[provider] : "provider";
   const managementUrl = provider ? aggregatorManagementUrl(provider, accounts[0]?.account.managementUrl ?? (typeof connection.config?.managementUrl === "string" ? connection.config?.managementUrl : null)) : null;
   return <>
-    {query.isError || refresh.isError || query.data?.sync.status === "error" ? <p role="alert" className="text-sm text-destructive">Couldn’t check {name}. Last known accounts are shown.</p> : null}
-    {query.isLoading ? <p role="status" className="text-sm text-muted-foreground">Loading accounts…</p> : accounts.length ? <div className="divide-y divide-border">
+    {query.isError || refresh.isError || query.data?.sync.status === "error" ? <p role="alert" className="text-sm text-destructive">{uiText("Couldn’t check ")}{name}{uiText(". Last known accounts are shown.")}</p> : null}
+    {query.isLoading ? <p role="status" className="text-sm text-muted-foreground">{uiText("Loading accounts…")}</p> : accounts.length ? <div className="divide-y divide-border">
       {accounts.map(({ account, snapshot }) => <div key={`${snapshot.toolkit}:${account.id}`} className="py-3">
-        <p className="text-sm font-medium">{account.alias || `${app.name} account`}</p>
-        <p className="text-xs text-muted-foreground">{snapshot.freshness === "stale" || snapshot.errorAt || Date.now() - new Date(snapshot.checkedAt).getTime() > 5 * 60_000 || account.status === "UNVERIFIED" ? "Not verified" : account.status === "ACTIVE" ? "Connected" : account.status === "INITIATED" ? "Waiting for sign-in" : "Needs sign-in"}</p>
+        <p className="text-sm font-medium">{account.alias || uiText("{{value0}} account", { value0: app.name })}</p>
+        <p className="text-xs text-muted-foreground">{snapshot.freshness === "stale" || snapshot.errorAt || Date.now() - new Date(snapshot.checkedAt).getTime() > 5 * 60_000 || account.status === "UNVERIFIED" ? uiText("Not verified") : account.status === "ACTIVE" ? uiText("Connected") : account.status === "INITIATED" ? uiText("Waiting for sign-in") : uiText("Needs sign-in")}</p>
       </div>)}
-    </div> : <p className="text-sm text-muted-foreground">{query.data?.discovery.message ?? `No connected ${app.name} accounts.`}</p>}
-    <p className="text-xs text-muted-foreground">Via <Link to={`/apps/${connection.id}/permissions`} onClick={onClose} className="underline underline-offset-2">“{connection.name}”</Link></p>
-    <DialogFooter className="sm:justify-between"><Button variant="ghost" onClick={onClose}>Close</Button><div className="flex flex-wrap items-center gap-2">
-      <Button variant="ghost" disabled={!settled || refresh.isPending || query.data?.discovery.availability !== "available"} onClick={() => refresh.mutate()}>Refresh</Button>
-      {managementUrl ? <Button asChild><a href={managementUrl} target="_blank" rel="noopener noreferrer">Open in {name}<ExternalLink className="size-4" /></a></Button> : null}
+    </div> : <p className="text-sm text-muted-foreground">{query.data?.discovery.message ?? uiText("No connected {{value0}} accounts.", { value0: app.name })}</p>}
+    <p className="text-xs text-muted-foreground">{uiText("Via ")}<Link to={`/apps/${connection.id}/permissions`} onClick={onClose} className="underline underline-offset-2">“{connection.name}”</Link></p>
+    <DialogFooter className="sm:justify-between"><Button variant="ghost" onClick={onClose}>{uiText("Close")}</Button><div className="flex flex-wrap items-center gap-2">
+      <Button variant="ghost" disabled={!settled || refresh.isPending || query.data?.discovery.availability !== "available"} onClick={() => refresh.mutate()}>{uiText("Refresh")}</Button>
+      {managementUrl ? <Button asChild><a href={managementUrl} target="_blank" rel="noopener noreferrer">{uiText("Open in ")}{name}<ExternalLink className="size-4" /></a></Button> : null}
     </div></DialogFooter>
   </>;
 }

@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { Clock, EyeOff, ShieldX, UserCog } from "lucide-react";
 import {
   describeIssueWriteDenial,
@@ -73,6 +74,7 @@ export function IssueWriteDenialNotice({
   context?: IssueWriteDenialContext;
   className?: string;
 }) {
+  useUiLocale();
   const copy = describeIssueWriteDenial(code, context ?? {});
   const tone = TONE_CLASSES[copy.tone];
   const Icon = VISIBILITY_CODES.has(code) ? EyeOff : TONE_ICONS[copy.tone];
@@ -99,11 +101,11 @@ export function IssueWriteDenialNotice({
               label and the first words of the value together at every width. */}
           <dl className={cn("space-y-0.5 text-xs leading-5", tone.action)}>
             <div className="min-w-0">
-              <dt className="inline font-medium">Who can act:</dt>{" "}
+              <dt className="inline font-medium">{uiText("Who can act:")}</dt>{" "}
               <dd className="inline">{copy.whoCanAct}</dd>
             </div>
             <div className="min-w-0">
-              <dt className="inline font-medium">Try this:</dt>{" "}
+              <dt className="inline font-medium">{uiText("Try this:")}</dt>{" "}
               <dd className="inline">{copy.sanctionedPath}</dd>
             </div>
           </dl>

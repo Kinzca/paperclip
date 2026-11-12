@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { Check, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +27,7 @@ export function TaskViewsMenu({
   /** Unread count surfaced next to the My-work group, mirroring the nav badge. */
   badgeCount?: number;
 }) {
+  useUiLocale();
   const active = taskView(value);
   return (
     <DropdownMenu>
@@ -34,7 +36,7 @@ export function TaskViewsMenu({
           size="sm"
           variant="outline"
           className="h-8 gap-1.5"
-          aria-label={`Change view — currently ${active.label}`}
+          aria-label={uiText("Change view — currently {{value0}}", { value0: active.label })}
         >
           <span className="max-w-(--sz-160px) truncate font-medium">{active.label}</span>
           <ChevronDown aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />

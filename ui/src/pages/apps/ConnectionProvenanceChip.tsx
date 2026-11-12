@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { Blocks } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +13,7 @@ export function ConnectionProvenanceChip({
   } | null | undefined;
   className?: string;
 }) {
+  useUiLocale();
   const chipClass = cn(
     "inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground",
     className,
@@ -21,11 +23,9 @@ export function ConnectionProvenanceChip({
     return (
       <span
         className={chipClass}
-        title={connectorUid ? `Credentials managed by Vercel Connect (${connectorUid})` : "Credentials managed by Vercel Connect"}
+        title={connectorUid ? uiText("Credentials managed by Vercel Connect ({{value0}})", { value0: connectorUid }) : uiText("Credentials managed by Vercel Connect")}
       >
-        <Blocks className="h-3 w-3" />
-        via Vercel Connect
-      </span>
+        <Blocks className="h-3 w-3" />{uiText("via Vercel Connect")}</span>
     );
   }
 

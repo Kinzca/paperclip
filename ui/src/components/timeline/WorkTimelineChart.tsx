@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { agentAvatarUrl } from "@/lib/agent-avatar-url";
 import { resolveAgentAppearance } from "@paperclipai/shared";
 /**
@@ -182,6 +183,7 @@ function ActorGlyph({
   r: number;
   clipId: string;
 }) {
+  useUiLocale();
   if (actor.type === "agent") {
     const size = r > 10 ? 24 : 16;
     const appearance = resolveAgentAppearance(actor.appearance, actor.id.replace(/^agent:/, ""));
@@ -258,6 +260,7 @@ export function WorkTimelineChart({
   onVisibleWindowChange,
   nowMs,
 }: WorkTimelineChartProps) {
+  useUiLocale();
   const location = useLocation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const initialWindowKeyRef = useRef<string | null>(null);
@@ -689,6 +692,7 @@ export function WorkTimelineChart({
 }
 
 function ActorGutter({ rows, height }: { rows: ReturnType<typeof computeLayout>["rows"]; height: number }) {
+  useUiLocale();
   return (
     <svg
       aria-hidden="true"
@@ -736,6 +740,7 @@ function TimeAxisOverlay({
   stepMs: number;
   scrollLeft: number;
 }) {
+  useUiLocale();
   return (
     <div
       aria-hidden="true"
@@ -779,6 +784,7 @@ function TimeAxisOverlay({
 }
 
 function Tooltip({ tooltip, now }: { tooltip: TooltipState; now: number }) {
+  useUiLocale();
   const { bar } = tooltip;
   const startMs = new Date(bar.span.start).getTime();
   const endMs = bar.span.end ? new Date(bar.span.end).getTime() : now;
@@ -792,13 +798,12 @@ function Tooltip({ tooltip, now }: { tooltip: TooltipState; now: number }) {
     >
       <div className="text-(length:--text-compact) font-medium text-foreground">{truncate(title)}</div>
       <div className="mt-0.5 text-muted-foreground">
-        {fmtClock(startMs)}–{bar.span.end ? fmtClock(endMs) : "now"} · {formatDuration(startMs, endMs)} ·{" "}
+        {fmtClock(startMs)}–{bar.span.end ? fmtClock(endMs) : uiText("now")} · {formatDuration(startMs, endMs)} ·{" "}
         <span className="font-medium text-foreground">{bar.span.status}</span>
       </div>
       {bar.kickoff && (
-        <div className="text-muted-foreground">
-          kicked off by: {(bar.kickoff as WorkTimelineActor).name}
-          {bar.span.retryOfRunId ? " · retry" : ""}
+        <div className="text-muted-foreground">{uiText("kicked off by: ")}{(bar.kickoff as WorkTimelineActor).name}
+          {bar.span.retryOfRunId ? uiText(" · retry") : ""}
         </div>
       )}
       {tooltip.connectorHint && (
@@ -821,6 +826,7 @@ function MiniMap({
   scrollLeft: number;
   onVisibleRangeChange: (fromMs: number, toMs: number) => void;
 }) {
+  useUiLocale();
   const documentDragCleanupRef = useRef<(() => void) | null>(null);
   const W = Math.max(320, viewportW || 900);
   const H = 54;
@@ -946,7 +952,7 @@ function MiniMap({
           height={H - 2}
           width={handleW}
           testId="timeline-minimap-left-handle"
-          label="Drag left edge to resize visible range"
+          label={uiText("Drag left edge to resize visible range")}
           onMouseDown={(e) => startRangeDrag("left", e)}
         />
         <MiniMapHandle
@@ -955,7 +961,7 @@ function MiniMap({
           height={H - 2}
           width={handleW}
           testId="timeline-minimap-right-handle"
-          label="Drag right edge to resize visible range"
+          label={uiText("Drag right edge to resize visible range")}
           onMouseDown={(e) => startRangeDrag("right", e)}
         />
       </svg>
@@ -980,6 +986,7 @@ function MiniMapHandle({
   label: string;
   onMouseDown: (event: React.MouseEvent<SVGElement>) => void;
 }) {
+  useUiLocale();
   const left = x - width / 2;
   const gripTop = y + height / 2 - 7;
   return (

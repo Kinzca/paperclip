@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { useStreamlinedTaskChatPresentation } from "./presentation-mode";
@@ -75,6 +76,7 @@ export function TaskChatTurn({
   timestampPrefix,
   leading,
 }: TaskChatTurnProps) {
+  useUiLocale();
   const streamlined = useStreamlinedTaskChatPresentation();
   const parentRow = !item.settled && item.liveStatus != null;
   // The new Paperclip Runner task surface owns one durable chronological
@@ -100,12 +102,12 @@ export function TaskChatTurn({
             />
           ) : null}
           {!item.historical ? <span className="min-w-0 truncate">
-            {item.continuedAfterSteering ? "Continued after steering · " : ""}
+            {item.continuedAfterSteering ? uiText("Continued after steering · ") : ""}
             {item.summary.durationLabel
-              ? `${item.summary.failed ? "Stopped" : "Worked"} for ${item.summary.durationLabel}`
+              ? uiText("{{value0}} for {{value1}}", { value0: item.summary.failed ? "Stopped" : "Worked", value1: item.summary.durationLabel })
               : item.summary.failed
-                ? "Stopped"
-                : "Worked"}
+                ? uiText("Stopped")
+                : uiText("Worked")}
           </span> : null}
         </div> : null}
         {item.items.length > 0 ? (
@@ -206,11 +208,11 @@ export function TaskChatTurn({
         <SummaryIcon className="h-3.5 w-3.5 shrink-0" />
       ) : null}
       <span>
-        {item.historical ? "Activity" : item.standaloneHeader && item.summary.durationLabel
-          ? `${item.summary.failed ? "Stopped" : "Worked"} for ${item.summary.durationLabel}`
+        {item.historical ? uiText("Activity") : item.standaloneHeader && item.summary.durationLabel
+          ? uiText("{{value0}} for {{value1}}", { value0: item.summary.failed ? "Stopped" : "Worked", value1: item.summary.durationLabel })
           : item.summary.failed
-            ? "Stopped"
-            : "Worked"}
+            ? uiText("Stopped")
+            : uiText("Worked")}
       </span>
       {!item.standaloneHeader && turnSummaryMetrics(item.summary) ? (
         // Time/tools/tokens is demoted, not deleted (PAP-502): it stays in the

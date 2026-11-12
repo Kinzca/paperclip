@@ -1,3 +1,5 @@
+import { getUiLocale } from "@/i18n/ui";
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useCallback, useEffect } from "react";
 import { History } from "lucide-react";
 import { useSearchParams } from "@/lib/router";
@@ -15,14 +17,15 @@ import { AuditFeed, type AuditFeedMode } from "./AuditFeed.production";
  * links stay shareable. The server enforces both tiers regardless.
  */
 export function CompanyActivity() {
+  useUiLocale();
   const { selectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
   const [searchParams, setSearchParams] = useSearchParams();
   const mode: AuditFeedMode = searchParams.get("mode") === "agents" ? "agents" : "all";
 
   useEffect(() => {
-    setBreadcrumbs([{ label: "Activity" }]);
-  }, [setBreadcrumbs]);
+    setBreadcrumbs([{ label: uiText("Activity") }]);
+  }, [setBreadcrumbs, getUiLocale()]);
 
   const handleModeChange = useCallback(
     (next: AuditFeedMode) => {

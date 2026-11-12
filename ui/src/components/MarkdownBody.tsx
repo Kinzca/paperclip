@@ -1,3 +1,5 @@
+import { getUiLocale } from "@/i18n/ui";
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { isValidElement, memo, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, ExternalLink, WrapText } from "lucide-react";
@@ -54,6 +56,7 @@ function MarkdownAgentMention({ agentId, children, style }: {
   children: ReactNode;
   style?: React.CSSProperties;
 }) {
+  useUiLocale();
   const companyId = useOptionalCompany()?.selectedCompanyId;
   // All mentions share the company list cache; never fetch one agent per chip.
   const { data: agents } = useQuery<Agent[]>({
@@ -145,6 +148,7 @@ function MarkdownIssueLink({
   href: string;
   children: ReactNode;
 }) {
+  useUiLocale();
   const queryClient = useQueryClient();
   const [engaged, setEngaged] = useState(false);
   const { data, error } = useQuery({
@@ -214,6 +218,7 @@ function MarkdownCaseLink({
   identifier: string;
   children: ReactNode;
 }) {
+  useUiLocale();
   // Cases resolve via the get-by-identifier route; navigate there on click.
   // Kept boxless/underlined to match the issue mention treatment.
   const caseHref = useCaseHref();
@@ -222,7 +227,7 @@ function MarkdownCaseLink({
       to={caseHref(identifier)}
       data-mention-kind="case"
       className={cn("paperclip-markdown-case-ref", "font-normal underline")}
-      aria-label={`Case ${identifier}`}
+      aria-label={uiText("Case {{value0}}", { value0: identifier })}
     >
       {children}
     </Link>
@@ -238,6 +243,7 @@ function MarkdownExternalLink({
   reference: MarkdownExternalReference;
   children: ReactNode;
 }) {
+  useUiLocale();
   const provider = externalObjectProviderLabel(reference.providerKey);
   const displayKey = reference.displayKey?.trim() || provider;
   const statusLabel = externalObjectDisplayStatusLabel(reference);
@@ -628,6 +634,7 @@ function CodeBlock({
   children: ReactNode;
   preProps: React.HTMLAttributes<HTMLPreElement>;
 }) {
+  useUiLocale();
   const [copied, setCopied] = useState(false);
   const [failed, setFailed] = useState(false);
   const [wrapLines, setWrapLines] = useState(false);
@@ -701,7 +708,7 @@ function CodeBlock({
         <button
           type="button"
           onClick={handleCopy}
-          aria-label="Copy code"
+          aria-label={uiText("Copy code")}
           title={copyLabel}
           className="paperclip-markdown-codeblock-action paperclip-markdown-codeblock-copy"
           style={codeBlockActionStyle}
@@ -721,6 +728,7 @@ function CodeBlock({
 }
 
 function MermaidDiagramBlock({ source, darkMode }: { source: string; darkMode: boolean }) {
+  useUiLocale();
   const renderId = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const [svg, setSvg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -764,7 +772,7 @@ function MermaidDiagramBlock({ source, darkMode }: { source: string; darkMode: b
       ) : (
         <>
           <p className={cn("paperclip-mermaid-status", error && "paperclip-mermaid-status-error")}>
-            {error ? `Unable to render Mermaid diagram: ${error}` : "Rendering Mermaid diagram..."}
+            {error ? uiText("Unable to render Mermaid diagram: {{value0}}", { value0: error }) : uiText("Rendering Mermaid diagram...")}
           </p>
           <pre className="paperclip-mermaid-source">
             <code className="language-mermaid">{source}</code>
@@ -791,6 +799,7 @@ function MarkdownBodyImpl({
   mediaMode = "render",
   resolveWorkspaceFileRef,
 }: MarkdownBodyProps) {
+  useUiLocale();
   const { theme } = useTheme();
   // Read company prefixes non-throwingly: MarkdownBody renders in surfaces that
   // may lack a CompanyProvider. A null context (or no companies yet) leaves
@@ -855,7 +864,7 @@ function MarkdownBodyImpl({
       </blockquote>
     ),
     table: ({ node: _node, style: tableStyle, children: tableChildren, ...tableProps }) => (
-      <div className="paperclip-markdown-table-scroll" role="region" aria-label="Scrollable table" tabIndex={0}>
+      <div className="paperclip-markdown-table-scroll" role="region" aria-label={uiText("Scrollable table")} tabIndex={0}>
         <table {...tableProps} style={tableStyle as React.CSSProperties | undefined}>
           {tableChildren}
         </table>
@@ -991,8 +1000,7 @@ function MarkdownBodyImpl({
     };
     if (mediaMode === "reference") {
       map.img = ({ src, alt, title }) => (
-        <span data-markdown-image-reference title={title}>
-          Image: {alt || "Untitled image"}{src ? ` (${src})` : ""}
+        <span data-markdown-image-reference title={title}>{uiText("Image: ")}{alt || uiText("Untitled image")}{src ? ` (${src})` : ""}
         </span>
       );
     } else if (resolveImageSrc || onImageClick) {
@@ -1011,7 +1019,7 @@ function MarkdownBodyImpl({
       };
     }
     return map;
-  }, [theme, linkIssueReferences, linkCaseReferences, externalReferenceLookup, resolveImageSrc, onImageClick, mediaMode]);
+  }, [theme, linkIssueReferences, linkCaseReferences, externalReferenceLookup, resolveImageSrc, onImageClick, mediaMode, getUiLocale()]);
 
   return (
     <div

@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useEffect, useRef, useState } from "react";
 import {
   Check,
@@ -86,6 +87,7 @@ function statusMeta(entry: WorkspaceServiceControlEntry): { label: string; unhea
 }
 
 function StatusIndicator({ entry, className }: { entry: WorkspaceServiceControlEntry; className?: string }) {
+  useUiLocale();
   if (isTransitional(entry.state)) {
     return <Loader2 className={cn("size-3 shrink-0 animate-spin text-muted-foreground", className)} />;
   }
@@ -109,6 +111,7 @@ function StatusIndicator({ entry, className }: { entry: WorkspaceServiceControlE
 }
 
 function CopyUrlButton({ url, disabled }: { url: string; disabled?: boolean }) {
+  useUiLocale();
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
@@ -147,11 +150,12 @@ function CopyUrlButton({ url, disabled }: { url: string; disabled?: boolean }) {
 }
 
 function UrlSegment({ entry, compact }: { entry: WorkspaceServiceControlEntry; compact?: boolean }) {
+  useUiLocale();
   const displayUrl = formatServiceUrl(entry.url) ?? (entry.port ? `:${entry.port}` : null);
   const live = entry.state === "running" && Boolean(entry.url);
 
   if (!displayUrl) {
-    return <span className="font-mono text-xs text-muted-foreground/70">no url</span>;
+    return <span className="font-mono text-xs text-muted-foreground/70">{uiText("no url")}</span>;
   }
   return (
     <>
@@ -181,10 +185,10 @@ function UrlSegment({ entry, compact }: { entry: WorkspaceServiceControlEntry; c
           size="icon-xs"
           disabled={!live}
           className="text-muted-foreground hover:text-foreground"
-          title="Open in new tab"
+          title={uiText("Open in new tab")}
         >
           {live ? (
-            <a href={entry.url ?? undefined} target="_blank" rel="noreferrer" aria-label="Open in new tab">
+            <a href={entry.url ?? undefined} target="_blank" rel="noreferrer" aria-label={uiText("Open in new tab")}>
               <ExternalLink className="size-3" />
             </a>
           ) : (
@@ -203,6 +207,7 @@ function ActionSlots({
   entry: Pick<WorkspaceServiceControlEntry, "state" | "canStart">;
   onAction: (action: WorkspaceServiceControlAction) => void;
 }) {
+  useUiLocale();
   const transitional = isTransitional(entry.state);
   const canStart = entry.canStart ?? true;
 
@@ -214,12 +219,10 @@ function ActionSlots({
         className="w-13 justify-center"
         disabled={!canStart}
         onClick={() => onAction("start")}
-        aria-label="Start"
-        title="Start"
+        aria-label={uiText("Start")}
+        title={uiText("Start")}
       >
-        <Play className="size-3" />
-        Start
-      </Button>
+        <Play className="size-3" />{uiText("Start")}</Button>
     );
   }
 
@@ -231,8 +234,8 @@ function ActionSlots({
           size="icon-xs"
           disabled={!canStart}
           onClick={() => onAction("start")}
-          aria-label="Start"
-          title="Start"
+          aria-label={uiText("Start")}
+          title={uiText("Start")}
         >
           <Play className="size-3" />
         </Button>
@@ -241,8 +244,8 @@ function ActionSlots({
           size="icon-xs"
           disabled={!canStart}
           onClick={() => onAction("restart")}
-          aria-label="Restart"
-          title="Restart"
+          aria-label={uiText("Restart")}
+          title={uiText("Restart")}
           className="border border-border text-foreground"
         >
           <RotateCcw className="size-3" />
@@ -258,8 +261,8 @@ function ActionSlots({
         size="icon-xs"
         disabled={transitional}
         onClick={() => onAction("stop")}
-        aria-label="Stop"
-        title="Stop"
+        aria-label={uiText("Stop")}
+        title={uiText("Stop")}
         className="border border-border text-foreground"
       >
         <Square className="size-3" />
@@ -269,8 +272,8 @@ function ActionSlots({
         size="icon-xs"
         disabled={transitional || !canStart}
         onClick={() => onAction("restart")}
-        aria-label="Restart"
-        title="Restart"
+        aria-label={uiText("Restart")}
+        title={uiText("Restart")}
         className="border border-border text-foreground"
       >
         <RotateCcw className="size-3" />
@@ -286,6 +289,7 @@ function ServiceDetail({
   entry: WorkspaceServiceControlEntry;
   onViewLogs?: () => void;
 }) {
+  useUiLocale();
   const detail = entry.exposureDetail ?? (entry.state === "failed" ? entry.failureDetail : null);
   if (!detail) return null;
   const exposureFailed = entry.exposureState === "failed" || entry.exposureState === "cleanup_pending";
@@ -299,9 +303,7 @@ function ServiceDetail({
             type="button"
             onClick={onViewLogs}
             className="font-medium text-foreground underline underline-offset-2 hover:text-foreground/80"
-          >
-            View logs
-          </button>
+          >{uiText("View logs")}</button>
         </>
       ) : null}
     </div>
@@ -319,6 +321,7 @@ function SingleServiceBar({
   onViewLogs?: () => void;
   className?: string;
 }) {
+  useUiLocale();
   const meta = statusMeta(entry);
   return (
     <div className={cn("flex w-full flex-col items-stretch gap-1 sm:w-auto sm:items-end", className)}>
@@ -356,6 +359,7 @@ function ServicePopoverRow({
   entry: WorkspaceServiceControlEntry;
   onAction: (action: WorkspaceServiceControlAction, serviceKey: string | null) => void;
 }) {
+  useUiLocale();
   const meta = statusMeta(entry);
   const displayUrl = formatServiceUrl(entry.url);
   const live = entry.state === "running" && Boolean(entry.url);
@@ -423,6 +427,7 @@ function MultiServiceBar({
   defaultServicesOpen?: boolean;
   className?: string;
 }) {
+  useUiLocale();
   const [open, setOpen] = useState(defaultServicesOpen ?? false);
   const runningCount = services.filter((entry) => entry.state === "running").length;
   const anyTransitional = services.some((entry) => isTransitional(entry.state));
@@ -454,16 +459,15 @@ function MultiServiceBar({
               <button
                 type="button"
                 className="flex h-full items-center gap-2 rounded-l-lg pr-1 text-xs font-medium text-foreground hover:bg-accent"
-                aria-label={`${runningCount} of ${services.length} services running — show services`}
+                aria-label={uiText("{{value0}} of {{value1}} services running — show services", { value0: runningCount, value1: services.length })}
               >
                 <StatusIndicator entry={aggregateEntry} />
-                <span className="whitespace-nowrap">{runningCount}/{services.length} running</span>
+                <span className="whitespace-nowrap">{runningCount}/{services.length}{uiText(" running")}</span>
                 <ChevronDown className="size-3 text-muted-foreground" />
               </button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-96 p-0" onOpenAutoFocus={(event) => event.preventDefault()}>
-              <div className="px-4 pb-1 pt-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Services · {services.length}
+              <div className="px-4 pb-1 pt-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">{uiText("Services · ")}{services.length}
               </div>
               <div className="divide-y divide-border px-4">
                 {services.map((entry) => (
@@ -471,18 +475,16 @@ function MultiServiceBar({
                 ))}
               </div>
               <div className="flex items-center gap-1 border-t border-border px-4 py-2">
-                <Button variant="ghost" size="xs" onClick={() => onAction("start", null)}>Start all</Button>
-                <Button variant="ghost" size="xs" onClick={() => onAction("stop", null)}>Stop all</Button>
-                <Button variant="ghost" size="xs" onClick={() => onAction("restart", null)}>Restart all</Button>
+                <Button variant="ghost" size="xs" onClick={() => onAction("start", null)}>{uiText("Start all")}</Button>
+                <Button variant="ghost" size="xs" onClick={() => onAction("stop", null)}>{uiText("Stop all")}</Button>
+                <Button variant="ghost" size="xs" onClick={() => onAction("restart", null)}>{uiText("Restart all")}</Button>
                 {onManageServices ? (
                   <Button
                     variant="link"
                     size="xs"
                     className="ml-auto text-muted-foreground"
                     onClick={onManageServices}
-                  >
-                    Manage in Services tab →
-                  </Button>
+                  >{uiText("Manage in Services tab →")}</Button>
                 ) : null}
               </div>
             </PopoverContent>
@@ -495,7 +497,7 @@ function MultiServiceBar({
                 <UrlSegment entry={primary} />
               </>
             ) : (
-              <span className="font-mono text-xs text-muted-foreground/70">no url</span>
+              <span className="font-mono text-xs text-muted-foreground/70">{uiText("no url")}</span>
             )}
           </div>
           <div className="mx-3 hidden h-5 w-px bg-border sm:block" />
@@ -529,6 +531,7 @@ export function WorkspaceServiceControlBar({
   defaultServicesOpen,
   className,
 }: WorkspaceServiceControlBarProps) {
+  useUiLocale();
   if (services.length === 0) return null;
   if (services.length === 1) {
     return (

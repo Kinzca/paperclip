@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
@@ -388,6 +389,7 @@ const FieldWrapper = React.memo(({
   disabled,
   children,
 }: FieldWrapperProps) => {
+  useUiLocale();
   return (
     <div className={cn("space-y-2", disabled && "opacity-60")}>
       <div className="flex items-center justify-between">
@@ -446,8 +448,7 @@ const BooleanField = React.memo(({
   isRequired?: boolean;
   description?: string;
   error?: string;
-}) => (
-  <div className="flex items-start space-x-3 space-y-0">
+}) => { useUiLocale(); return (<div className="flex items-start space-x-3 space-y-0">
     <Checkbox
       id={id}
       checked={!!value}
@@ -471,8 +472,7 @@ const BooleanField = React.memo(({
         <p className="text-xs font-medium text-destructive">{error}</p>
       )}
     </div>
-  </div>
-));
+  </div>); });
 
 BooleanField.displayName = "BooleanField";
 
@@ -515,6 +515,7 @@ const EnumField = React.memo(({
   error?: string;
   options: unknown[];
 }) => {
+  useUiLocale();
   // Optional enums get a leading blank row so the user can express "not
   // configured"; it is also the selected row when no value is set.
   const showUnsetOption = !isRequired;
@@ -553,12 +554,12 @@ const EnumField = React.memo(({
         disabled={disabled}
       >
         <SelectTrigger className="w-full" aria-label={label} aria-required={isRequired}>
-          <SelectValue placeholder="Select an option" />
+          <SelectValue placeholder={uiText("Select an option")} />
         </SelectTrigger>
         <SelectContent>
           {showUnsetOption && (
             <SelectItem value={ENUM_UNSET_VALUE} textValue="None">
-              <span className="text-muted-foreground">None</span>
+              <span className="text-muted-foreground">{uiText("None")}</span>
             </SelectItem>
           )}
           {options.map((option) => (
@@ -601,6 +602,7 @@ const SecretField = React.memo(({
   defaultValue?: unknown;
   maxLength?: number;
 }) => {
+  useUiLocale();
   const [isVisible, setIsVisible] = useState(false);
   const isTextArea = maxLength != null && maxLength > TEXTAREA_THRESHOLD;
 
@@ -691,7 +693,7 @@ const SecretField = React.memo(({
           <Eye className="h-4 w-4 text-muted-foreground" />
         )}
         <span className="sr-only">
-          {isVisible ? "Hide secret" : "Show secret"}
+          {isVisible ? uiText("Hide secret") : uiText("Show secret")}
         </span>
       </Button>
     </div>
@@ -722,7 +724,7 @@ const SecretField = React.memo(({
           <Eye className="h-4 w-4 text-muted-foreground" />
         )}
         <span className="sr-only">
-          {isVisible ? "Hide secret" : "Show secret"}
+          {isVisible ? uiText("Hide secret") : uiText("Show secret")}
         </span>
       </Button>
     </div>
@@ -733,7 +735,7 @@ const SecretField = React.memo(({
       label={label}
       description={
         description ||
-        "Pick an existing organization secret, or paste a raw value (Paperclip will store it as a secret on save)."
+        uiText("Pick an existing organization secret, or paste a raw value (Paperclip will store it as a secret on save).")
       }
       required={isRequired}
       error={error}
@@ -744,7 +746,7 @@ const SecretField = React.memo(({
           value={bindingValue}
           onChange={handlePickerChange}
           label=""
-          placeholder="Select an existing secret"
+          placeholder={uiText("Select an existing secret")}
           allowVersionSelector={false}
           emptyHint="No active secrets yet. Create one or paste a raw value below."
           disabled={disabled}
@@ -762,9 +764,7 @@ const SecretField = React.memo(({
                     setIsVisible(false);
                   }}
                   disabled={disabled}
-                >
-                  Hide raw value input
-                </button>
+                >{uiText("Hide raw value input")}</button>
               ) : null}
             </div>
           ) : (
@@ -773,9 +773,7 @@ const SecretField = React.memo(({
               className="text-(length:--text-micro) text-muted-foreground hover:text-foreground"
               onClick={() => setShowRawInput(true)}
               disabled={disabled}
-            >
-              Or paste a raw value
-            </button>
+            >{uiText("Or paste a raw value")}</button>
           )
         ) : null}
       </div>
@@ -817,6 +815,7 @@ const NumberField = React.memo(({
   maximum?: number;
   suggestions?: unknown[];
 }) => {
+  useUiLocale();
   const hasSuggestions = Array.isArray(suggestions) && suggestions.length > 0;
   // Sanitize the path-based id so it is a valid CSS/HTML identifier (paths can contain "/").
   const listId = hasSuggestions ? `${id.replace(/[^a-zA-Z0-9_-]/g, "-")}-suggestions` : undefined;
@@ -885,6 +884,7 @@ const StringField = React.memo(({
   format?: string;
   maxLength?: number;
 }) => {
+  useUiLocale();
   const isTextArea = format === "textarea" || (maxLength && maxLength > TEXTAREA_THRESHOLD);
   return (
     <FieldWrapper
@@ -945,6 +945,7 @@ const ArrayField = React.memo(({
   errors: Record<string, string>;
   path: string;
 }) => {
+  useUiLocale();
   const items = Array.isArray(value) ? value : [];
   const itemSchema = propSchema.items as JsonSchemaNode;
   const isComplex = resolveType(itemSchema) === "object";
@@ -975,7 +976,7 @@ const ArrayField = React.memo(({
           }}
         >
           <Plus className="mr-2 h-4 w-4" />
-          {isComplex ? "Add item" : "Add"}
+          {isComplex ? uiText("Add item") : uiText("Add")}
         </Button>
       </div>
 
@@ -986,8 +987,7 @@ const ArrayField = React.memo(({
             className="group relative flex items-start space-x-2 rounded-lg border p-3"
           >
             <div className="flex-1">
-              <div className="mb-2 text-xs font-medium text-muted-foreground">
-                Item {index + 1}
+              <div className="mb-2 text-xs font-medium text-muted-foreground">{uiText("Item ")}{index + 1}
               </div>
               <FormField
                 propSchema={itemSchema}
@@ -1020,14 +1020,12 @@ const ArrayField = React.memo(({
               }}
             >
               <Trash2 className="h-4 w-4" />
-              <span className="sr-only">Remove item</span>
+              <span className="sr-only">{uiText("Remove item")}</span>
             </Button>
           </div>
         ))}
         {items.length === 0 && (
-          <div className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
-            No items added yet.
-          </div>
+          <div className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">{uiText("No items added yet.")}</div>
         )}
       </div>
       {error && (
@@ -1043,6 +1041,7 @@ ArrayField.displayName = "ArrayField";
 function JsonObjectField({ value, onChange, disabled, label, error }: {
   value: unknown; onChange: (value: unknown) => void; disabled: boolean; label: string; error?: string;
 }) {
+  useUiLocale();
   const format = (next: unknown) => typeof next === "string" ? next : JSON.stringify(next ?? {}, null, 2);
   const [text, setText] = useState(() => format(value));
   const emitted = useRef(value);
@@ -1061,8 +1060,8 @@ function JsonObjectField({ value, onChange, disabled, label, error }: {
     onChange(next);
   };
   return <div className="space-y-2">
-    <Textarea aria-label={`${label} JSON`} aria-invalid={!!error} value={text} onChange={(event) => change(event.target.value)} disabled={disabled} rows={5} className="font-mono text-sm" />
-    <p className="text-xs text-muted-foreground">Enter a JSON object using the action's argument names.</p>
+    <Textarea aria-label={uiText("{{value0}} JSON", { value0: label })} aria-invalid={!!error} value={text} onChange={(event) => change(event.target.value)} disabled={disabled} rows={5} className="font-mono text-sm" />
+    <p className="text-xs text-muted-foreground">{uiText("Enter a JSON object using the action's argument names.")}</p>
     {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
   </div>;
 }
@@ -1087,6 +1086,7 @@ const ObjectField = React.memo(({
   errors: Record<string, string>;
   path: string;
 }) => {
+  useUiLocale();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const handleObjectChange = (newVal: Record<string, unknown>) => {
     onChange(newVal);
@@ -1153,6 +1153,7 @@ const FormField = React.memo(({
   errors,
   path,
 }: FormFieldProps) => {
+  useUiLocale();
   const type = resolveType(propSchema);
   const isReadOnly = disabled || propSchema.readOnly === true;
 
@@ -1285,6 +1286,7 @@ export function JsonSchemaForm({
   className,
   advancedLabel = "Advanced options",
 }: JsonSchemaFormProps) {
+  useUiLocale();
   const type = resolveType(schema);
 
   const handleRootScalarChange = useCallback((newVal: unknown) => {
@@ -1388,9 +1390,7 @@ export function JsonSchemaForm({
           "py-4 text-center text-sm text-muted-foreground",
           className,
         )}
-      >
-        No configuration options available.
-      </div>
+      >{uiText("No configuration options available.")}</div>
     );
   }
 

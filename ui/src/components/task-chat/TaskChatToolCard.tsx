@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useTaskChatExpansion } from "./expansion-state";
 import { cn } from "@/lib/utils";
 import {
@@ -30,6 +31,7 @@ const STATUS_ICON = {
  * inset). Full diff bodies stay out of the activity feed.
  */
 export function TaskChatToolCard({ item }: { item: TaskChatToolItem }) {
+  useUiLocale();
   const { Icon, spin, tone } = STATUS_ICON[item.status];
   const RowIcon = toolTaxonomy(item.rawName ?? item.name).icon;
   const [showDetail, setShowDetail] = useTaskChatExpansion(item.id, false);
@@ -95,9 +97,7 @@ export function TaskChatToolCard({ item }: { item: TaskChatToolItem }) {
             aria-hidden
           />
           {item.status === "interrupted" ? (
-            <span className="text-(length:--text-micro) text-muted-foreground">
-              Interrupted
-            </span>
+            <span className="text-(length:--text-micro) text-muted-foreground">{uiText("Interrupted")}</span>
           ) : null}
         </span>
       </button>
@@ -120,7 +120,7 @@ export function TaskChatToolCard({ item }: { item: TaskChatToolItem }) {
           data-testid="task-chat-tool-change-summary"
         >
           <div className="flex min-w-0 items-center gap-2 text-(length:--text-micro) text-muted-foreground">
-            <span className="shrink-0">Changed</span>
+            <span className="shrink-0">{uiText("Changed")}</span>
             {item.diff.path ? (
               <span className="min-w-0 truncate font-mono text-foreground">
                 {item.diff.path}

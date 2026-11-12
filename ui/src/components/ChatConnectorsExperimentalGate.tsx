@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { chatEndpointsApi } from "@/api/chatEndpoints";
@@ -16,6 +17,7 @@ function ProviderEndpointGate({
   endpointId: string;
   children: ReactNode;
 }) {
+  useUiLocale();
   const endpoint = useQuery({
     queryKey: queryKeys.chatEndpoints.detail(endpointId),
     queryFn: () => chatEndpointsApi.get(endpointId),
@@ -27,9 +29,7 @@ function ProviderEndpointGate({
         <p role="alert" className="text-sm text-destructive">
           {endpoint.error.message}
         </p>
-        <Button variant="outline" onClick={() => void endpoint.refetch()}>
-          Retry
-        </Button>
+        <Button variant="outline" onClick={() => void endpoint.refetch()}>{uiText("Retry")}</Button>
       </div>
     );
   if (!endpoint.data) return null;
@@ -45,6 +45,7 @@ export function ChatConnectorsExperimentalGate({
 }: {
   children: ReactNode;
 }) {
+  useUiLocale();
   const { enabled, githubEnabled, loaded } = useChatConnectorsEnabled();
   const [params] = useSearchParams();
   const { endpointId } = useParams<{ endpointId: string }>();

@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useEffect, useMemo, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, RefreshCw } from "lucide-react";
@@ -13,6 +14,7 @@ import { AppLogo } from "../AppLogo";
 const catalogBySlug = new Map(AGGREGATOR_APP_CATALOG.map(app => [app.slug, app]));
 
 export function ConnectedAggregatorApps({ connection }: { connection: ToolConnection }) {
+  useUiLocale();
   const queryClient = useQueryClient();
   const { userId, settled, failed } = useAccountIdentity();
   const queryKey = queryKeys.tools.aggregatorApps(connection.id, userId);
@@ -54,22 +56,20 @@ export function ConnectedAggregatorApps({ connection }: { connection: ToolConnec
 
   return <section aria-labelledby="connected-aggregator-apps-heading" className="space-y-3">
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <h2 id="connected-aggregator-apps-heading" className="text-sm font-semibold">Connected apps</h2>
-      <Button variant="outline" size="sm" aria-label={`Refresh ${providerName}`}
+      <h2 id="connected-aggregator-apps-heading" className="text-sm font-semibold">{uiText("Connected apps")}</h2>
+      <Button variant="outline" size="sm" aria-label={uiText("Refresh {{value0}}", { value0: providerName })}
         disabled={!settled || query.isLoading || syncing || Boolean(unavailable)}
         onClick={() => refresh.mutate(userId)}>
         <RefreshCw className={syncing ? "size-4 animate-spin" : "size-4"} aria-hidden="true" />
-        {syncing ? "Refreshing…" : `Refresh ${providerName}`}
+        {syncing ? uiText("Refreshing…") : uiText("Refresh {{value0}}", { value0: providerName })}
       </Button>
     </div>
-    {loadFailed || syncFailed ? <p role="alert" className="text-sm text-destructive">
-      Couldn’t refresh {providerName} apps.{apps.length ? " Last known apps are shown." : " Try refreshing again."}
+    {loadFailed || syncFailed ? <p role="alert" className="text-sm text-destructive">{uiText("Couldn’t refresh ")}{providerName}{uiText(" apps.")}{apps.length ? uiText(" Last known apps are shown.") : uiText(" Try refreshing again.")}
     </p> : null}
-    {syncing ? <p role="status" className="text-sm text-muted-foreground">
-      Refreshing apps…{data?.sync.total ? ` ${data.sync.checked} of ${data.sync.total}` : ""}
-    </p> : refresh.isSuccess && !syncFailed && !unavailable ? <p role="status" className="text-sm text-muted-foreground">Apps refreshed.</p> : null}
-    {(!settled && !failed) || query.isLoading ? <p role="status" className="text-sm text-muted-foreground">Loading apps…</p>
-      : apps.length ? <ul aria-label={`Connected ${providerName} apps`} tabIndex={0}
+    {syncing ? <p role="status" className="text-sm text-muted-foreground">{uiText("Refreshing apps…")}{data?.sync.total ? uiText(" {{value0}} of {{value1}}", { value0: data.sync.checked, value1: data.sync.total }) : ""}
+    </p> : refresh.isSuccess && !syncFailed && !unavailable ? <p role="status" className="text-sm text-muted-foreground">{uiText("Apps refreshed.")}</p> : null}
+    {(!settled && !failed) || query.isLoading ? <p role="status" className="text-sm text-muted-foreground">{uiText("Loading apps…")}</p>
+      : apps.length ? <ul aria-label={uiText("Connected {{value0}} apps", { value0: providerName })} tabIndex={0}
         className="max-h-80 overflow-y-auto rounded-lg border border-border divide-y divide-border">
         {apps.map(snapshots => {
           const app = snapshots[0];
@@ -84,7 +84,7 @@ export function ConnectedAggregatorApps({ connection }: { connection: ToolConnec
             <AppLogo name={app.appName} brandKey={app.appSlug} logoUrl={logoUrl} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium" title={app.appName}>{app.appName}</p>
-              {accounts.length > 1 ? <p className="text-xs text-muted-foreground">{accounts.length} accounts</p>
+              {accounts.length > 1 ? <p className="text-xs text-muted-foreground">{accounts.length}{uiText(" accounts")}</p>
                 : accounts[0]?.alias ? <p className="truncate text-xs text-muted-foreground">{accounts[0].alias}</p> : null}
             </div>
             <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
@@ -94,7 +94,7 @@ export function ConnectedAggregatorApps({ connection }: { connection: ToolConnec
           </li>;
         })}
       </ul> : !loadFailed && !syncFailed && !syncing ? <p className="text-sm text-muted-foreground">
-        {data?.discovery.message ?? `No connected apps found in ${providerName}.`}
+        {data?.discovery.message ?? uiText("No connected apps found in {{value0}}.", { value0: providerName })}
       </p> : null}
   </section>;
 }

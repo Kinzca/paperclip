@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, History, RotateCcw } from "lucide-react";
@@ -30,6 +31,7 @@ export function PipelineStageHistoryPanel({
   hasDocument: boolean;
   onRestored: (body: string, baseRevisionId: string | null) => void;
 }) {
+  useUiLocale();
   const { pushToast } = useToastActions();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -78,8 +80,8 @@ export function PipelineStageHistoryPanel({
         <div className="flex items-center gap-2">
           <History className="h-4 w-4 text-muted-foreground" />
           <div>
-            <p className="text-sm font-medium">History</p>
-            <p className="text-xs text-muted-foreground">Past versions of these instructions.</p>
+            <p className="text-sm font-medium">{uiText("History")}</p>
+            <p className="text-xs text-muted-foreground">{uiText("Past versions of these instructions.")}</p>
           </div>
         </div>
         {open ? (
@@ -90,17 +92,15 @@ export function PipelineStageHistoryPanel({
       </CollapsibleTrigger>
       <CollapsibleContent className="border-t border-border/70">
         {!hasDocument ? (
-          <p className="px-4 py-3 text-xs text-muted-foreground">
-            No history yet. Save the instructions to create the first revision.
-          </p>
+          <p className="px-4 py-3 text-xs text-muted-foreground">{uiText("No history yet. Save the instructions to create the first revision.")}</p>
         ) : revisionsQuery.isLoading ? (
-          <p className="px-4 py-3 text-xs text-muted-foreground">Loading revisions…</p>
+          <p className="px-4 py-3 text-xs text-muted-foreground">{uiText("Loading revisions…")}</p>
         ) : revisionsQuery.error ? (
           <p className="px-4 py-3 text-xs text-destructive">
-            {revisionsQuery.error instanceof Error ? revisionsQuery.error.message : "Could not load revisions."}
+            {revisionsQuery.error instanceof Error ? revisionsQuery.error.message : uiText("Could not load revisions.")}
           </p>
         ) : revisions.length === 0 ? (
-          <p className="px-4 py-3 text-xs text-muted-foreground">No revisions recorded yet.</p>
+          <p className="px-4 py-3 text-xs text-muted-foreground">{uiText("No revisions recorded yet.")}</p>
         ) : (
           <ul className="divide-y divide-border/70">
             {revisions.map((revision) => {
@@ -111,12 +111,9 @@ export function PipelineStageHistoryPanel({
                   className={cn("flex items-center justify-between gap-3 px-4 py-2.5", isCurrent && "bg-accent/30")}
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-medium">
-                      Revision {revision.revisionNumber}
+                    <p className="text-sm font-medium">{uiText("Revision ")}{revision.revisionNumber}
                       {isCurrent ? (
-                        <Badge variant="ghost" className="ml-2 bg-muted text-(length:--text-micro) text-muted-foreground">
-                          Current
-                        </Badge>
+                        <Badge variant="ghost" className="ml-2 bg-muted text-(length:--text-micro) text-muted-foreground">{uiText("Current")}</Badge>
                       ) : null}
                     </p>
                     <p className="text-xs text-muted-foreground">
@@ -132,9 +129,7 @@ export function PipelineStageHistoryPanel({
                       disabled={restore.isPending}
                       onClick={() => restore.mutate(revision.id)}
                     >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                      Restore
-                    </Button>
+                      <RotateCcw className="h-3.5 w-3.5" />{uiText("Restore")}</Button>
                   )}
                 </li>
               );

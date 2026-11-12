@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useEffect, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { createPortal } from "react-dom";
@@ -6,6 +7,7 @@ import { useSidebar } from "@/context/SidebarContext";
 import { cn } from "@/lib/utils";
 
 export function SetupWizardSidebar() {
+  useUiLocale();
   const sidebar = useSetupWizardSidebar();
   return (
     <aside className="flex h-full min-h-0 w-full flex-col border-r border-border bg-background">
@@ -33,6 +35,7 @@ export function SetupWizardNavigation({
   disabled?: boolean;
   onSelect: (step: number) => void;
 }) {
+  useUiLocale();
   const sidebar = useSetupWizardSidebar();
   const { isMobile, setSidebarOpen } = useSidebar();
   const setActive = sidebar?.setActive;
@@ -84,14 +87,16 @@ export function SetupWizardNavigation({
 
 /** Lets a form temporarily replace the section menu, without replacing global navigation. */
 export function SetupWizardSidebarOutlet({ children }: { children: ReactNode }) {
+  useUiLocale();
   const sidebar = useSetupWizardSidebar();
   return sidebar?.active ? <SetupWizardSidebar /> : children;
 }
 
 /** Each step owns one footer row; secondary actions stay with the primary action. */
 export function SetupWizardFooter({ onSaveExit, children, disabled = false }: { onSaveExit: () => void; children: ReactNode; disabled?: boolean }) {
+  useUiLocale();
   return <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-    <Button type="button" variant="ghost" className="text-muted-foreground" onClick={onSaveExit} disabled={disabled}>Save &amp; exit</Button>
+    <Button type="button" variant="ghost" className="text-muted-foreground" onClick={onSaveExit} disabled={disabled}>{uiText("Save & exit")}</Button>
     <div className="ml-auto flex flex-wrap items-center gap-2">{children}</div>
   </div>;
 }

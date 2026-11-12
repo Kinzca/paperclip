@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useMemo, type CSSProperties } from "react";
 import { Folder, GitBranch, GitBranchPlus, Monitor } from "lucide-react";
 import type { ExecutionWorkspaceSummary } from "@paperclipai/shared";
@@ -37,6 +38,7 @@ export function ComposerWorktreePicker({
   mode, workspaceId, workspaces, onChange, loading, error, onRetry,
   disabled, mobile, contentStyle, selectedWorkspaceLabel,
 }: ComposerWorktreePickerProps) {
+  useUiLocale();
   const groups = useMemo(() => [
     { id: "new", options: [MODE_OPTIONS[0]!] },
     {
@@ -61,11 +63,11 @@ export function ComposerWorktreePicker({
       value={value}
       groups={groups}
       onValueChange={(_, option) => onChange(option.mode, option.workspaceId ?? "")}
-      placeholder="Worktrees"
+      placeholder={uiText("Worktrees")}
       triggerAriaLabel="Worktrees"
       mobileTitle="Worktrees"
       searchPlaceholder="Search worktrees..."
-      emptyMessage="No matching worktrees."
+      emptyMessage={uiText("No matching worktrees.")}
       disabled={disabled}
       modal={mobile}
       contentStyle={contentStyle}
@@ -76,8 +78,8 @@ export function ComposerWorktreePicker({
         <span className="flex min-w-0 items-center gap-1.5">
           <GitBranch className="size-3.5 shrink-0" aria-hidden />
           <span className="truncate">
-            <span className="hidden text-muted-foreground sm:inline">Worktrees · </span>
-            {option?.label ?? selectedWorkspaceLabel ?? "Select worktree"}
+            <span className="hidden text-muted-foreground sm:inline">{uiText("Worktrees · ")}</span>
+            {option?.label ?? selectedWorkspaceLabel ?? uiText("Select worktree")}
           </span>
         </span>
       )}
@@ -96,12 +98,10 @@ export function ComposerWorktreePicker({
       }}
       listFooter={loading || error || workspaces.length === 0 ? (
         <div className="border-t border-border px-3 py-2 text-xs text-muted-foreground" role="status">
-          {loading ? "Loading existing worktrees…" : error ? (
-            <span className="flex items-center justify-between gap-2">
-              Couldn't load worktrees.
-              <button type="button" className="rounded px-2 py-1 text-foreground hover:bg-accent" onClick={onRetry}>Retry</button>
+          {loading ? uiText("Loading existing worktrees…") : error ? (
+            <span className="flex items-center justify-between gap-2">{uiText("Couldn't load worktrees.")}<button type="button" className="rounded px-2 py-1 text-foreground hover:bg-accent" onClick={onRetry}>{uiText("Retry")}</button>
             </span>
-          ) : "No existing worktrees yet. Choose New worktree to start one."}
+          ) : uiText("No existing worktrees yet. Choose New worktree to start one.")}
         </div>
       ) : undefined}
     />

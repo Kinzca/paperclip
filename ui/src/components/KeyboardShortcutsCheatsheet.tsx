@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface ShortcutEntry {
@@ -62,6 +63,7 @@ const sections: ShortcutSection[] = [
 ];
 
 function KeyCap({ children }: { children: string }) {
+  useUiLocale();
   return (
     <kbd className="inline-flex h-6 min-w-6 items-center justify-center rounded border border-border bg-muted px-1.5 font-mono text-xs font-medium text-foreground shadow-(--shadow-extract-10)">
       {children}
@@ -70,6 +72,7 @@ function KeyCap({ children }: { children: string }) {
 }
 
 export function KeyboardShortcutsCheatsheetContent() {
+  useUiLocale();
   return (
     <>
       <div className="divide-y divide-border border-t border-border">
@@ -90,7 +93,7 @@ export function KeyboardShortcutsCheatsheetContent() {
                       <span key={key} className="flex items-center gap-1">
                         {i > 0 && (
                           <span className="text-xs text-muted-foreground">
-                            {shortcut.combo ? "+" : "then"}
+                            {shortcut.combo ? "+" : uiText("then")}
                           </span>
                         )}
                         <KeyCap>{key}</KeyCap>
@@ -104,9 +107,7 @@ export function KeyboardShortcutsCheatsheetContent() {
         ))}
       </div>
       <div className="border-t border-border px-5 py-3">
-        <p className="text-xs text-muted-foreground">
-          Press <KeyCap>Esc</KeyCap> to close &middot; Shortcuts are disabled in text fields
-        </p>
+        <p className="text-xs text-muted-foreground">{uiText("Press ")}<KeyCap>{uiText("Esc")}</KeyCap>{uiText(" to close · Shortcuts are disabled in text fields")}</p>
       </div>
     </>
   );
@@ -119,11 +120,12 @@ export function KeyboardShortcutsCheatsheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  useUiLocale();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md gap-0 p-0 overflow-hidden" showCloseButton={false}>
         <DialogHeader className="px-5 pt-5 pb-3">
-          <DialogTitle className="text-base">Keyboard shortcuts</DialogTitle>
+          <DialogTitle className="text-base">{uiText("Keyboard shortcuts")}</DialogTitle>
         </DialogHeader>
         <KeyboardShortcutsCheatsheetContent />
       </DialogContent>

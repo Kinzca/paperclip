@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
@@ -56,6 +57,7 @@ export function AttentionInteractionResolver({
   userLabelMap,
   onResolved,
 }: AttentionInteractionResolverProps) {
+  useUiLocale();
   const queryClient = useQueryClient();
 
   const { data: interactions, isLoading, error } = useQuery({
@@ -130,16 +132,13 @@ export function AttentionInteractionResolver({
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 py-3 text-xs text-muted-foreground">
-        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading decision…
-      </div>
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />{uiText(" Loading decision…")}</div>
     );
   }
 
   if (error || !interaction) {
     return (
-      <p className="py-3 text-xs text-muted-foreground">
-        This decision is no longer available — it may have been resolved elsewhere.
-      </p>
+      <p className="py-3 text-xs text-muted-foreground">{uiText("This decision is no longer available — it may have been resolved elsewhere.")}</p>
     );
   }
 

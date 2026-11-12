@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { Sparkles } from "lucide-react";
 import { Link } from "@/lib/router";
 import { cn, relativeTime } from "@/lib/utils";
@@ -33,6 +34,7 @@ function MetaRow({
   label: string;
   children: React.ReactNode;
 }) {
+  useUiLocale();
   return (
     <div className="grid grid-cols-(--gtc-10) gap-x-3 gap-y-0 py-1 text-xs sm:grid-cols-(--gtc-11)">
       <dt className="truncate text-(length:--text-micro) font-medium uppercase tracking-(--tracking-label) text-emerald-900/70 dark:text-emerald-200/70">
@@ -48,6 +50,7 @@ export function SourceResolvedFoldCallout({
   finalizedAt,
   className,
 }: SourceResolvedFoldCalloutProps) {
+  useUiLocale();
   const sourceLabel = fold.sourceIssueIdentifier ?? fold.sourceIssueId.slice(0, 8);
   const evidenceShort = shortenEvidenceId(fold.sameRunEvidenceId);
   const evidenceAt = isoOrLocaleString(fold.sameRunEvidenceAt);
@@ -60,7 +63,7 @@ export function SourceResolvedFoldCallout({
   return (
     <section
       role="status"
-      aria-label="Source-resolved watchdog fold"
+      aria-label={uiText("Source-resolved watchdog fold")}
       data-source-resolved-fold
       className={cn(
         "relative w-full overflow-hidden rounded-lg border text-sm shadow-(--shadow-extract-8)",
@@ -81,11 +84,9 @@ export function SourceResolvedFoldCallout({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-(length:--text-micro) font-semibold uppercase tracking-(--tracking-eyebrow)">
-            <span className="text-emerald-900 dark:text-emerald-200">SOURCE-RESOLVED FOLD</span>
+            <span className="text-emerald-900 dark:text-emerald-200">{uiText("SOURCE-RESOLVED FOLD")}</span>
             <span className="text-muted-foreground/60" aria-hidden>·</span>
-            <span className="font-medium normal-case tracking-normal text-muted-foreground">
-              system audit
-            </span>
+            <span className="font-medium normal-case tracking-normal text-muted-foreground">{uiText("system audit")}</span>
             {finalizedRelative ? (
               <>
                 <span className="text-muted-foreground/60" aria-hidden>·</span>
@@ -95,9 +96,7 @@ export function SourceResolvedFoldCallout({
               </>
             ) : null}
           </div>
-          <p className="mt-1 text-sm leading-6">
-            This run was folded as a source-resolved false positive.
-          </p>
+          <p className="mt-1 text-sm leading-6">{uiText("This run was folded as a source-resolved false positive.")}</p>
         </div>
       </header>
       <dl
@@ -107,7 +106,7 @@ export function SourceResolvedFoldCallout({
           "[&>*]:border-emerald-300/40 dark:[&>*]:border-emerald-500/20",
         )}
       >
-        <MetaRow label="Source task">
+        <MetaRow label={uiText("Source task")}>
           <span className="inline-flex flex-wrap items-center gap-1.5">
             <Link
               to={issueLink(fold.sourceIssueId, fold.sourceIssueIdentifier)}
@@ -120,7 +119,7 @@ export function SourceResolvedFoldCallout({
             </span>
           </span>
         </MetaRow>
-        <MetaRow label="Same-run evidence">
+        <MetaRow label={uiText("Same-run evidence")}>
           <span className="inline-flex flex-wrap items-baseline gap-1.5">
             <span className="rounded bg-background/70 px-1.5 py-0.5 font-mono text-(length:--text-micro) text-emerald-900 dark:bg-background/40 dark:text-emerald-100">
               {fold.sameRunEvidenceKind}
@@ -132,23 +131,23 @@ export function SourceResolvedFoldCallout({
               {evidenceShort}
             </code>
             {evidenceAt ? (
-              <span className="text-(length:--text-micro) text-muted-foreground">at {evidenceAt}</span>
+              <span className="text-(length:--text-micro) text-muted-foreground">{uiText("at ")}{evidenceAt}</span>
             ) : null}
           </span>
         </MetaRow>
-        <MetaRow label="Silence age before fold">
+        <MetaRow label={uiText("Silence age before fold")}>
           {silenceAgeLabel ? (
             <span>
               {silenceAgeLabel}
               {silenceStartedLabel ? (
-                <span className="text-muted-foreground"> (silence started {silenceStartedLabel})</span>
+                <span className="text-muted-foreground">{uiText(" (silence started ")}{silenceStartedLabel})</span>
               ) : null}
             </span>
           ) : (
-            <span className="text-muted-foreground">unknown</span>
+            <span className="text-muted-foreground">{uiText("unknown")}</span>
           )}
         </MetaRow>
-        <MetaRow label="Process cleanup">
+        <MetaRow label={uiText("Process cleanup")}>
           <span
             className="inline-flex flex-wrap items-baseline gap-1.5"
             title={fold.cleanup.outcome}
@@ -160,7 +159,7 @@ export function SourceResolvedFoldCallout({
           </span>
         </MetaRow>
         {fold.evaluationIssueId ? (
-          <MetaRow label="Evaluation task">
+          <MetaRow label={uiText("Evaluation task")}>
             <Link
               to={issueLink(fold.evaluationIssueId, fold.evaluationIssueIdentifier)}
               className="rounded-sm font-medium underline-offset-2 hover:underline"

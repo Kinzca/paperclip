@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { AgentAvatar } from "./AgentAvatar";
 import { Identity } from "./Identity";
 import { renderAccessIdentity, type AccessSelectOption } from "./AccessSelectIdentity";
@@ -93,6 +94,7 @@ const SOURCE_BADGES: Record<IssueAccessGrantSource, SourceBadgeSpec> = {
 };
 
 function SourceBadge({ source }: { source: IssueAccessGrantSource }) {
+  useUiLocale();
   const spec = SOURCE_BADGES[source];
   const Icon = spec.icon;
   return (
@@ -119,6 +121,7 @@ function PrincipalAvatar({
   avatarUrl?: string | null;
   initials?: string | null;
 }) {
+  useUiLocale();
   return (
     <Avatar size="sm" className="mt-0.5" aria-hidden="true">
       {avatarUrl ? <AvatarImage src={avatarUrl} alt="" /> : null}
@@ -142,6 +145,7 @@ function RowShell({
   badge?: React.ReactNode;
   action?: React.ReactNode;
 }) {
+  useUiLocale();
   return (
     <div className="flex items-start gap-2.5 py-2">
       {avatar}
@@ -180,6 +184,7 @@ export function IssueShareSheet({
   /** Pre-selected add subject (`type:id`), used by stories/tests to show the caution. */
   initialAddSelection?: string;
 }) {
+  useUiLocale();
   const queryClient = useQueryClient();
   const { pushToast } = useToastActions();
   const [view, setView] = useState<"list" | "add">(initialView);
@@ -304,9 +309,7 @@ export function IssueShareSheet({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Lock className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            Who can access this task
-          </DialogTitle>
+            <Lock className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />{uiText("Who can access this task")}</DialogTitle>
           <DialogDescription>{aclDescription}</DialogDescription>
         </DialogHeader>
 
@@ -330,17 +333,12 @@ export function IssueShareSheet({
                 data-testid="share-sheet-error"
               >
                 <span className="flex items-center gap-1.5">
-                  <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  Couldn't load access.
-                </span>
+                  <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />{uiText("Couldn't load access.")}</span>
                 <Button variant="ghost" size="sm" onClick={() => grantsQuery.refetch()}>
-                  <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> Retry
-                </Button>
+                  <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />{uiText(" Retry")}</Button>
               </div>
             ) : isEmpty ? (
-              <p className="py-3 text-sm text-muted-foreground" data-testid="share-sheet-empty">
-                Only you can see this task.
-              </p>
+              <p className="py-3 text-sm text-muted-foreground" data-testid="share-sheet-empty">{uiText("Only you can see this task.")}</p>
             ) : (
               <div className="divide-y divide-border/60">
                 {implicitPrincipals.filter(principal => !activeGrants.some(grant => grant.subjectId === principal.id || `${grant.subjectType}:${grant.subjectId}` === principal.id)).map((principal) => (
@@ -379,7 +377,7 @@ export function IssueShareSheet({
                         />
                       }
                       title={displayName}
-                      subtitle={implicitPrincipal ? `${implicitPrincipal.roleLabel} — access remains while this role applies` : grant.inherited ? "Inherited access — managed at its source" : `${granter} ${timeAgo(grant.createdAt)}`}
+                      subtitle={implicitPrincipal ? uiText("{{value0}} — access remains while this role applies", { value0: implicitPrincipal.roleLabel }) : grant.inherited ? uiText("Inherited access — managed at its source") : `${granter} ${timeAgo(grant.createdAt)}`}
                       badge={<SourceBadge source={grant.source} />}
                       action={
                         revocable ? (
@@ -389,12 +387,10 @@ export function IssueShareSheet({
                             className="text-muted-foreground hover:text-destructive"
                             onClick={() => setRevokeTarget(grant)}
                           >
-                            {implicitPrincipal ? "Remove saved grant" : "Revoke"}
+                            {implicitPrincipal ? uiText("Remove saved grant") : uiText("Revoke")}
                           </Button>
                         ) : grant.source === "project" ? (
-                          <span className="text-(length:--text-nano) text-muted-foreground">
-                            project-managed
-                          </span>
+                          <span className="text-(length:--text-nano) text-muted-foreground">{uiText("project-managed")}</span>
                         ) : null
                       }
                     />
@@ -412,8 +408,7 @@ export function IssueShareSheet({
                   onClick={() => setView("add")}
                   disabled={isLoading}
                 >
-                  <UserPlus className="h-3.5 w-3.5" aria-hidden="true" /> Add someone
-                </Button>
+                  <UserPlus className="h-3.5 w-3.5" aria-hidden="true" />{uiText(" Add someone")}</Button>
               </div>
             ) : null}
           </div>
@@ -425,27 +420,24 @@ export function IssueShareSheet({
               renderValue={(option) => option ? renderAccessIdentity(option) : "Choose a person or agent…"}
               renderOption={renderAccessIdentity}
               onValueChange={(value) => setAddSelection(value)}
-              placeholder="Choose a person or agent…"
+              placeholder={uiText("Choose a person or agent…")}
               searchPlaceholder="Search people and agents…"
               loading={directoryQuery.isLoading || agentsQuery.isLoading}
               loadingMessage="Loading directory…"
-              emptyMessage="No one left to add."
+              emptyMessage={uiText("No one left to add.")}
               triggerClassName="w-full"
             />
 
             {selectedSharedAgentName ? (
               <div
                 role="note"
-                aria-label="Shared agent caution"
+                aria-label={uiText("Shared agent caution")}
                 data-testid="shared-agent-caution"
                 className="flex items-start gap-2 rounded-md border border-border bg-muted px-3 py-2 text-xs leading-relaxed text-foreground"
               >
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 <span>
-                  <span className="font-semibold">Shared agent.</span> {selectedSharedAgentName}'s
-                  memory &amp; workspace may carry residual private context from this task into its
-                  later runs for other people. Grant only if that's acceptable.
-                </span>
+                  <span className="font-semibold">{uiText("Shared agent.")}</span> {selectedSharedAgentName}{uiText("'s memory & workspace may carry residual private context from this task into its later runs for other people. Grant only if that's acceptable.")}</span>
               </div>
             ) : null}
 
@@ -457,11 +449,9 @@ export function IssueShareSheet({
                   setView("list");
                   setAddSelection("");
                 }}
-              >
-                Back
-              </Button>
+              >{uiText("Back")}</Button>
               <Button size="sm" onClick={submitAdd} disabled={!addSelection || addMutation.isPending}>
-                {addMutation.isPending ? "Adding…" : "Add"}
+                {addMutation.isPending ? uiText("Adding…") : uiText("Add")}
               </Button>
             </div>
           </div>
@@ -476,18 +466,11 @@ export function IssueShareSheet({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              Remove {revokeTarget?.subjectDisplayName ?? "this subject"}'s saved grant?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This removes this grant and the access it supplies to this task's descendants.
-              Ownership, current assignment, project membership, inherited access, or another grant
-              can still provide access. Revoking access does <span className="font-semibold">not</span> erase
-              content already seen or retained in an agent's memory.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{uiText("Remove ")}{revokeTarget?.subjectDisplayName ?? uiText("this subject")}{uiText("'s saved grant?")}</AlertDialogTitle>
+            <AlertDialogDescription>{uiText("This removes this grant and the access it supplies to this task's descendants. Ownership, current assignment, project membership, inherited access, or another grant can still provide access. Revoking access does ")}<span className="font-semibold">{uiText("not")}</span>{uiText(" erase content already seen or retained in an agent's memory.")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{uiText("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={(event) => {
@@ -496,7 +479,7 @@ export function IssueShareSheet({
               }}
               disabled={revokeMutation.isPending}
             >
-              {revokeMutation.isPending ? "Removing…" : "Remove grant"}
+              {revokeMutation.isPending ? uiText("Removing…") : uiText("Remove grant")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { SelectField } from "@/components/ui/select-field";
 import type { ReactNode } from "react";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +17,7 @@ interface PageTabBarProps {
 }
 
 export function PageTabBar({ items, value, onValueChange, align = "center" }: PageTabBarProps) {
+  useUiLocale();
   const { isMobile } = useSidebar();
 
   if (isMobile && value !== undefined && onValueChange) {
@@ -25,7 +27,7 @@ export function PageTabBar({ items, value, onValueChange, align = "center" }: Pa
           value={value}
           onValueChange={(optionValue) => onValueChange(optionValue)}
           className="h-9 appearance-none rounded-md border border-border bg-background pl-3 pr-9 py-1 text-base focus:outline-none focus:ring-1 focus:ring-ring"
-          aria-label="Page section"
+          aria-label={uiText("Page section")}
         >
           {items.map((item) => (
             <option key={item.value} value={item.value}>

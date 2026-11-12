@@ -1,3 +1,5 @@
+import { getUiLocale } from "@/i18n/ui";
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,6 +15,7 @@ import { useToast } from "@/context/ToastContext";
 import { queryKeys } from "@/lib/queryKeys";
 
 export function JoinRequestQueue() {
+  useUiLocale();
   const { selectedCompany, selectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
   const { pushToast } = useToast();
@@ -23,10 +26,10 @@ export function JoinRequestQueue() {
   useEffect(() => {
     setBreadcrumbs([
       { label: selectedCompany?.name ?? "Organization", href: "/dashboard" },
-      { label: "Inbox", href: "/inbox" },
-      { label: "Join Requests" },
+      { label: uiText("Inbox"), href: "/inbox" },
+      { label: uiText("Join Requests") },
     ]);
-  }, [selectedCompany?.name, setBreadcrumbs]);
+  }, [selectedCompany?.name, setBreadcrumbs, getUiLocale()]);
 
   const requestsQuery = useQuery({
     queryKey: queryKeys.access.joinRequests(selectedCompanyId ?? "", `${status}:${requestType}`),
@@ -58,11 +61,11 @@ export function JoinRequestQueue() {
   });
 
   if (!selectedCompanyId) {
-    return <div className="text-sm text-muted-foreground">Select an organization to review join requests.</div>;
+    return <div className="text-sm text-muted-foreground">{uiText("Select an organization to review join requests.")}</div>;
   }
 
   if (requestsQuery.isLoading) {
-    return <div className="text-sm text-muted-foreground">Loading join requests…</div>;
+    return <div className="text-sm text-muted-foreground">{uiText("Loading join requests…")}</div>;
   }
 
   if (requestsQuery.error) {
@@ -80,16 +83,14 @@ export function JoinRequestQueue() {
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <UserPlus2 className="h-5 w-5 text-muted-foreground" />
-          <h1 className="text-lg font-semibold">Join Request Queue</h1>
+          <h1 className="text-lg font-semibold">{uiText("Join Request Queue")}</h1>
         </div>
-        <p className="max-w-3xl text-sm text-muted-foreground">
-          Review human and agent join requests outside the mixed inbox feed. This queue uses the same approval mutations as the inline inbox cards.
-        </p>
+        <p className="max-w-3xl text-sm text-muted-foreground">{uiText("Review human and agent join requests outside the mixed inbox feed. This queue uses the same approval mutations as the inline inbox cards.")}</p>
       </div>
 
       <Card className="flex-row flex-wrap gap-3 p-4">
         <label className="space-y-2 text-sm">
-          <span className="font-medium">Status</span>
+          <span className="font-medium">{uiText("Status")}</span>
           <SelectField
             className="rounded-md border border-border bg-background px-3 py-2"
             value={status}
@@ -97,13 +98,13 @@ export function JoinRequestQueue() {
               setStatus(optionValue as "pending_approval" | "approved" | "rejected")
             }
           >
-            <option value="pending_approval">Pending approval</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
+            <option value="pending_approval">{uiText("Pending approval")}</option>
+            <option value="approved">{uiText("Approved")}</option>
+            <option value="rejected">{uiText("Rejected")}</option>
           </SelectField>
         </label>
         <label className="space-y-2 text-sm">
-          <span className="font-medium">Request type</span>
+          <span className="font-medium">{uiText("Request type")}</span>
           <SelectField
             className="rounded-md border border-border bg-background px-3 py-2"
             value={requestType}
@@ -111,18 +112,16 @@ export function JoinRequestQueue() {
               setRequestType(optionValue as "all" | "human" | "agent")
             }
           >
-            <option value="all">All</option>
-            <option value="human">Human</option>
-            <option value="agent">Agent</option>
+            <option value="all">{uiText("All")}</option>
+            <option value="human">{uiText("Human")}</option>
+            <option value="agent">{uiText("Agent")}</option>
           </SelectField>
         </label>
       </Card>
 
       <div className="space-y-4">
         {(requestsQuery.data ?? []).length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border px-4 py-8 text-sm text-muted-foreground">
-            No join requests match the current filters.
-          </div>
+          <div className="rounded-xl border border-dashed border-border px-4 py-8 text-sm text-muted-foreground">{uiText("No join requests match the current filters.")}</div>
         ) : (
           requestsQuery.data!.map((request) => (
             <Card key={request.id} className="block p-4">
@@ -138,8 +137,8 @@ export function JoinRequestQueue() {
                   <div>
                     <div className="text-base font-medium">
                       {request.requestType === "human"
-                        ? request.requesterUser?.name || request.requestEmailSnapshot || request.requestingUserId || "Unknown human requester"
-                        : request.agentName || "Unknown agent requester"}
+                        ? request.requesterUser?.name || request.requestEmailSnapshot || request.requestingUserId || uiText("Unknown human requester")
+                        : request.agentName || uiText("Unknown agent requester")}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       {request.requestType === "human"
@@ -155,35 +154,31 @@ export function JoinRequestQueue() {
                       variant="outline"
                       onClick={() => rejectMutation.mutate(request.id)}
                       disabled={rejectMutation.isPending}
-                    >
-                      Reject
-                    </Button>
+                    >{uiText("Reject")}</Button>
                     <Button
                       onClick={() => approveMutation.mutate(request.id)}
                       disabled={approveMutation.isPending}
-                    >
-                      Approve
-                    </Button>
+                    >{uiText("Approve")}</Button>
                   </div>
                 ) : null}
               </div>
 
               <div className="mt-4 grid gap-3 text-sm text-muted-foreground md:grid-cols-2">
                 <div className="rounded-lg border border-border bg-background px-3 py-2">
-                  <div className="text-xs font-medium uppercase tracking-wide">Invite context</div>
+                  <div className="text-xs font-medium uppercase tracking-wide">{uiText("Invite context")}</div>
                   <div className="mt-2">
                     {request.invite
-                      ? `${request.invite.allowedJoinTypes} join invite${request.invite.humanRole ? ` • default role ${request.invite.humanRole}` : ""}`
-                      : "Invite metadata unavailable"}
+                      ? uiText("{{value0}} join invite{{value1}}", { value0: request.invite.allowedJoinTypes, value1: request.invite.humanRole ? ` • default role ${request.invite.humanRole}` : "" })
+                      : uiText("Invite metadata unavailable")}
                   </div>
                   {request.invite?.inviteMessage ? (
                     <div className="mt-2 text-foreground">{request.invite.inviteMessage}</div>
                   ) : null}
                 </div>
                 <div className="rounded-lg border border-border bg-background px-3 py-2">
-                  <div className="text-xs font-medium uppercase tracking-wide">Request details</div>
-                  <div className="mt-2">Submitted {new Date(request.createdAt).toLocaleString()}</div>
-                  <div>Source IP {request.requestIp}</div>
+                  <div className="text-xs font-medium uppercase tracking-wide">{uiText("Request details")}</div>
+                  <div className="mt-2">{uiText("Submitted ")}{new Date(request.createdAt).toLocaleString()}</div>
+                  <div>{uiText("Source IP ")}{request.requestIp}</div>
                   {request.requestType === "agent" && request.capabilities ? <div>{request.capabilities}</div> : null}
                 </div>
               </div>

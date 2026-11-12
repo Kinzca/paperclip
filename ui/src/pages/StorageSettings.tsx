@@ -1,3 +1,4 @@
+import { getUiLocale } from "@/i18n/ui";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Archive, Building2, Database, FolderOpen, History, Layers, RefreshCw } from "lucide-react";
@@ -21,7 +22,7 @@ const managementLinks = [
 export function StorageSettings() {
   const locale = useUiLocale();
   const { setBreadcrumbs } = useBreadcrumbs();
-  useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" }, { label: uiText("Storage") }]); }, [setBreadcrumbs, locale]);
+  useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" }, { label: uiText("Storage") }]); }, [setBreadcrumbs, locale, getUiLocale()]);
   const usage = useQuery({ queryKey: ["instance-storage", true], queryFn: () => instanceSettingsApi.getStorageUsage(true),
     staleTime: 30_000, refetchOnWindowFocus: false, retry: false });
   return <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">

@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { MessageSquare } from "lucide-react";
 import type { ChatConversation, ChatProvider } from "@/api/chatEndpoints";
 import { EmptyState } from "@/components/EmptyState";
@@ -34,6 +35,7 @@ export function ChatConversationList({
   rows: ChatConversation[];
   provider: ChatProvider;
 }) {
+  useUiLocale();
   if (!rows.length)
     return (
       <EmptyState
@@ -41,14 +43,14 @@ export function ChatConversationList({
         message="No conversations yet"
         description={
           provider === "agentmail"
-            ? "Send an email to this agent’s address to start one."
-            : "Mention the agent in an enabled destination to start one."
+            ? uiText("Send an email to this agent’s address to start one.")
+            : uiText("Mention the agent in an enabled destination to start one.")
         }
       />
     );
   return (
     <ul
-      aria-label="Conversations"
+      aria-label={uiText("Conversations")}
       className="divide-y divide-border border-y border-border"
     >
       {rows.map((row) => (
@@ -71,11 +73,11 @@ export function ChatConversationList({
                   className="break-words font-medium hover:underline"
                   to={`/issues/${row.issueId}`}
                 >
-                  {row.issueTitle ?? row.issueIdentifier ?? "Paperclip task"}
+                  {row.issueTitle ?? row.issueIdentifier ?? uiText("Paperclip task")}
                 </Link>
               ) : (
                 <span className="font-medium">
-                  {row.issueTitle ?? "Waiting for task"}
+                  {row.issueTitle ?? uiText("Waiting for task")}
                 </span>
               )}
             </div>
@@ -97,7 +99,7 @@ export function ChatConversationList({
                   {formatDateTime(row.updatedAt)}
                 </time>
               )}
-              {row.state === "completed" && <span>Completed</span>}
+              {row.state === "completed" && <span>{uiText("Completed")}</span>}
             </div>
           </div>
           {row.state !== "active" && row.state !== "completed" && (

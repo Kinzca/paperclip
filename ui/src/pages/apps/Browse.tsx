@@ -1,3 +1,5 @@
+import { getUiLocale } from "@/i18n/ui";
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { AGGREGATOR_NAMES, aggregatorManagementUrl, isAppAggregator, type AggregatorAppSnapshot, type AggregatorAppsResponse } from "@paperclipai/shared/aggregator-apps";
 import { CatalogSourceFilters, type CatalogSource } from "./CatalogSourceFilters";
 import { ExecutorManagementSetup } from "./ExecutorManagementSetup";
@@ -335,6 +337,7 @@ function accountActionHref(
  * account; unconnected providers retain the same catalog setup flows.
  */
 export function Browse({ renderAccountDetails = (connection) => connection.connectionPurpose === "ai" && !aiConnectionRouterPluginKey(connection) ? <ManagedAiConnectionRow connection={connection} /> : null }: { renderAccountDetails?: (connection: ToolConnection) => ReactNode } = {}) {
+  useUiLocale();
   const navigate = useNavigate();
   const preselectedChatAgentId =
     typeof window === "undefined"
@@ -362,9 +365,9 @@ export function Browse({ renderAccountDetails = (connection) => connection.conne
     useState<ConnectionRemovalTarget | null>(null);
 
   useEffect(() => {
-    setBreadcrumbs([{ label: "Connectors" }]);
+    setBreadcrumbs([{ label: uiText("Connectors") }]);
     return () => setBreadcrumbs([]);
-  }, [setBreadcrumbs]);
+  }, [setBreadcrumbs, getUiLocale()]);
 
   useEffect(() => { setQuery(""); setPage(1); setSource("paperclip"); setExpandedSearch(false); setArcadeToConfigure(null); setAggregatorToConnect(null); setAggregatorToManage(null); setInitialAggregatorProvider(undefined); setConnectionToRemove(null); }, [selectedCompanyId]);
   useEffect(() => {
@@ -863,9 +866,7 @@ export function Browse({ renderAccountDetails = (connection) => connection.conne
 
   if (!selectedCompanyId) {
     return (
-      <div className="p-6 text-sm text-muted-foreground">
-        Select an organization to manage connectors.
-      </div>
+      <div className="p-6 text-sm text-muted-foreground">{uiText("Select an organization to manage connectors.")}</div>
     );
   }
 
@@ -890,8 +891,8 @@ export function Browse({ renderAccountDetails = (connection) => connection.conne
             type="search"
             value={query}
             onChange={(event) => changeQuery(event.target.value)}
-            placeholder="Search connectors…"
-            aria-label="Search connectors"
+            placeholder={uiText("Search connectors…")}
+            aria-label={uiText("Search connectors")}
             className="pl-9"
           />
         </div>
@@ -904,10 +905,7 @@ export function Browse({ renderAccountDetails = (connection) => connection.conne
           role="alert"
         >
           <AlertTriangle className="h-4 w-4 shrink-0" />
-          <p className="min-w-0 flex-1">
-            Couldn’t load every connector. Existing accounts are shown where
-            available.
-          </p>
+          <p className="min-w-0 flex-1">{uiText("Couldn’t load every connector. Existing accounts are shown where available.")}</p>
           <Button
             type="button"
             size="sm"
@@ -918,27 +916,25 @@ export function Browse({ renderAccountDetails = (connection) => connection.conne
               void connectionsQuery.refetch();
               void chatEndpointsQuery.refetch();
             }}
-          >
-            Try again
-          </Button>
+          >{uiText("Try again")}</Button>
         </div>
       ) : null}
 
-      {refreshAggregator.isError ? <p role="alert" className="text-sm text-destructive">Couldn’t refresh the gateway. Last known accounts are shown.</p> : null}
+      {refreshAggregator.isError ? <p role="alert" className="text-sm text-destructive">{uiText("Couldn’t refresh the gateway. Last known accounts are shown.")}</p> : null}
 
       {loading ? (
-        <div className="space-y-3" aria-label="Loading connectors">
+        <div className="space-y-3" aria-label={uiText("Loading connectors")}>
           {Array.from({ length: 6 }).map((_, index) => (
             <Skeleton key={index} className="h-24 w-full rounded-xl" />
           ))}
         </div>
       ) : nothingMatches ? (
         <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed border-border bg-card px-4 py-6 text-sm text-muted-foreground">
-          <p className="flex items-center gap-2"><Link2 className="h-4 w-4" />No connectors match “{query.trim()}”.</p>
-          <Button variant="outline" size="sm" onClick={() => changeQuery("")}>Clear search</Button>
+          <p className="flex items-center gap-2"><Link2 className="h-4 w-4" />{uiText("No connectors match “")}{query.trim()}”.</p>
+          <Button variant="outline" size="sm" onClick={() => changeQuery("")}>{uiText("Clear search")}</Button>
         </div>
       ) : (
-        <div className="space-y-3" role="list" aria-label="Connector list">
+        <div className="space-y-3" role="list" aria-label={uiText("Connector list")}>
           {showAssistantConnection && <AssistantConnectionCard onNavigate={navigate} />}
           {paginatedRows.map((row) => (
             <ConnectorCard
@@ -968,14 +964,14 @@ export function Browse({ renderAccountDetails = (connection) => connection.conne
         </div>
       )}
 
-      {accountLoadErrors.length ? <p role="alert" className="text-sm text-destructive">Couldn’t load {Array.from(new Set(accountLoadErrors)).join(" or ")} accounts. Use Refresh in the connection’s menu to try again.</p> : null}
+      {accountLoadErrors.length ? <p role="alert" className="text-sm text-destructive">{uiText("Couldn’t load ")}{Array.from(new Set(accountLoadErrors)).join(" or ")}{uiText(" accounts. Use Refresh in the connection’s menu to try again.")}</p> : null}
 
-      {!loading && catalogRows.length > 0 ? <nav aria-label="Connector catalog pages" className="flex flex-wrap items-center justify-between gap-3 text-sm">
-        <p className="text-muted-foreground" role="status">{pageStart + 1}–{Math.min(pageStart + CATALOG_PAGE_SIZE, catalogRows.length)} of {catalogRows.length.toLocaleString()} connectors</p>
+      {!loading && catalogRows.length > 0 ? <nav aria-label={uiText("Connector catalog pages")} className="flex flex-wrap items-center justify-between gap-3 text-sm">
+        <p className="text-muted-foreground" role="status">{pageStart + 1}–{Math.min(pageStart + CATALOG_PAGE_SIZE, catalogRows.length)}{uiText(" of ")}{catalogRows.length.toLocaleString()}{uiText(" connectors")}</p>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => { setPage(currentPage - 1); catalogTop.current?.scrollIntoView?.({ block: "start" }); }}>Previous</Button>
-          <span className="text-xs text-muted-foreground">Page {currentPage} of {pageCount}</span>
-          <Button variant="outline" size="sm" disabled={currentPage === pageCount} onClick={() => { setPage(currentPage + 1); catalogTop.current?.scrollIntoView?.({ block: "start" }); }}>Next</Button>
+          <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => { setPage(currentPage - 1); catalogTop.current?.scrollIntoView?.({ block: "start" }); }}>{uiText("Previous")}</Button>
+          <span className="text-xs text-muted-foreground">{uiText("Page ")}{currentPage}{uiText(" of ")}{pageCount}</span>
+          <Button variant="outline" size="sm" disabled={currentPage === pageCount} onClick={() => { setPage(currentPage + 1); catalogTop.current?.scrollIntoView?.({ block: "start" }); }}>{uiText("Next")}</Button>
         </div>
       </nav> : null}
 
@@ -996,27 +992,23 @@ export function Browse({ renderAccountDetails = (connection) => connection.conne
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              Remove {connectionToRemove?.accountName ?? "this"} connection?
-            </AlertDialogTitle>
+            <AlertDialogTitle>{uiText("Remove ")}{connectionToRemove?.accountName ?? uiText("this")}{uiText(" connection?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {connectionToRemove?.pool ? "The connections in this pool are kept." : connectionToRemove && Object.values(AGGREGATOR_NAMES).includes(connectionToRemove.providerName as "Composio")
-                ? `This removes the saved ${connectionToRemove.providerName} connection from Paperclip and agents lose access through it. Your apps and accounts remain connected in ${connectionToRemove.providerName}.`
+              {connectionToRemove?.pool ? uiText("The connections in this pool are kept.") : connectionToRemove && Object.values(AGGREGATOR_NAMES).includes(connectionToRemove.providerName as "Composio")
+                ? uiText("This removes the saved {{value0}} connection from Paperclip and agents lose access through it. Your apps and accounts remain connected in {{value1}}.", { value0: connectionToRemove.providerName, value1: connectionToRemove.providerName })
                 : connectionToRemove?.kind === "chat"
-                ? `This connection will stop receiving new work from ${connectionToRemove.providerName}. Existing Paperclip tasks and conversation history remain available. This does not delete the app, bot, or account in ${connectionToRemove.providerName}.`
+                ? uiText("This connection will stop receiving new work from {{value0}}. Existing Paperclip tasks and conversation history remain available. This does not delete the app, bot, or account in {{value1}}.", { value0: connectionToRemove.providerName, value1: connectionToRemove.providerName })
                 : connectionToRemove &&
                     connectionToRemove.remainingConnectionCount > 0
-                  ? `This connection's saved credentials are deleted and agents lose access through it immediately. They can still use ${connectionToRemove.providerName} through ${connectionToRemove.remainingConnectionCount} other active ${connectionToRemove.remainingConnectionCount === 1 ? "connection" : "connections"}.`
-                  : "The saved credentials are deleted and agents lose access immediately. Connecting it again later requires a new sign-in or key."}
+                  ? uiText("This connection's saved credentials are deleted and agents lose access through it immediately. They can still use {{value0}} through {{value1}} other active {{value2}}.", { value0: connectionToRemove.providerName, value1: connectionToRemove.remainingConnectionCount, value2: connectionToRemove.remainingConnectionCount === 1 ? "connection" : "connections" })
+                  : uiText("The saved credentials are deleted and agents lose access immediately. Connecting it again later requires a new sign-in or key.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {removeConnection.isError ? <p role="alert" className="text-sm text-destructive">
-            {removeConnection.error instanceof Error ? removeConnection.error.message : "Couldn’t remove the connection. Please try again."}
+            {removeConnection.error instanceof Error ? removeConnection.error.message : uiText("Couldn’t remove the connection. Please try again.")}
           </p> : null}
           <AlertDialogFooter className="sm:justify-between">
-            <AlertDialogCancel disabled={removeConnection.isPending}>
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel disabled={removeConnection.isPending}>{uiText("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={!connectionToRemove || removeConnection.isPending}
@@ -1031,7 +1023,7 @@ export function Browse({ renderAccountDetails = (connection) => connection.conne
               ) : (
                 <Trash2 />
               )}
-              {removeConnection.isPending ? "Removing…" : "Remove connection"}
+              {removeConnection.isPending ? uiText("Removing…") : uiText("Remove connection")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1081,6 +1073,7 @@ export function ConnectorCard({
   onConfigureArcade?: (connection: ToolConnection) => void;
   onConfigureExecutor?: (connection: ToolConnection) => void;
 }) {
+  useUiLocale();
   const action = connectorAction(
     row,
     chatProviderVisible(row.slug, chatConnectorsEnabled, githubReviewBotsEnabled),
@@ -1126,7 +1119,7 @@ export function ConnectorCard({
             })}
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {row.aggregatorApp && row.upstreamApps?.some(app => app.accounts.length > 0) ? `Accounts managed in ${[...new Set(row.upstreamApps?.map(app => AGGREGATOR_NAMES[app.provider ?? "composio"]))].join(" and ")}.` : row.description}
+            {row.aggregatorApp && row.upstreamApps?.some(app => app.accounts.length > 0) ? uiText("Accounts managed in {{value0}}.", { value0: [...new Set(row.upstreamApps?.map(app => AGGREGATOR_NAMES[app.provider ?? "composio"]))].join(" and ") }) : row.description}
           </p>
         </div>
         <Button
@@ -1201,12 +1194,12 @@ export function ConnectorCard({
           const managementUrl = aggregatorManagementUrl(provider, account.managementUrl ?? (typeof connection.config?.managementUrl === "string" ? connection.config?.managementUrl : null));
           const manage = () => onManageAggregator?.(row.upstreamCatalogApp!, connection.id);
           return <ConnectionAccountRowLayout key={`${connection.id}:${snapshot.toolkit}:${account.id}`} state={state} accountName={name}
-            source={<><AppLogo name={providerName} brandKey={provider} size={16} compact /><span>Managed by {providerName} ·</span><button type="button" className="max-w-full truncate hover:underline" onClick={() => onNavigate(`/apps/${connection.id}/permissions`)}>“{connection.name}”</button></>}
+            source={<><AppLogo name={providerName} brandKey={provider} size={16} compact /><span>{uiText("Managed by ")}{providerName} ·</span><button type="button" className="max-w-full truncate hover:underline" onClick={() => onNavigate(`/apps/${connection.id}/permissions`)}>“{connection.name}”</button></>}
             onOpen={manage} openLabel={`Manage ${name}`}>
-            <DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon-sm" aria-label={`Manage ${name} connection`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+            <DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon-sm" aria-label={uiText("Manage {{value0}} connection", { value0: name })}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {managementUrl ? <DropdownMenuItem asChild><a href={managementUrl} target="_blank" rel="noopener noreferrer">Open in {providerName}<ExternalLink className="size-4" /></a></DropdownMenuItem>
-                  : <DropdownMenuItem disabled title="Set the management URL on this gateway to open its console">Open in {providerName}<ExternalLink className="size-4" /></DropdownMenuItem>}
+                {managementUrl ? <DropdownMenuItem asChild><a href={managementUrl} target="_blank" rel="noopener noreferrer">{uiText("Open in ")}{providerName}<ExternalLink className="size-4" /></a></DropdownMenuItem>
+                  : <DropdownMenuItem disabled title={uiText("Set the management URL on this gateway to open its console")}>{uiText("Open in ")}{providerName}<ExternalLink className="size-4" /></DropdownMenuItem>}
               </DropdownMenuContent>
             </DropdownMenu>
           </ConnectionAccountRowLayout>;
@@ -1221,7 +1214,7 @@ export function ConnectorCard({
             >
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 <AgentAvatar agent={chatAgentById?.get(endpoint.assignedAgentId) ?? { id: endpoint.assignedAgentId, name: endpoint.assignedAgentName }}
-                  size={40} label={`${endpoint.assignedAgentName} avatar`} />
+                  size={40} label={uiText("{{value0}} avatar", { value0: endpoint.assignedAgentName })} />
                 <div className="min-w-0">
                   <button
                     type="button"
@@ -1230,12 +1223,12 @@ export function ConnectorCard({
                       onNavigate(`/apps/chat/${endpoint.id}/settings`)
                     }
                   >
-                    {endpoint.assignedAgentName} · {endpoint.provider === "agentmail" ? "Email" : endpoint.provider === "github" ? "Code review bot" : "Chat"}
+                    {endpoint.assignedAgentName} · {endpoint.provider === "agentmail" ? uiText("Email") : endpoint.provider === "github" ? uiText("Code review bot") : uiText("Chat")}
                   </button>
                   <p className="truncate text-xs text-muted-foreground">
                     {endpoint.providerAccountLabel ??
                       endpoint.botLabel ??
-                      "Provider identity"}
+                      uiText("Provider identity")}
                   </p>
                 </div>
               </div>
@@ -1244,16 +1237,14 @@ export function ConnectorCard({
                   { createdByUserId: (endpoint.connectionId ? connectionById?.get(endpoint.connectionId)?.createdByUserId : null) ?? endpoint.sponsorUserId ?? null }, userProfileById,
                 )} />
                 {["paused", "attention", "revoked"].includes(endpoint.status) && <span className="text-xs text-muted-foreground">
-                  {endpoint.status === "attention" ? "Needs attention" : endpoint.status === "revoked" ? "Access revoked" : "Paused"}
+                  {endpoint.status === "attention" ? uiText("Needs attention") : endpoint.status === "revoked" ? uiText("Access revoked") : uiText("Paused")}
                 </span>}
                 {endpoint.status === "draft" ? (
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => onNavigate(`/apps/chat/connect?provider=${endpoint.provider}&purpose=chat&resume=${endpoint.id}`)}
-                  >
-                    Finish setup
-                  </Button>
+                  >{uiText("Finish setup")}</Button>
                 ) : null}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -1261,15 +1252,13 @@ export function ConnectorCard({
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      aria-label={`Manage ${endpoint.assignedAgentName} ${row.name} connection`}
+                      aria-label={uiText("Manage {{value0}} {{value1}} connection", { value0: endpoint.assignedAgentName, value1: row.name })}
                     >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => onNavigate(`/apps/chat/${endpoint.id}/settings`)}>
-                      Manage
-                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => onNavigate(`/apps/chat/${endpoint.id}/settings`)}>{uiText("Manage")}</DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       variant="destructive"
@@ -1282,9 +1271,7 @@ export function ConnectorCard({
                         remainingConnectionCount: 0,
                       })}
                     >
-                      <Trash2 />
-                      Remove connection
-                    </DropdownMenuItem>
+                      <Trash2 />{uiText("Remove connection")}</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -1321,6 +1308,7 @@ function ConnectionAccountRow({
   onConfigureArcade?: () => void;
   onConfigureExecutor?: () => void;
 }) {
+  useUiLocale();
   const state = connectionState(connection);
   const actionHref = accountActionHref(row, connection);
   const accountName = connectionDisplayNameForOwner(
@@ -1341,9 +1329,9 @@ function ConnectionAccountRow({
           >
             {state.kind === "attention"
               ? connection.requiresReauthorization === false
-                ? "Retry access"
-                : "Reconnect"
-              : "Finish setup"}
+                ? uiText("Retry access")
+                : uiText("Reconnect")
+              : uiText("Finish setup")}
           </Button>
         ) : null}
         <DropdownMenu>
@@ -1352,7 +1340,7 @@ function ConnectionAccountRow({
               type="button"
               variant="ghost"
               size="icon-sm"
-              aria-label={`Manage ${accountName} connection`}
+              aria-label={uiText("Manage {{value0}} connection", { value0: accountName })}
             >
               <MoreHorizontal className="h-4 w-4" />
             </Button>
@@ -1360,20 +1348,15 @@ function ConnectionAccountRow({
           <DropdownMenuContent align="end">
             <DropdownMenuItem
               onSelect={() => onNavigate(`/apps/${connection.id}/permissions`)}
-            >
-              Permissions
-            </DropdownMenuItem>
+            >{uiText("Permissions")}</DropdownMenuItem>
             {onRefreshComposio ? <DropdownMenuItem disabled={refreshingComposio} onSelect={onRefreshComposio}>
-              {refreshingComposio ? <Loader2 className="animate-spin" /> : null}
-              Refresh {isAppAggregator(row.slug) ? AGGREGATOR_NAMES[row.slug] : "Composio"}
+              {refreshingComposio ? <Loader2 className="animate-spin" /> : null}{uiText("Refresh ")}{isAppAggregator(row.slug) ? AGGREGATOR_NAMES[row.slug] : uiText("Composio")}
             </DropdownMenuItem> : null}
-            {row.slug === "arcade" && onConfigureArcade ? <DropdownMenuItem onSelect={onConfigureArcade}>{discovery?.discovery.availability === "setup_required" ? "Set up account sync" : "Account sync settings"}</DropdownMenuItem> : null}
-            {row.slug === "executor" && onConfigureExecutor ? <DropdownMenuItem onSelect={onConfigureExecutor}>Console URL</DropdownMenuItem> : null}
+            {row.slug === "arcade" && onConfigureArcade ? <DropdownMenuItem onSelect={onConfigureArcade}>{discovery?.discovery.availability === "setup_required" ? uiText("Set up account sync") : uiText("Account sync settings")}</DropdownMenuItem> : null}
+            {row.slug === "executor" && onConfigureExecutor ? <DropdownMenuItem onSelect={onConfigureExecutor}>{uiText("Console URL")}</DropdownMenuItem> : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onSelect={onRemove}>
-              <Trash2 />
-              Remove connection
-            </DropdownMenuItem>
+              <Trash2 />{uiText("Remove connection")}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
     </ConnectionAccountRowLayout>
@@ -1385,6 +1368,7 @@ function ConnectionAccountRowLayout({ state, accountName, owner, source, details
   state: ConnectionState; accountName: string; owner?: ConnectionOwnerProfile | null; source?: ReactNode; details?: ReactNode;
   openLabel: string; onOpen: () => void; children: ReactNode;
 }) {
+  useUiLocale();
   return (
     <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 items-start gap-2.5">
@@ -1424,6 +1408,7 @@ function ConnectionAccountRowLayout({ state, accountName, owner, source, details
 }
 
 function ConnectionStatusIcon({ state }: { state: ConnectionState }) {
+  useUiLocale();
   if (state.kind === "connected") {
     return (
       <span
@@ -1467,6 +1452,7 @@ function CustomConnectorCard({
 }: {
   onNavigate: (href: string) => void;
 }) {
+  useUiLocale();
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -1480,12 +1466,8 @@ function CustomConnectorCard({
           <Link2 className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-semibold text-foreground">
-            Connect your own tool
-          </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Add a custom MCP server or paste an existing configuration.
-          </p>
+          <h2 className="text-sm font-semibold text-foreground">{uiText("Connect your own tool")}</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">{uiText("Add a custom MCP server or paste an existing configuration.")}</p>
         </div>
         <Button
           type="button"
@@ -1495,7 +1477,7 @@ function CustomConnectorCard({
           aria-controls="custom-connector-options"
           onClick={() => setExpanded((open) => !open)}
         >
-          {expanded ? "Close" : "Connect"}
+          {expanded ? uiText("Close") : uiText("Connect")}
         </Button>
       </div>
 
@@ -1506,14 +1488,14 @@ function CustomConnectorCard({
         >
           <CustomConnectorOption
             icon={ServerCog}
-            title="Connect your own MCP server"
-            description="Enter the URL for a custom or self-hosted MCP server."
+            title={uiText("Connect your own MCP server")}
+            description={uiText("Enter the URL for a custom or self-hosted MCP server.")}
             onClick={() => onNavigate("/apps/byo")}
           />
           <CustomConnectorOption
             icon={ClipboardPaste}
-            title="Paste a config"
-            description="Paste an existing setup snippet and connect it."
+            title={uiText("Paste a config")}
+            description={uiText("Paste an existing setup snippet and connect it.")}
             onClick={() => onNavigate("/apps/advanced/paste-config")}
           />
         </div>
@@ -1533,6 +1515,7 @@ function CustomConnectorOption({
   description: string;
   onClick: () => void;
 }) {
+  useUiLocale();
   return (
     <button
       type="button"

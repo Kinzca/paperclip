@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useEffect, useState } from "react";
 import type { FeedbackDataSharingPreference, FeedbackVoteValue } from "@paperclipai/shared";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ export function OutputFeedbackButtons({
   rightSlot?: React.ReactNode;
   inline?: boolean;
 }) {
+  useUiLocale();
   const [pendingVote, setPendingVote] = useState<{
     vote: FeedbackVoteValue;
     reason?: string;
@@ -123,9 +125,7 @@ export function OutputFeedbackButtons({
           className={cn(visibleVote === "up" && "border-green-600/50 bg-green-500/10 text-green-700")}
           onClick={() => handleVote("up")}
         >
-          <ThumbsUp className="mr-1.5 h-3.5 w-3.5" />
-          Helpful
-        </Button>
+          <ThumbsUp className="mr-1.5 h-3.5 w-3.5" />{uiText("Helpful")}</Button>
         <Button
           type="button"
           size="sm"
@@ -134,18 +134,16 @@ export function OutputFeedbackButtons({
           className={cn(visibleVote === "down" && "border-amber-600/50 bg-amber-500/10 text-amber-800")}
           onClick={() => handleVote("down")}
         >
-          <ThumbsDown className="mr-1.5 h-3.5 w-3.5" />
-          Needs work
-        </Button>
+          <ThumbsDown className="mr-1.5 h-3.5 w-3.5" />{uiText("Needs work")}</Button>
         {rightSlot ? <div className="ml-auto">{rightSlot}</div> : null}
       </div>
       {collectingDownvoteReason ? (
         <div className="mt-2 rounded-md border border-border/60 bg-accent/20 p-3">
-          <div className="mb-2 text-sm font-medium">What could have been better?</div>
+          <div className="mb-2 text-sm font-medium">{uiText("What could have been better?")}</div>
           <Textarea
             value={downvoteReason}
             onChange={(event) => setDownvoteReason(event.target.value)}
-            placeholder="Add a short note"
+            placeholder={uiText("Add a short note")}
             className="min-h-20 resize-y bg-background"
             disabled={disabled || isSaving}
           />
@@ -160,9 +158,7 @@ export function OutputFeedbackButtons({
                 setDownvoteReason("");
                 setDownvoteAllowSharing(undefined);
               }}
-            >
-              Dismiss
-            </Button>
+            >{uiText("Dismiss")}</Button>
             <Button
               type="button"
               size="sm"
@@ -174,7 +170,7 @@ export function OutputFeedbackButtons({
                 });
               }}
             >
-              {isSaving ? "Saving..." : "Save note"}
+              {isSaving ? uiText("Saving...") : uiText("Save note")}
             </Button>
           </div>
         </div>
@@ -191,34 +187,21 @@ export function OutputFeedbackButtons({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Save your feedback sharing preference</DialogTitle>
-            <DialogDescription>
-              Choose whether voted AI outputs can be shared with Paperclip Labs. This
-              answer becomes the default for future thumbs up and thumbs down votes.
-            </DialogDescription>
+            <DialogTitle>{uiText("Save your feedback sharing preference")}</DialogTitle>
+            <DialogDescription>{uiText("Choose whether voted AI outputs can be shared with Paperclip Labs. This answer becomes the default for future thumbs up and thumbs down votes.")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm text-muted-foreground">
-            <p>
-              This vote is always saved locally.
-            </p>
-            <p>
-              Choose <span className="font-medium text-foreground">Always allow</span> to share
-              this vote and future voted AI outputs. Choose{" "}
-              <span className="font-medium text-foreground">Don't allow</span> to keep this vote
-              and future votes local.
-            </p>
-            <p>
-              You can change this later in Settings &gt; General.
-            </p>
+            <p>{uiText("This vote is always saved locally.")}</p>
+            <p>{uiText("Choose ")}<span className="font-medium text-foreground">{uiText("Always allow")}</span>{uiText(" to share this vote and future voted AI outputs. Choose")}{" "}
+              <span className="font-medium text-foreground">{uiText("Don't allow")}</span>{uiText(" to keep this vote and future votes local.")}</p>
+            <p>{uiText("You can change this later in Settings > General.")}</p>
             {termsUrl ? (
               <a
                 href={termsUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex text-sm text-foreground underline underline-offset-4"
-              >
-                Read our terms of service
-              </a>
+              >{uiText("Read our terms of service")}</a>
             ) : null}
           </div>
           <DialogFooter>
@@ -238,7 +221,7 @@ export function OutputFeedbackButtons({
                 );
               }}
             >
-              {isSaving ? "Saving..." : "Don't allow"}
+              {isSaving ? uiText("Saving...") : uiText("Don't allow")}
             </Button>
             <Button
               type="button"
@@ -258,7 +241,7 @@ export function OutputFeedbackButtons({
                 );
               }}
             >
-              {isSaving ? "Saving..." : "Always allow"}
+              {isSaving ? uiText("Saving...") : uiText("Always allow")}
             </Button>
           </DialogFooter>
         </DialogContent>

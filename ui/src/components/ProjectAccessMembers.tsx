@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { AgentAvatar } from "./AgentAvatar";
 import { Identity } from "./Identity";
 import { renderAccessIdentity, type AccessSelectOption } from "./AccessSelectIdentity";
@@ -16,6 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { SearchableSelect, type SearchableSelectGroup } from "@/components/SearchableSelect";
 
 export function ProjectAccessMembers({ project, canManage }: { project: Project; canManage: boolean }) {
+  useUiLocale();
   const [open, setOpen] = useState(false);
   const [selection, setSelection] = useState("");
   const queryClient = useQueryClient();
@@ -90,19 +92,17 @@ export function ProjectAccessMembers({ project, canManage }: { project: Project;
   return (
     <>
       <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-        <Lock className="h-3.5 w-3.5" aria-hidden="true" /> {canManage ? "Manage access" : "View access"}
+        <Lock className="h-3.5 w-3.5" aria-hidden="true" /> {canManage ? uiText("Manage access") : uiText("View access")}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Private project access</DialogTitle>
-            <DialogDescription>
-              Members can discover this project and read every task in it. A task can still be shared directly.
-            </DialogDescription>
+            <DialogTitle>{uiText("Private project access")}</DialogTitle>
+            <DialogDescription>{uiText("Members can discover this project and read every task in it. A task can still be shared directly.")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             {directoryQuery.isError || agentsQuery.isError ? (
-              <p className="text-sm text-destructive">Couldn&apos;t load the company access directory.</p>
+              <p className="text-sm text-destructive">{uiText("Couldn't load the company access directory.")}</p>
             ) : null}
             <div className="flex items-end gap-2">
               <SearchableSelect
@@ -111,21 +111,17 @@ export function ProjectAccessMembers({ project, canManage }: { project: Project;
                 renderValue={(option) => option ? renderAccessIdentity(option) : "Add a person or agent"}
                 renderOption={renderAccessIdentity}
                 onValueChange={(value) => setSelection(value)}
-                placeholder="Add a person or agent"
+                placeholder={uiText("Add a person or agent")}
                 searchPlaceholder="Search people and agents"
-                emptyMessage="No more company members to add"
+                emptyMessage={uiText("No more company members to add")}
                 loading={directoryQuery.isLoading || agentsQuery.isLoading}
                 className="min-w-0 flex-1"
               />
               <Button size="sm" disabled={!canManage || !selection || addMember.isPending} onClick={() => addMember.mutate()}>
-                <UserPlus className="h-3.5 w-3.5" aria-hidden="true" /> Add
-              </Button>
+                <UserPlus className="h-3.5 w-3.5" aria-hidden="true" />{uiText(" Add")}</Button>
             </div>
             {sharingWithSharedAgent ? (
-              <p className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground">
-                This agent can retain private project context in its memory and workspace for later runs.
-                Removing access cannot erase what it has already learned.
-              </p>
+              <p className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground">{uiText("This agent can retain private project context in its memory and workspace for later runs. Removing access cannot erase what it has already learned.")}</p>
             ) : null}
             <div className="divide-y divide-border/60">
               {(membersQuery.data ?? []).map((member) => {
@@ -133,16 +129,16 @@ export function ProjectAccessMembers({ project, canManage }: { project: Project;
                 return (
                   <div key={member.id} className="flex items-center gap-3 py-2">
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium">{member.subjectDisplayName ?? "Unknown member"}</div>
+                      <div className="truncate text-sm font-medium">{member.subjectDisplayName ?? uiText("Unknown member")}</div>
                       <div className="text-xs text-muted-foreground">
-                        {isPersonalOwner ? "Owner" : member.subjectType === "agent" ? "Agent" : "Person"}
+                        {isPersonalOwner ? uiText("Owner") : member.subjectType === "agent" ? uiText("Agent") : uiText("Person")}
                       </div>
                     </div>
                     {!isPersonalOwner ? (
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        aria-label={`Remove ${member.subjectDisplayName ?? "member"}`}
+                        aria-label={uiText("Remove {{value0}}", { value0: member.subjectDisplayName ?? "member" })}
                         disabled={!canManage || removeMember.isPending}
                         onClick={() => removeMember.mutate(member.id)}
                       >
@@ -152,9 +148,9 @@ export function ProjectAccessMembers({ project, canManage }: { project: Project;
                   </div>
                 );
               })}
-              {membersQuery.isLoading ? <p className="py-3 text-sm text-muted-foreground">Loading access…</p> : null}
+              {membersQuery.isLoading ? <p className="py-3 text-sm text-muted-foreground">{uiText("Loading access…")}</p> : null}
               {membersQuery.isError ? (
-                <p className="py-3 text-sm text-destructive">Couldn&apos;t load project access members.</p>
+                <p className="py-3 text-sm text-destructive">{uiText("Couldn't load project access members.")}</p>
               ) : null}
             </div>
           </div>

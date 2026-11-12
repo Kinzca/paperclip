@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useId, useState, type ReactNode } from "react";
 import {
   ChevronDown,
@@ -112,6 +113,7 @@ function formatTimestamp(ts: string) {
 }
 
 function MetadataRow({ row, tone }: { row: SystemNoticeMetadataRow; tone: ToneTokens }) {
+  useUiLocale();
   return (
     <div className="grid grid-cols-(--gtc-8) gap-x-3 gap-y-0.5 px-3 py-1.5 text-xs">
       <div className="truncate text-(length:--text-micro) font-medium uppercase tracking-(--tracking-label) text-muted-foreground">
@@ -217,6 +219,7 @@ export function SystemNoticeMetadataSections({
   sections: SystemNoticeMetadataSection[];
   tone?: SystemNoticeTone;
 }) {
+  useUiLocale();
   const tokens = TONE_TOKENS[tone];
   return (
     <div className="divide-y divide-border/50 px-1 py-1">
@@ -248,6 +251,7 @@ export function SystemNotice({
   timestamp,
   className,
 }: SystemNoticeProps) {
+  useUiLocale();
   const tokens = TONE_TOKENS[tone];
   const ToneIcon = tokens.icon;
   const [open, setOpen] = useState(detailsDefaultOpen);
@@ -326,7 +330,7 @@ export function SystemNotice({
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
             )}
           >
-            <span>{open ? "Hide details" : "Details"}</span>
+            <span>{open ? uiText("Hide details") : uiText("Details")}</span>
             <ChevronDown
               className={cn(
                 "h-3.5 w-3.5 transition-transform duration-150",

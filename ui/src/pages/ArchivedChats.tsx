@@ -1,3 +1,4 @@
+import { getUiLocale } from "@/i18n/ui";
 import { CleanupFeedbackDialog, type CleanupFeedbackState } from "@/components/CleanupFeedbackDialog";
 import { useEffect, useState } from "react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,6 +25,7 @@ import { formatDateTime } from "@/lib/utils";
 const PAGE_SIZE = 50;
 
 export function ArchivedChats() {
+  useUiLocale();
   const { selectedCompanyId } = useCompany();
   const session = useQuery({ queryKey: queryKeys.auth.session, queryFn: authApi.getSession });
   if (session.isError) return <p role="alert">{uiText("Unable to load archived chats.")}</p>;
@@ -103,7 +105,7 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
   });
   useEffect(() => { setSelected(new Set()); setPreview(null); }, [query, projectId]);
   useEffect(() => { setPreview(null); }, [skipRelated]);
-  useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" }, { label: uiText("Storage"), href: "/company/settings/instance/storage" }, { label: uiText("Archived chats") }]); }, [setBreadcrumbs, locale]);
+  useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" }, { label: uiText("Storage"), href: "/company/settings/instance/storage" }, { label: uiText("Archived chats") }]); }, [setBreadcrumbs, locale, getUiLocale()]);
   const chats = useInfiniteQuery({
     queryKey: ["archived-chats", companyId, userId, query, projectId],
     queryFn: ({ pageParam }) => issuesApi.listArchivedChats(companyId, {

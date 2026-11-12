@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { Building2, UserRound } from "lucide-react";
 import { AppLogo } from "@/pages/apps/AppLogo";
 import {
@@ -11,6 +12,7 @@ export function AiConnectionIdentity({
 }: {
   connection: AiConnectionSummary;
 }) {
+  useUiLocale();
   const provider = AI_PROVIDERS[connection.provider];
   const Icon = connection.ownership === "shared" ? Building2 : UserRound;
   return (
@@ -28,8 +30,8 @@ export function AiConnectionIdentity({
         <span className="flex items-center gap-1 text-xs text-muted-foreground">
           <Icon aria-hidden className="size-3" />
           {connection.ownership === "shared"
-            ? "Company shared"
-            : `Personal · ${connection.ownerName ?? "Account owner"}`}
+            ? uiText("Company shared")
+            : uiText("Personal · {{value0}}", { value0: connection.ownerName ?? "Account owner" })}
         </span>
       </div>
     </div>

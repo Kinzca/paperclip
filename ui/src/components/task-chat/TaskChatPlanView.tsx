@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { cn } from "@/lib/utils";
 import { Check, Circle, Loader2 } from "lucide-react";
 import type { TaskChatPlan, TaskChatPlanEntryStatus } from "./task-chat-model";
@@ -20,15 +21,15 @@ const PRIORITY_TONE = {
  * checklist with per-entry status and a revision label; entries stagger in.
  */
 export function TaskChatPlanView({ plan }: { plan: TaskChatPlan }) {
+  useUiLocale();
   const done = plan.entries.filter((e) => e.status === "completed").length;
   return (
     <div className="flex flex-col gap-2 py-2">
       <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">Plan</span>
-        <span>· rev {plan.revision}</span>
+        <span className="font-medium text-foreground">{uiText("Plan")}</span>
+        <span>{uiText("· rev ")}{plan.revision}</span>
         <span className="ml-auto">
-          {done}/{plan.entries.length} done
-        </span>
+          {done}/{plan.entries.length}{uiText(" done")}</span>
       </div>
       <ul className="flex flex-col gap-1">
         {plan.entries.map((entry, i) => {

@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useMemo, useState } from "react";
 import { FileText } from "lucide-react";
 import {
@@ -21,6 +22,7 @@ function humanBytes(size: number): string {
  * variation-picker (out of scope).
  */
 export function CaseAttachmentsGallery({ attachments }: { attachments: CaseAttachmentRef[] }) {
+  useUiLocale();
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
 
   // The lightbox only navigates across image attachments.
@@ -36,7 +38,7 @@ export function CaseAttachmentsGallery({ attachments }: { attachments: CaseAttac
   );
 
   if (attachments.length === 0) {
-    return <p className="text-xs text-muted-foreground">No attachments.</p>;
+    return <p className="text-xs text-muted-foreground">{uiText("No attachments.")}</p>;
   }
 
   return (

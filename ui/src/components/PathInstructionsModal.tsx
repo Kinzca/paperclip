@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useState } from "react";
 import { Apple, Monitor, Terminal } from "lucide-react";
 import {
@@ -61,6 +62,7 @@ export function PathInstructionsModal({
   open,
   onOpenChange,
 }: PathInstructionsModalProps) {
+  useUiLocale();
   const [platform, setPlatform] = useState<Platform>(detectPlatform);
 
   const current = instructions[platform];
@@ -69,12 +71,9 @@ export function PathInstructionsModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-base">How to get a full path</DialogTitle>
-          <DialogDescription>
-            Paste the absolute path (e.g.{" "}
-            <code className="text-xs bg-muted px-1 py-0.5 rounded">/Users/you/project</code>
-            ) into the input field.
-          </DialogDescription>
+          <DialogTitle className="text-base">{uiText("How to get a full path")}</DialogTitle>
+          <DialogDescription>{uiText("Paste the absolute path (e.g.")}{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">/Users/you/project</code>{uiText(") into the input field.")}</DialogDescription>
         </DialogHeader>
 
         {/* Platform tabs */}
@@ -124,6 +123,7 @@ export function PathInstructionsModal({
  * Drop-in replacement for the old showDirectoryPicker buttons.
  */
 export function ChoosePathButton({ className }: { className?: string }) {
+  useUiLocale();
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -134,9 +134,7 @@ export function ChoosePathButton({ className }: { className?: string }) {
           className,
         )}
         onClick={() => setOpen(true)}
-      >
-        Choose
-      </button>
+      >{uiText("Choose")}</button>
       <PathInstructionsModal open={open} onOpenChange={setOpen} />
     </>
   );

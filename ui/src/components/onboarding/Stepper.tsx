@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { cn } from "../../lib/utils";
 
 /**
@@ -107,6 +108,7 @@ export function Stepper({
   canJumpToStep?: (target: number) => boolean;
   onJumpToStep?: (target: number) => void;
 }) {
+  useUiLocale();
   return (
     <div className="mb-11 flex items-center justify-center gap-2">
       {Array.from({ length: total }, (_, index) => index + 1).map((segment) => {
@@ -115,7 +117,7 @@ export function Stepper({
           <button
             key={segment}
             type="button"
-            aria-label={labels[segment - 1] ?? `Step ${segment}`}
+            aria-label={labels[segment - 1] ?? uiText("Step {{value0}}", { value0: segment })}
             aria-current={segment === step ? "step" : undefined}
             disabled={!jumpable}
             onClick={() => jumpable && onJumpToStep?.(segment)}
@@ -133,8 +135,7 @@ export function Stepper({
         );
       })}
       {/* Out of flow, so it neither takes a row nor picks up the gap. */}
-      <span className="sr-only">
-        Step {step} of {total}
+      <span className="sr-only">{uiText("Step ")}{step}{uiText(" of ")}{total}
       </span>
     </div>
   );

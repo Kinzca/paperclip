@@ -1,3 +1,4 @@
+import { translateUi as uiText, useHostLocale as useUiLocale } from "@paperclipai/plugin-sdk/ui";
 import type { PluginDetailTabProps } from "@paperclipai/plugin-sdk/ui";
 import { copyTextToClipboard, usePluginData, usePluginToast } from "@paperclipai/plugin-sdk/ui";
 import { DIFFS_TAG_NAME, getSingularPatch } from "@pierre/diffs";
@@ -41,6 +42,7 @@ const FILE_SIDEBAR_WIDTH_STORAGE_KEY = "paperclip.workspace-diff.files-sidebar-w
 
 function makeLucideIcon(paths: ReactNode) {
   return function LucideIcon({ size = 16 }: LucideIconProps) {
+  useUiLocale();
     return (
       <svg
         aria-hidden="true"
@@ -190,6 +192,7 @@ function FileRow({
   onToggle: () => void;
   onCopy: () => void;
 }) {
+  useUiLocale();
   const warning = warningText(file);
   const expandLabel = expanded ? "Collapse file" : "Expand file";
   const fileAriaLabel = expanded ? `Collapse ${file.path}` : `Expand ${file.path}`;
@@ -226,8 +229,8 @@ function FileRow({
           type="button"
           className="text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
           onClick={onCopy}
-          title="Copy path"
-          aria-label={`Copy ${file.path}`}
+          title={uiText("Copy path")}
+          aria-label={uiText("Copy {{value0}}", { value0: file.path })}
         >
           ⧉
         </button>
@@ -271,21 +274,19 @@ function WorkspacePatchDiff({
 }
 
 function EmptyState() {
+  useUiLocale();
   return (
     <div className="border border-dashed border-border bg-background px-4 py-8 text-center">
-      <div className="text-sm font-medium text-foreground">No workspace changes</div>
-      <div className="mt-1 text-sm text-muted-foreground">
-        The workspace matches its current comparison target.
-      </div>
+      <div className="text-sm font-medium text-foreground">{uiText("No workspace changes")}</div>
+      <div className="mt-1 text-sm text-muted-foreground">{uiText("The workspace matches its current comparison target.")}</div>
     </div>
   );
 }
 
 function LoadingState() {
+  useUiLocale();
   return (
-    <div className="border border-dashed border-border bg-background px-4 py-8 text-center text-sm text-muted-foreground">
-      Loading workspace changes…
-    </div>
+    <div className="border border-dashed border-border bg-background px-4 py-8 text-center text-sm text-muted-foreground">{uiText("Loading workspace changes…")}</div>
   );
 }
 
@@ -296,28 +297,23 @@ export function ErrorState({
   message: string;
   onRetry: () => void;
 }) {
+  useUiLocale();
   return (
     <div className="border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm" role="alert">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <div className="font-medium text-foreground">Unable to load workspace changes.</div>
-          <div className="mt-1 text-muted-foreground">
-            Retry the request or open the details below for the technical error.
-          </div>
+          <div className="font-medium text-foreground">{uiText("Unable to load workspace changes.")}</div>
+          <div className="mt-1 text-muted-foreground">{uiText("Retry the request or open the details below for the technical error.")}</div>
         </div>
         <button
           type="button"
           className={buttonClass(false)}
           onClick={onRetry}
-          aria-label="Retry loading workspace changes"
-        >
-          Retry
-        </button>
+          aria-label={uiText("Retry loading workspace changes")}
+        >{uiText("Retry")}</button>
       </div>
       <details className="mt-3">
-        <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
-          Troubleshooting details
-        </summary>
+        <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">{uiText("Troubleshooting details")}</summary>
         <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words border border-border bg-background px-3 py-2 font-mono text-xs text-muted-foreground">
           {message || "No error message was provided."}
         </pre>
@@ -335,11 +331,12 @@ function FileDiffPanel({
   mode: DiffRenderMode;
   lineWrap: boolean;
 }) {
+  useUiLocale();
   const warning = warningText(file);
   if (warning) {
     return (
       <div className="border border-dashed border-border bg-background px-4 py-6 text-sm text-muted-foreground">
-        {warning ?? "No renderable patch is available for this file."}
+        {warning ?? uiText("No renderable patch is available for this file.")}
       </div>
     );
   }
@@ -359,7 +356,7 @@ function FileDiffPanel({
             ) : null}
             {patchWarning || !patch.patch ? (
               <div className="px-4 py-6 text-sm text-muted-foreground">
-                {patchWarning ?? "No renderable patch is available for this file."}
+                {patchWarning ?? uiText("No renderable patch is available for this file.")}
               </div>
             ) : (
               <WorkspacePatchDiff
@@ -386,6 +383,7 @@ function CollapsedFilePanel({
   file: DiffFileViewModel;
   onExpand: () => void;
 }) {
+  useUiLocale();
   const title = file.longDiff ? "Large diff folded" : "Diff folded";
   const details = file.lineCount > 0
     ? `${file.lineCount.toLocaleString()} lines`
@@ -402,16 +400,15 @@ function CollapsedFilePanel({
           type="button"
           className={buttonClass(false)}
           onClick={onExpand}
-          aria-label={`Show diff for ${file.path}`}
-        >
-          Show file
-        </button>
+          aria-label={uiText("Show diff for {{value0}}", { value0: file.path })}
+        >{uiText("Show file")}</button>
       </div>
     </div>
   );
 }
 
 export function ChangesTab({ context }: PluginDetailTabProps) {
+  useUiLocale();
   const toast = usePluginToast();
   const [mode, setMode] = useState<DiffRenderMode>("split");
   const [lineWrap, setLineWrap] = useState(false);
@@ -611,10 +608,10 @@ export function ChangesTab({ context }: PluginDetailTabProps) {
             <span key="changed" className="font-medium text-foreground">{summary.changedLabel}</span>
             <span key="lines" className="font-mono text-xs text-muted-foreground">{summary.lineLabel}</span>
             {summary.truncated ? (
-              <span key="truncated" className="text-xs text-amber-700 dark:text-amber-300">Truncated</span>
+              <span key="truncated" className="text-xs text-amber-700 dark:text-amber-300">{uiText("Truncated")}</span>
             ) : null}
             {summary.warningCount > 0 ? (
-              <span key="warnings" className="text-xs text-muted-foreground">{summary.warningCount} warnings</span>
+              <span key="warnings" className="text-xs text-muted-foreground">{summary.warningCount}{uiText(" warnings")}</span>
             ) : null}
           </div>
           <div key="compare" className="mt-1 truncate font-mono text-xs text-muted-foreground">
@@ -623,25 +620,21 @@ export function ChangesTab({ context }: PluginDetailTabProps) {
         </div>
 
         <div key="actions" className="flex flex-wrap items-center gap-2">
-          <div key="layout" className="inline-flex gap-1" aria-label="Diff layout">
-            <button key="split" type="button" className={buttonClass(mode === "split")} onClick={() => setMode("split")}>
-              Split
-            </button>
-            <button key="unified" type="button" className={buttonClass(mode === "unified")} onClick={() => setMode("unified")}>
-              Unified
-            </button>
+          <div key="layout" className="inline-flex gap-1" aria-label={uiText("Diff layout")}>
+            <button key="split" type="button" className={buttonClass(mode === "split")} onClick={() => setMode("split")}>{uiText("Split")}</button>
+            <button key="unified" type="button" className={buttonClass(mode === "unified")} onClick={() => setMode("unified")}>{uiText("Unified")}</button>
           </div>
           <button
             key="line-wrap"
             type="button"
             className={buttonClass(lineWrap)}
             onClick={() => setLineWrap((value) => !value)}
-            title={lineWrap ? "Disable line wrapping" : "Enable line wrapping"}
+            title={lineWrap ? uiText("Disable line wrapping") : uiText("Enable line wrapping")}
             aria-pressed={lineWrap}
           >
-            {lineWrap ? "Wrap on" : "Wrap lines"}
+            {lineWrap ? uiText("Wrap on") : uiText("Wrap lines")}
           </button>
-          <div key="view" className="inline-flex gap-1" aria-label="Diff comparison">
+          <div key="view" className="inline-flex gap-1" aria-label={uiText("Diff comparison")}>
             <button
               key="working-tree"
               type="button"
@@ -650,9 +643,7 @@ export function ChangesTab({ context }: PluginDetailTabProps) {
                 viewTouchedRef.current = true;
                 setView("working-tree");
               }}
-            >
-              Working tree
-            </button>
+            >{uiText("Working tree")}</button>
             <button
               key="head"
               type="button"
@@ -661,9 +652,7 @@ export function ChangesTab({ context }: PluginDetailTabProps) {
                 viewTouchedRef.current = true;
                 setView("head");
               }}
-            >
-              Against ref
-            </button>
+            >{uiText("Against ref")}</button>
           </div>
           {view === "head" ? (
             <input
@@ -674,8 +663,8 @@ export function ChangesTab({ context }: PluginDetailTabProps) {
                 baseRefTouchedRef.current = true;
                 setBaseRef(event.target.value);
               }}
-              placeholder="origin/master"
-              aria-label="Base ref"
+              placeholder={uiText("origin/master")}
+              aria-label={uiText("Base ref")}
             />
           ) : null}
           {view === "working-tree" ? (
@@ -685,7 +674,7 @@ export function ChangesTab({ context }: PluginDetailTabProps) {
               className={buttonClass(includeUntracked)}
               onClick={() => setIncludeUntracked((value) => !value)}
             >
-              {includeUntracked ? "Untracked shown" : "Show untracked"}
+              {includeUntracked ? uiText("Untracked shown") : uiText("Show untracked")}
             </button>
           ) : null}
           <button
@@ -693,8 +682,8 @@ export function ChangesTab({ context }: PluginDetailTabProps) {
             type="button"
             className={iconButtonClass(false)}
             onClick={() => refresh()}
-            title="Refresh changes"
-            aria-label="Refresh changes"
+            title={uiText("Refresh changes")}
+            aria-label={uiText("Refresh changes")}
           >
             <RefreshCwIcon />
           </button>
@@ -714,9 +703,7 @@ export function ChangesTab({ context }: PluginDetailTabProps) {
             className="relative flex min-w-0 flex-col border border-border bg-background lg:h-full lg:shrink-0 lg:overflow-hidden"
             style={fileSidebarStyle}
           >
-            <div key="heading" className="border-b border-border px-3 py-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-              Files
-            </div>
+            <div key="heading" className="border-b border-border px-3 py-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">{uiText("Files")}</div>
             <div key="list" className="max-h-[70vh] overflow-auto lg:max-h-none lg:flex-1">
               {files.map((file, index) => (
                 <FileRow
@@ -732,7 +719,7 @@ export function ChangesTab({ context }: PluginDetailTabProps) {
             </div>
             <div
               role="separator"
-              aria-label="Resize file list"
+              aria-label={uiText("Resize file list")}
               aria-orientation="vertical"
               aria-valuemin={MIN_FILE_SIDEBAR_WIDTH}
               aria-valuemax={MAX_FILE_SIDEBAR_WIDTH}
@@ -775,8 +762,8 @@ export function ChangesTab({ context }: PluginDetailTabProps) {
                         key="collapse"
                         type="button"
                         className="mt-0.5 text-muted-foreground hover:text-foreground"
-                        title={expandedFiles.has(file.path) ? "Collapse file" : "Expand file"}
-                        aria-label={expandedFiles.has(file.path) ? `Collapse ${file.path}` : `Expand ${file.path}`}
+                        title={expandedFiles.has(file.path) ? uiText("Collapse file") : uiText("Expand file")}
+                        aria-label={expandedFiles.has(file.path) ? uiText("Collapse {{value0}}", { value0: file.path }) : uiText("Expand {{value0}}", { value0: file.path })}
                         onClick={() => setExpandedFiles((current) => nextExpandedFileSet(current, file.path))}
                       >
                         {expandedFiles.has(file.path) ? "−" : "+"}
@@ -789,8 +776,7 @@ export function ChangesTab({ context }: PluginDetailTabProps) {
                       >
                         <div key="path" className="truncate text-sm font-medium">{file.path}</div>
                         {file.oldPath ? (
-                          <div key="old-path" className="truncate font-mono text-[11px] text-muted-foreground">
-                            from {file.oldPath}
+                          <div key="old-path" className="truncate font-mono text-[11px] text-muted-foreground">{uiText("from ")}{file.oldPath}
                           </div>
                         ) : null}
                       </button>
@@ -800,8 +786,8 @@ export function ChangesTab({ context }: PluginDetailTabProps) {
                         key="copy"
                         type="button"
                         className={iconButtonClass(false)}
-                        title="Copy path"
-                        aria-label={`Copy ${file.path}`}
+                        title={uiText("Copy path")}
+                        aria-label={uiText("Copy {{value0}}", { value0: file.path })}
                         onClick={() => void copyPath(file.path)}
                       >
                         ⧉

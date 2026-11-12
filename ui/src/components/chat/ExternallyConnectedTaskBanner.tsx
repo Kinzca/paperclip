@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, Paperclip, Radio } from "lucide-react";
@@ -133,6 +134,7 @@ type ConnectedTaskProps = {
 };
 
 export function ExternallyConnectedTaskBanner(props: ConnectedTaskProps) {
+  useUiLocale();
   const { binding } = useIssueChatBinding(props.companyId, props.issueId);
   if (!binding || binding.provider === "agentmail") return null;
   return (
@@ -157,6 +159,7 @@ function ConnectedTaskComposer({
   issueCacheRefs,
   binding,
 }: ConnectedTaskProps & { binding: ExternalChannelBindingSummary }) {
+  useUiLocale();
   const { pushToast } = useToast();
   const queryClient = useQueryClient();
   const [composing, setComposing] = useState(false);
@@ -488,28 +491,26 @@ function ConnectedTaskComposer({
   const activityPath = `/apps/chat/${binding.endpointId}/activity`;
   return (
     <section
-      aria-label="External conversation"
+      aria-label={uiText("External conversation")}
       className={cn("task-context-notice space-y-3", className)}
     >
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex min-w-0 flex-1 basis-64 items-center gap-3">
           <Radio className="h-4 w-4 shrink-0 text-muted-foreground" />
           <div className="min-w-0 flex-1">
-            <p className="font-medium">
-              Connected to {providerNames[binding.provider]}
+            <p className="font-medium">{uiText("Connected to ")}{providerNames[binding.provider]}
             </p>
             <p className="truncate text-xs text-muted-foreground">
               {binding.externalLabel} · {binding.provider === "slack"
-                ? "Messages you send here and agent replies are also posted to Slack."
-                : "Agent assignment is fixed for this external task."}
+                ? uiText("Messages you send here and agent replies are also posted to Slack.")
+                : uiText("Agent assignment is fixed for this external task.")}
             </p>
           </div>
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           {binding.externalUrl && (
             <Button asChild size="sm" variant="outline">
-              <a href={binding.externalUrl} target="_blank" rel="noreferrer">
-                Open {providerNames[binding.provider]} <ExternalLink />
+              <a href={binding.externalUrl} target="_blank" rel="noreferrer">{uiText("Open ")}{providerNames[binding.provider]} <ExternalLink />
               </a>
             </Button>
           )}
@@ -517,13 +518,9 @@ function ConnectedTaskComposer({
             size="sm"
             variant="outline"
             onClick={() => setComposing((value) => !value)}
-          >
-            Send to channel
-          </Button>
+          >{uiText("Send to channel")}</Button>
           <Button asChild size="sm" variant="ghost">
-            <Link to={`/apps/chat/${binding.endpointId}/conversations`}>
-              Connection
-            </Link>
+            <Link to={`/apps/chat/${binding.endpointId}/conversations`}>{uiText("Connection")}</Link>
           </Button>
         </div>
       </div>
@@ -532,9 +529,7 @@ function ConnectedTaskComposer({
           <label
             className="text-xs font-medium"
             htmlFor="external-board-update"
-          >
-            Board update
-          </label>
+          >{uiText("Board update")}</label>
           <Textarea
             id="external-board-update"
             value={body}
@@ -551,19 +546,17 @@ function ConnectedTaskComposer({
               idempotencyKey.current = null;
               publish.reset();
             }}
-            placeholder="Write only what should be visible in the provider conversation."
+            placeholder={uiText("Write only what should be visible in the provider conversation.")}
           />
           {selectedAttachmentIds.length > 0 && !body.trim() && (
-            <p className="text-xs text-muted-foreground">
-              Add a message to send with your files.
-            </p>
+            <p className="text-xs text-muted-foreground">{uiText("Add a message to send with your files.")}</p>
           )}
           <div className="flex flex-wrap items-center gap-2">
             <input
               ref={fileInput}
               type="file"
               className="hidden"
-              aria-label="Attach file to channel update"
+              aria-label={uiText("Attach file to channel update")}
               disabled={uploadDisabled}
               onChange={(event) => {
                 const file = event.target.files?.[0];
@@ -579,11 +572,9 @@ function ConnectedTaskComposer({
               onClick={() => fileInput.current?.click()}
             >
               <Paperclip />
-              {uploading ? "Uploading…" : "Attach file"}
+              {uploading ? uiText("Uploading…") : uiText("Attach file")}
             </Button>
-            <p className="text-xs text-muted-foreground">
-              Files stay on this task until you send them to the channel.
-            </p>
+            <p className="text-xs text-muted-foreground">{uiText("Files stay on this task until you send them to the channel.")}</p>
           </div>
           {uploadError && (
             <p role="alert" className="text-xs text-destructive">
@@ -591,11 +582,7 @@ function ConnectedTaskComposer({
             </p>
           )}
           {selectionNotice && (
-            <p role="status" className="text-xs text-muted-foreground">
-              A file already attached to another comment was removed from this
-              selection. Attach a new copy or share the task link; your message
-              is unchanged.
-            </p>
+            <p role="status" className="text-xs text-muted-foreground">{uiText("A file already attached to another comment was removed from this selection. Attach a new copy or share the task link; your message is unchanged.")}</p>
           )}
           {visibleAttachments.length > 0 && (
             <fieldset
@@ -611,18 +598,18 @@ function ConnectedTaskComposer({
             >
               <legend className="px-1 text-xs font-medium">
                 {showingRetainedFiles
-                  ? "Files in this send"
-                  : "Include task files"}
+                  ? uiText("Files in this send")
+                  : uiText("Include task files")}
               </legend>
               <p className="text-xs text-muted-foreground">
                 {binding.provider === "github"
-                  ? "GitHub Apps cannot upload file bytes in comments. Checked files stay on the Paperclip task; GitHub receives an authenticated task link when this Board has a public URL, or a private-task notice otherwise."
+                  ? uiText("GitHub Apps cannot upload file bytes in comments. Checked files stay on the Paperclip task; GitHub receives an authenticated task link when this Board has a public URL, or a private-task notice otherwise.")
                   : binding.provider === "microsoft-teams" &&
                       !showingRetainedFiles
-                    ? "In personal Teams chats, recipients accept each file before upload. Channels and group chats receive supported images directly; other files stay on the task, with a task link or private-task notice."
+                    ? uiText("In personal Teams chats, recipients accept each file before upload. Channels and group chats receive supported images directly; other files stay on the task, with a task link or private-task notice.")
                     : showingRetainedFiles
-                      ? "These are the files selected for this send. Selection is locked until delivery is resolved."
-                      : "Only checked files will be published to the external conversation."}
+                      ? uiText("These are the files selected for this send. Selection is locked until delivery is resolved.")
+                      : uiText("Only checked files will be published to the external conversation.")}
               </p>
               <div className="space-y-2">
                 {visibleAttachments.map((attachment) => {
@@ -664,12 +651,8 @@ function ConnectedTaskComposer({
               role="alert"
               className="space-y-1 rounded-md border border-border bg-background p-3 text-xs"
             >
-              <p className="font-medium">Update was not sent</p>
-              <p className="text-muted-foreground">
-                A selected file already belongs to another comment. This request
-                was rejected before any channel message was queued. Your exact
-                draft is kept.
-              </p>
+              <p className="font-medium">{uiText("Update was not sent")}</p>
+              <p className="text-muted-foreground">{uiText("A selected file already belongs to another comment. This request was rejected before any channel message was queued. Your exact draft is kept.")}</p>
               <Button
                 size="sm"
                 variant="outline"
@@ -702,9 +685,7 @@ function ConnectedTaskComposer({
                   setSelectionNotice(true);
                   publish.reset();
                 }}
-              >
-                Edit rejected send
-              </Button>
+              >{uiText("Edit rejected send")}</Button>
             </div>
           )}
           {!rejection &&
@@ -715,18 +696,12 @@ function ConnectedTaskComposer({
                 role="alert"
                 className="space-y-1 rounded-md border border-border bg-background p-3 text-xs"
               >
-                <p className="font-medium">Delivery result not confirmed</p>
-                <p className="text-muted-foreground">
-                  Your exact draft and request identity are kept. Retry safely
-                  to learn the authoritative publication state without creating
-                  a duplicate.
-                </p>
+                <p className="font-medium">{uiText("Delivery result not confirmed")}</p>
+                <p className="text-muted-foreground">{uiText("Your exact draft and request identity are kept. Retry safely to learn the authoritative publication state without creating a duplicate.")}</p>
                 <Link
                   className="inline-block font-medium underline underline-offset-4"
                   to={activityPath}
-                >
-                  Open Activity
-                </Link>
+                >{uiText("Open Activity")}</Link>
               </div>
             )}
           {publication && currentPublication && currentFeedback && (
@@ -760,13 +735,13 @@ function ConnectedTaskComposer({
                           ? [`${batch.cancelled} cancelled`]
                           : []),
                       ].join(" · ")
-                    : `${batch.published} of ${batch.total} parts published.`}
+                    : uiText("{{value0}} of {{value1}} parts published.", { value0: batch.published, value1: batch.total })}
                 </p>
               )}
               {batch?.parts?.some((part) => part.fileTransfer) && (
                 <ul
                   className="space-y-1 text-muted-foreground"
-                  aria-label="File delivery outcomes"
+                  aria-label={uiText("File delivery outcomes")}
                 >
                   {batch.parts
                     .filter((part) => part.fileTransfer)
@@ -779,22 +754,16 @@ function ConnectedTaskComposer({
                 </ul>
               )}
               {publicationStatus.isError && (
-                <p role="alert" className="text-muted-foreground">
-                  Delivery status could not be refreshed. Your draft is kept;
-                  Paperclip will check again without sending another update.
-                </p>
+                <p role="alert" className="text-muted-foreground">{uiText("Delivery status could not be refreshed. Your draft is kept; Paperclip will check again without sending another update.")}</p>
               )}
               {currentPublication.redactedError && (
-                <p className="text-muted-foreground">
-                  Provider detail: {currentPublication.redactedError}
+                <p className="text-muted-foreground">{uiText("Provider detail: ")}{currentPublication.redactedError}
                 </p>
               )}
               <Link
                 className="inline-block font-medium underline underline-offset-4"
                 to={activityPath}
-              >
-                Open Activity
-              </Link>
+              >{uiText("Open Activity")}</Link>
               {dismissible && (
                 <Button
                   className="ml-3"
@@ -822,17 +791,15 @@ function ConnectedTaskComposer({
                     idempotencyKey.current = null;
                     publish.reset();
                   }}
-                >
-                  Dismiss delivery receipt
-                </Button>
+                >{uiText("Dismiss delivery receipt")}</Button>
               )}
             </div>
           )}
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
               {binding.provider === "slack"
-                ? "Your message is posted to Slack with your name and starts the agent."
-                : "Ordinary board comments remain Paperclip-only."}
+                ? uiText("Your message is posted to Slack with your name and starts the agent.")
+                : uiText("Ordinary board comments remain Paperclip-only.")}
             </p>
             <Button
               size="sm"
@@ -885,10 +852,10 @@ function ConnectedTaskComposer({
               }}
             >
               {publish.isPending
-                ? "Sending…"
+                ? uiText("Sending…")
                 : !rejection && (publish.isError || unconfirmedRequest)
-                  ? "Retry safely"
-                  : "Send to channel"}
+                  ? uiText("Retry safely")
+                  : uiText("Send to channel")}
             </Button>
           </div>
         </div>

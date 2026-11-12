@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 /** A muted em-dash for null / empty / missing values. */
 function EmptyValue() {
+  useUiLocale();
   return <span className="text-muted-foreground">—</span>;
 }
 
@@ -58,6 +60,7 @@ function extractIssueIdentifiers(value: unknown, fieldKey?: string): string[] {
 }
 
 function IssueIdentifierValue({ identifiers }: { identifiers: string[] }) {
+  useUiLocale();
   return (
     <span className="flex min-w-0 flex-wrap items-center gap-1.5">
       {identifiers.map((identifier) => (
@@ -79,6 +82,7 @@ function CopyableCompactValue({
   children: ReactNode;
   className?: string;
 }) {
+  useUiLocale();
   const text = stringifyCopyValue(value);
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -109,15 +113,14 @@ function CopyableCompactValue({
           aria-live="polite"
           className="pointer-events-none absolute bottom-full left-1/2 mb-1.5 inline-flex -translate-x-1/2 items-center gap-1 rounded-md bg-foreground px-2 py-1 text-xs whitespace-nowrap text-background"
         >
-          <Check className="h-3 w-3 shrink-0" />
-          Copied
-        </span>
+          <Check className="h-3 w-3 shrink-0" />{uiText("Copied")}</span>
       ) : null}
     </span>
   );
 }
 
 function StringValue({ value, variant }: { value: string; variant: "compact" | "full" }) {
+  useUiLocale();
   const caseHref = useCaseHref();
   const trimmed = value.trim();
   if (trimmed === "") return <EmptyValue />;
@@ -164,6 +167,7 @@ export function CaseFieldValue({
   fieldKey?: string;
   variant?: "compact" | "full";
 }) {
+  useUiLocale();
   if (value === null || value === undefined) return <EmptyValue />;
 
   const issueIdentifiers = extractIssueIdentifiers(value, fieldKey);
@@ -185,7 +189,7 @@ export function CaseFieldValue({
 
   if (typeof value === "boolean") {
     return value ? (
-      <Check className="h-4 w-4 text-green-600 dark:text-green-400" aria-label="true" />
+      <Check className="h-4 w-4 text-green-600 dark:text-green-400" aria-label={uiText("true")} />
     ) : (
       <EmptyValue />
     );
@@ -233,17 +237,18 @@ export function CaseFieldValue({
 }
 
 export function CaseFieldsPanel({ fields }: { fields: Record<string, unknown> }) {
+  useUiLocale();
   const entries = Object.entries(fields ?? {});
 
   return (
     <section className="space-y-2">
       <div className="flex items-baseline gap-2">
-        <h2 className="text-sm font-semibold">Fields</h2>
-        <span className="text-xs text-muted-foreground">from the skill&apos;s schema — rendered generically</span>
+        <h2 className="text-sm font-semibold">{uiText("Fields")}</h2>
+        <span className="text-xs text-muted-foreground">{uiText("from the skill's schema — rendered generically")}</span>
       </div>
       <Card className="gap-0 py-0">
         {entries.length === 0 ? (
-          <div className="px-4 py-3 text-sm text-muted-foreground">No fields set</div>
+          <div className="px-4 py-3 text-sm text-muted-foreground">{uiText("No fields set")}</div>
         ) : (
           <dl className="divide-y divide-border">
             {entries.map(([key, value]) => (

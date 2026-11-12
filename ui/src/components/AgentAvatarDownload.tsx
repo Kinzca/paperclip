@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useState } from "react";
 import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ export function AgentAvatarDownload({
   name: string;
   iconOnly?: boolean;
 }) {
+  useUiLocale();
   const [downloading, setDownloading] = useState(false);
   const [failed, setFailed] = useState(false);
   const download = async () => {
@@ -51,8 +53,8 @@ export function AgentAvatarDownload({
         asChild
       >
         <a
-          aria-label="Download avatar"
-          title="Download avatar"
+          aria-label={uiText("Download avatar")}
+          title={uiText("Download avatar")}
           href={avatarUrl}
           download={agentAvatarFilename(name)}
           aria-disabled={downloading}
@@ -66,13 +68,11 @@ export function AgentAvatarDownload({
           ) : (
             <Download className="size-4" />
           )}
-          {!iconOnly && "Download avatar"}
+          {!iconOnly && uiText("Download avatar")}
         </a>
       </Button>
       {failed && (
-        <p role="alert" className="text-sm text-destructive">
-          Couldn’t download the avatar. Try downloading it again.
-        </p>
+        <p role="alert" className="text-sm text-destructive">{uiText("Couldn’t download the avatar. Try downloading it again.")}</p>
       )}
     </div>
   );

@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { AlertTriangle, Info, PauseCircle, User, X } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { AgentAvatar, type AvatarAgent } from "../AgentAvatar";
@@ -56,10 +57,11 @@ export function AssigneeChip({
   resolvers: HandoffChipResolvers;
   className?: string;
 }) {
+  useUiLocale();
   if (assignee.agentId) {
     return (
       <span className={cn(CHIP_CLASS, className)} data-testid="handoff-assignee-chip" data-kind="agent">
-        <span className="sr-only">Agent </span>
+        <span className="sr-only">{uiText("Agent ")}</span>
         <AgentAvatar agent={{ ...resolvers.agentMap?.get(assignee.agentId), id: assignee.agentId }} size={16} />
         <span className="max-w-(--sz-12rem) truncate">{agentName(assignee.agentId, resolvers)}</span>
       </span>
@@ -68,7 +70,7 @@ export function AssigneeChip({
   if (assignee.userId) {
     return (
       <span className={cn(CHIP_CLASS, className)} data-testid="handoff-assignee-chip" data-kind="user">
-        <span className="sr-only">User </span>
+        <span className="sr-only">{uiText("User ")}</span>
         <User className="h-3 w-3 shrink-0 text-muted-foreground" />
         <span className="max-w-(--sz-12rem) truncate">{userLabel(assignee.userId, resolvers)}</span>
       </span>
@@ -80,9 +82,7 @@ export function AssigneeChip({
       data-testid="handoff-assignee-chip"
       data-kind="unassigned"
     >
-      <span className="sr-only">No responsible — </span>
-      Unassigned
-    </span>
+      <span className="sr-only">{uiText("No responsible — ")}</span>{uiText("Unassigned")}</span>
   );
 }
 
@@ -97,6 +97,7 @@ export function HandoffWakeRow({
   resolvers: HandoffChipResolvers;
   interruptedRunAttached?: boolean;
 }) {
+  useUiLocale();
   const info = classifyAssigneeHandoff(to, {
     agentName: to.agentId ? agentName(to.agentId, resolvers) : null,
     interruptedRunAttached,
@@ -107,7 +108,7 @@ export function HandoffWakeRow({
       data-testid="handoff-wake-row"
       data-kind={info.kind}
     >
-      <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Wake</span>
+      <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{uiText("Wake")}</span>
       <span className={cn(info.kind === "agent_wake" ? "text-foreground" : "text-muted-foreground")}>
         {info.wakeText}
       </span>
@@ -126,6 +127,7 @@ export function RunStatusBadge({
   operatorInterrupted?: boolean;
   className?: string;
 }) {
+  useUiLocale();
   const p = resolveRunStatusPresentation(status, { operatorInterrupted });
   return (
     <span
@@ -146,6 +148,7 @@ function PreviewChip({
   chip: NonNullable<ComposerHandoffPreview["chip"]>;
   resolvers: HandoffChipResolvers;
 }) {
+  useUiLocale();
   return (
     <AssigneeChip
       assignee={chip.kind === "agent" ? { agentId: chip.id, userId: null } : { agentId: null, userId: chip.id }}
@@ -162,6 +165,7 @@ export function ComposerHandoffPreviewRow({
   preview: ComposerHandoffPreview;
   resolvers: HandoffChipResolvers;
 }) {
+  useUiLocale();
   if (preview.kind === "none") return null;
   return (
     <div
@@ -194,6 +198,7 @@ export function ComposerMentionCoach({
   onInsert: () => void;
   onDismiss: () => void;
 }) {
+  useUiLocale();
   return (
     <div
       className="flex items-center gap-2 rounded-md border border-amber-300/40 bg-amber-50/70 px-2 py-1.5 text-xs text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
@@ -202,23 +207,18 @@ export function ComposerMentionCoach({
       aria-live="polite"
     >
       <Info className="h-3.5 w-3.5 shrink-0" aria-hidden />
-      <span className="min-w-0 flex-1">
-        Did you mean <span className="font-medium">@{candidate.matchedText}</span>? Plain text won't
-        notify or assign an agent.
-      </span>
+      <span className="min-w-0 flex-1">{uiText("Did you mean ")}<span className="font-medium">@{candidate.matchedText}</span>{uiText("? Plain text won't notify or assign an agent.")}</span>
       <button
         type="button"
         onClick={onInsert}
         className="shrink-0 rounded border border-amber-400/50 px-1.5 py-0.5 font-medium hover:bg-amber-100/60 dark:hover:bg-amber-500/20"
-        aria-label={`Insert mention for ${agentDisplayName} into your comment`}
-      >
-        Insert mention
-      </button>
+        aria-label={uiText("Insert mention for {{value0}} into your comment", { value0: agentDisplayName })}
+      >{uiText("Insert mention")}</button>
       <button
         type="button"
         onClick={onDismiss}
         className="shrink-0 rounded p-0.5 hover:bg-amber-100/60 dark:hover:bg-amber-500/20"
-        aria-label="Dismiss suggestion"
+        aria-label={uiText("Dismiss suggestion")}
       >
         <X className="h-3.5 w-3.5" aria-hidden />
       </button>
@@ -235,6 +235,7 @@ export function AssigneeRunningBanner({
   copy: ReassignInterruptCopy;
   className?: string;
 }) {
+  useUiLocale();
   return (
     <div
       role="status"
@@ -267,6 +268,7 @@ export function InterruptAssignConfirm({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  useUiLocale();
   return (
     <div
       data-testid="interrupt-assign-confirm"
@@ -277,7 +279,7 @@ export function InterruptAssignConfirm({
         <div className="min-w-0 flex-1 space-y-1">
           <p className="font-medium">{copy.confirmTitle}</p>
           <p className="flex flex-wrap items-center gap-1 text-amber-700/90 dark:text-amber-300/90">
-            <span>Hand off to</span>
+            <span>{uiText("Hand off to")}</span>
             <AssigneeChip assignee={to} resolvers={resolvers} />
           </p>
         </div>
@@ -311,6 +313,7 @@ export function PauseAffectsSummaryView({
   summary: PauseAffectsSummary;
   className?: string;
 }) {
+  useUiLocale();
   const visibleBuckets = summary.buckets.filter((bucket) => bucket.count > 0);
   return (
     <div
@@ -318,14 +321,9 @@ export function PauseAffectsSummaryView({
       className={cn("space-y-2 rounded-md border border-border bg-muted/30 p-3", className)}
     >
       <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-        <PauseCircle className="h-3.5 w-3.5" aria-hidden />
-        What this affects
-      </div>
+        <PauseCircle className="h-3.5 w-3.5" aria-hidden />{uiText("What this affects")}</div>
       {summary.nothingLive ? (
-        <p role="status" className="text-xs text-muted-foreground" data-testid="pause-nothing-live">
-          Nothing live to pause — no agent run is in flight or queued. This records a hold so new work
-          won't start until you resume.
-        </p>
+        <p role="status" className="text-xs text-muted-foreground" data-testid="pause-nothing-live">{uiText("Nothing live to pause — no agent run is in flight or queued. This records a hold so new work won't start until you resume.")}</p>
       ) : null}
       {visibleBuckets.length > 0 ? (
         <ul className="space-y-1">
@@ -342,7 +340,7 @@ export function PauseAffectsSummaryView({
           ))}
         </ul>
       ) : (
-        <p className="text-xs text-muted-foreground">No tasks are affected.</p>
+        <p className="text-xs text-muted-foreground">{uiText("No tasks are affected.")}</p>
       )}
     </div>
   );

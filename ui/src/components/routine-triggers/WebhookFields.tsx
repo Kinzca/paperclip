@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ export function CopyField({
   value: string;
   help?: string;
 }) {
+  useUiLocale();
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(false);
   return (
@@ -26,7 +28,7 @@ export function CopyField({
         <Button
           variant="ghost"
           size="sm"
-          aria-label={`Copy ${label}`}
+          aria-label={uiText("Copy {{value0}}", { value0: label })}
           onClick={async () => {
             try {
               await copyTextToClipboard(value);
@@ -42,18 +44,16 @@ export function CopyField({
           ) : (
             <Copy className="h-3.5 w-3.5" />
           )}
-          {copied ? "Copied" : "Copy"}
+          {copied ? uiText("Copied") : uiText("Copy")}
         </Button>
       </div>
       {help && <p className="text-xs text-muted-foreground">{help}</p>}
       {error && (
         <div className="space-y-2">
-          <p role="alert" className="text-xs text-destructive">
-            Copy failed. Select and copy the text below.
-          </p>
+          <p role="alert" className="text-xs text-destructive">{uiText("Copy failed. Select and copy the text below.")}</p>
           <textarea
             readOnly
-            aria-label={`${label} text`}
+            aria-label={uiText("{{value0}} text", { value0: label })}
             value={value}
             rows={5}
             className="w-full rounded-md border border-input bg-background p-3 font-mono text-xs"
@@ -65,23 +65,21 @@ export function CopyField({
 }
 
 export function AgentInstructions({ value }: { value: string }) {
+  useUiLocale();
   return (
     <section
-      aria-label="Agent instructions"
+      aria-label={uiText("Agent instructions")}
       className="space-y-3 rounded-md bg-muted/40 p-4"
     >
       <div className="space-y-1">
-        <h2 className="text-sm font-medium">Agent instructions</h2>
-        <p className="text-sm text-muted-foreground">
-          Give your agent everything it needs to connect this webhook: the URL,
-          authentication key, and step-by-step instructions.
-        </p>
+        <h2 className="text-sm font-medium">{uiText("Agent instructions")}</h2>
+        <p className="text-sm text-muted-foreground">{uiText("Give your agent everything it needs to connect this webhook: the URL, authentication key, and step-by-step instructions.")}</p>
       </div>
       <AgentSetupPrompt
         prompt={value}
-        label="Copy for your agent"
-        title="Webhook setup"
-        description="Paste this into your agent to connect this webhook to your routine."
+        label={uiText("Copy for your agent")}
+        title={uiText("Webhook setup")}
+        description={uiText("Paste this into your agent to connect this webhook to your routine.")}
       />
     </section>
   );

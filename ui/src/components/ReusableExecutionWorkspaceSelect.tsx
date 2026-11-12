@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useMemo } from "react";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import {
@@ -36,6 +37,7 @@ export function ReusableExecutionWorkspaceSelect<TWorkspace extends ReusableExec
   triggerClassName,
   disablePortal,
 }: ReusableExecutionWorkspaceSelectProps<TWorkspace>) {
+  useUiLocale();
   const groups = useMemo(() => buildReusableExecutionWorkspaceOptionGroups(workspaces), [workspaces]);
 
   return (
@@ -45,7 +47,7 @@ export function ReusableExecutionWorkspaceSelect<TWorkspace extends ReusableExec
       onValueChange={onValueChange}
       placeholder={placeholder}
       searchPlaceholder="Search workspaces..."
-      emptyMessage={error ? "Workspaces failed to load." : "No matching workspaces."}
+      emptyMessage={error ? uiText("Workspaces failed to load.") : uiText("No matching workspaces.")}
       loadingMessage="Loading workspaces..."
       loading={loading}
       disabled={disabled}

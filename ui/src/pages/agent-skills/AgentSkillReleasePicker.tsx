@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import type { CompanySkillVersion } from "@paperclipai/shared";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -68,6 +69,7 @@ export function AgentSkillReleasePicker({
   disabled = false,
   onChange,
 }: AgentSkillReleasePickerProps) {
+  useUiLocale();
   const selected = value ? releases.find((release) => release.id === value) ?? null : null;
   // Closed trigger shows the release name only; the `· released <date>` suffix
   // lives in the open menu, where dates are meaningful for comparing options.
@@ -82,7 +84,7 @@ export function AgentSkillReleasePicker({
       <SelectTrigger
         size="sm"
         className="w-full max-w-(--sz-16rem) sm:w-(--sz-16rem)"
-        aria-label="Skill release"
+        aria-label={uiText("Skill release")}
       >
         <SelectValue placeholder={DEFAULT_LABEL}>{triggerLabel}</SelectValue>
       </SelectTrigger>
@@ -92,9 +94,7 @@ export function AgentSkillReleasePicker({
           <SelectItem key={release.id} value={release.id}>
             <span className="flex items-center gap-2">
               <span className="truncate">{releaseOptionLabel(release)}</span>
-              <Badge variant="secondary" className="shrink-0 text-(length:--text-nano)">
-                Beta
-              </Badge>
+              <Badge variant="secondary" className="shrink-0 text-(length:--text-nano)">{uiText("Beta")}</Badge>
             </span>
           </SelectItem>
         ))}

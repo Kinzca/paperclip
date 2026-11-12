@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 "use client"
 
 import * as React from "react"
@@ -18,6 +19,7 @@ function Command({
   className,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive>) {
+  useUiLocale();
   return (
     <CommandPrimitive
       data-slot="command"
@@ -43,6 +45,7 @@ function CommandDialog({
   className?: string
   showCloseButton?: boolean
 }) {
+  useUiLocale();
   return (
     <Dialog {...props}>
       <DialogHeader className="sr-only">
@@ -62,7 +65,7 @@ function CommandDialog({
             className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-0 right-2 flex h-12 items-center rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
           >
             <XIcon />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{uiText("Close")}</span>
           </DialogPrimitive.Close>
         )}
       </DialogContent>
@@ -74,6 +77,7 @@ function CommandInput({
   className,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Input>) {
+  useUiLocale();
   return (
     <div
       data-slot="command-input-wrapper"
@@ -96,6 +100,7 @@ function CommandList({
   className,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.List>) {
+  useUiLocale();
   return (
     <CommandPrimitive.List
       data-slot="command-list"
@@ -111,6 +116,7 @@ function CommandList({
 function CommandEmpty({
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Empty>) {
+  useUiLocale();
   return (
     <CommandPrimitive.Empty
       data-slot="command-empty"
@@ -124,6 +130,7 @@ function CommandGroup({
   className,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Group>) {
+  useUiLocale();
   return (
     <CommandPrimitive.Group
       data-slot="command-group"
@@ -140,6 +147,7 @@ function CommandSeparator({
   className,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Separator>) {
+  useUiLocale();
   return (
     <CommandPrimitive.Separator
       data-slot="command-separator"
@@ -153,6 +161,7 @@ function CommandItem({
   className,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Item>) {
+  useUiLocale();
   return (
     <CommandPrimitive.Item
       data-slot="command-item"
@@ -169,6 +178,7 @@ function CommandShortcut({
   className,
   ...props
 }: React.ComponentProps<"span">) {
+  useUiLocale();
   return (
     <span
       data-slot="command-shortcut"

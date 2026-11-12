@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { useLocation, useNavigate } from "@/lib/router";
 import { Button } from "@/components/ui/button";
@@ -41,21 +42,15 @@ class RouteErrorBoundaryInner extends Component<RouteErrorBoundaryInnerProps, Ro
     return (
       <div className="mx-auto max-w-2xl space-y-4 px-4 py-10">
         <div>
-          <h1 className="text-lg font-semibold">This page hit an error</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Something went wrong while rendering this page. You can go back and try again, or reload.
-          </p>
+          <h1 className="text-lg font-semibold">{uiText("This page hit an error")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{uiText("Something went wrong while rendering this page. You can go back and try again, or reload.")}</p>
         </div>
         <pre className="overflow-auto rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive whitespace-pre-wrap">
           {error.message}
         </pre>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={this.props.onReset}>
-            Go back
-          </Button>
-          <Button size="sm" onClick={() => window.location.reload()}>
-            Reload page
-          </Button>
+          <Button variant="outline" size="sm" onClick={this.props.onReset}>{uiText("Go back")}</Button>
+          <Button size="sm" onClick={() => window.location.reload()}>{uiText("Reload page")}</Button>
         </div>
       </div>
     );
@@ -63,6 +58,7 @@ class RouteErrorBoundaryInner extends Component<RouteErrorBoundaryInnerProps, Ro
 }
 
 export function RouteErrorBoundary({ children }: { children: ReactNode }) {
+  useUiLocale();
   const location = useLocation();
   const navigate = useNavigate();
   const resetKey = `${location.pathname}${location.search}`;

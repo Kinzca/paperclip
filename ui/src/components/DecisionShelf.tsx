@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { type ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Sun } from "lucide-react";
@@ -28,6 +29,7 @@ export function Curtain({
   onToggle: () => void;
   children: ReactNode;
 }) {
+  useUiLocale();
   return (
     <section className="space-y-2">
       <IssueGroupHeader
@@ -70,6 +72,7 @@ export function AgingItemRow({
   onDismiss: (item: AttentionItem) => void;
   onSnooze: (item: AttentionItem, snoozedUntil: string) => void;
 }) {
+  useUiLocale();
   const queryClient = useQueryClient();
   const { pushToast } = useToastActions();
   const idleDays = attentionIdleDays(item, now);
@@ -90,8 +93,7 @@ export function AgingItemRow({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2 px-1">
-        <span className="text-(length:--text-nano) text-muted-foreground">
-          Idle {idleDays} {idleDays === 1 ? "day" : "days"}
+        <span className="text-(length:--text-nano) text-muted-foreground">{uiText("Idle ")}{idleDays} {idleDays === 1 ? uiText("day") : uiText("days")}
         </span>
         <Button
           type="button"
@@ -103,7 +105,7 @@ export function AgingItemRow({
         >
           {keep.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
           <Sun className="h-3.5 w-3.5" />
-          {item.keep ? "Kept" : "Keep on desk"}
+          {item.keep ? uiText("Kept") : uiText("Keep on desk")}
         </Button>
       </div>
       <AttentionQueueRow

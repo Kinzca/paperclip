@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useQuery } from "@tanstack/react-query";
 import { ShieldAlert } from "lucide-react";
 import { Link } from "@/lib/router";
@@ -14,6 +15,7 @@ import { ToolsAccess } from "./ToolsAccess";
  * The server is authoritative.
  */
 export function AdvancedToolsRoute() {
+  useUiLocale();
   const { selectedCompanyId } = useCompany();
   const boardAccess = useQuery({
     queryKey: queryKeys.access.currentBoardAccess,
@@ -22,7 +24,7 @@ export function AdvancedToolsRoute() {
   });
 
   if (boardAccess.isLoading) {
-    return <div className="mx-auto max-w-xl py-10 text-sm text-muted-foreground">Loading…</div>;
+    return <div className="mx-auto max-w-xl py-10 text-sm text-muted-foreground">{uiText("Loading…")}</div>;
   }
 
   const data = boardAccess.data;
@@ -41,14 +43,10 @@ export function AdvancedToolsRoute() {
         <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-6">
           <div className="flex items-center gap-2 text-foreground">
             <ShieldAlert className="h-5 w-5 text-muted-foreground" />
-            <h1 className="text-lg font-semibold">Advanced setup requires editing access</h1>
+            <h1 className="text-lg font-semibold">{uiText("Advanced setup requires editing access")}</h1>
           </div>
-          <p className="text-sm text-muted-foreground">
-            This area lets company editors wire up tools that aren't in the gallery. Ask a company editor if you
-            need a new app connected, or head back to{" "}
-            <Link to="/apps" className="font-medium text-primary hover:underline">
-              your apps
-            </Link>
+          <p className="text-sm text-muted-foreground">{uiText("This area lets company editors wire up tools that aren't in the gallery. Ask a company editor if you need a new app connected, or head back to")}{" "}
+            <Link to="/apps" className="font-medium text-primary hover:underline">{uiText("your apps")}</Link>
             .
           </p>
         </div>

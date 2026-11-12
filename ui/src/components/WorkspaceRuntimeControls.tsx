@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import type {
   WorkspaceCommandDefinition,
   RuntimeExposureStatus,
@@ -236,6 +237,7 @@ function exposureFailureCopy(exposure: RuntimeExposureStatus | null) {
 }
 
 function ExposureFailureDetail({ exposure }: { exposure: RuntimeExposureStatus | null }) {
+  useUiLocale();
   const copy = exposureFailureCopy(exposure);
   if (!copy) return null;
   return (
@@ -390,6 +392,7 @@ function CommandActionButtons({
   square?: boolean;
   iconOnly?: boolean;
 }) {
+  useUiLocale();
   const actions: WorkspaceRuntimeAction[] =
     item.kind === "job"
       ? ["run"]
@@ -461,6 +464,7 @@ function CommandSection({
   square?: boolean;
   iconOnly?: boolean;
 }) {
+  useUiLocale();
   // Managed-sandbox-only policy: the working directory is a path on the
   // execution host, so the command rows drop it, and keep dropping it until the
   // policy is known. The URL, the port, and the command itself stay — they
@@ -506,7 +510,7 @@ function CommandSection({
                       <ExternalLink className="h-3.5 w-3.5" />
                     </a>
                   ) : null}
-                  {item.port ? <div>Port {item.port}</div> : null}
+                  {item.port ? <div>{uiText("Port ")}{item.port}</div> : null}
                   {item.command ? <div className="break-all font-mono">{item.command}</div> : null}
                   {item.cwd && !hideHostPaths ? <div className="break-all font-mono">{item.cwd}</div> : null}
                   {item.disabledReason ? <div>{item.disabledReason}</div> : null}
@@ -548,6 +552,7 @@ export function WorkspaceRuntimeControls({
   className,
   square,
 }: WorkspaceRuntimeControlsProps) {
+  useUiLocale();
   const resolvedSections = sections ?? {
     services: (items ?? []).map((item) => ({
       ...item,
@@ -566,7 +571,7 @@ export function WorkspaceRuntimeControls({
     <div className={cn("space-y-4", className)}>
       <div className={cn("border border-border/70 bg-background p-3", square ? "rounded-none" : "rounded-xl")}>
         <div className="space-y-1">
-          <div className="text-xs font-medium uppercase tracking-(--tracking-eyebrow) text-muted-foreground">Workspace commands</div>
+          <div className="text-xs font-medium uppercase tracking-(--tracking-eyebrow) text-muted-foreground">{uiText("Workspace commands")}</div>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline"
               className={cn(
@@ -577,12 +582,12 @@ export function WorkspaceRuntimeControls({
               )}
             >
               <Activity className="h-3.5 w-3.5" />
-              {runningCount > 0 ? `${runningCount} services running` : "No services running"}
+              {runningCount > 0 ? uiText("{{value0}} services running", { value0: runningCount }) : uiText("No services running")}
             </Badge>
             <span className="text-xs text-muted-foreground">
               {resolvedSections.jobs.length > 0
-                ? `${resolvedSections.jobs.length} job${resolvedSections.jobs.length === 1 ? "" : "s"} available to run on demand.`
-                : "Each command can be controlled independently."}
+                ? uiText("{{value0}} job{{value1}} available to run on demand.", { value0: resolvedSections.jobs.length, value1: resolvedSections.jobs.length === 1 ? "" : "s" })
+                : uiText("Each command can be controlled independently.")}
             </span>
           </div>
           {visibleDisabledHint ? <p className="text-xs text-muted-foreground">{visibleDisabledHint}</p> : null}
@@ -590,8 +595,8 @@ export function WorkspaceRuntimeControls({
       </div>
 
       <CommandSection
-        title="Services"
-        description="Long-running commands that Paperclip can supervise for this workspace."
+        title={uiText("Services")}
+        description={uiText("Long-running commands that Paperclip can supervise for this workspace.")}
         items={resolvedSections.services}
         emptyMessage={resolvedServiceEmptyMessage}
         disabledHint={visibleDisabledHint}
@@ -602,8 +607,8 @@ export function WorkspaceRuntimeControls({
       />
 
       <CommandSection
-        title="Jobs"
-        description="One-shot commands that run now and exit when they finish."
+        title={uiText("Jobs")}
+        description={uiText("One-shot commands that run now and exit when they finish.")}
         items={resolvedSections.jobs}
         emptyMessage={jobEmptyMessage}
         isPending={isPending}
@@ -614,8 +619,8 @@ export function WorkspaceRuntimeControls({
 
       {resolvedSections.otherServices.length > 0 ? (
         <CommandSection
-          title="Untracked services"
-          description="Running services that no longer match the current workspace command config."
+          title={uiText("Untracked services")}
+          description={uiText("Running services that no longer match the current workspace command config.")}
           items={resolvedSections.otherServices}
           emptyMessage=""
           isPending={isPending}
@@ -645,6 +650,7 @@ export function WorkspaceRuntimeQuickControls({
   align?: "start" | "end";
   iconOnly?: boolean;
 }) {
+  useUiLocale();
   const controlItems = sections.services.length > 0 ? sections.services : sections.otherServices;
   const serviceUrl = getRunningRuntimeServiceUrl(sections);
   const alignEnd = align === "end";

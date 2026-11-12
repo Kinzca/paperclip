@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Copy, KeyRound, Plus } from "lucide-react";
@@ -44,6 +45,7 @@ const STATUS_CLASS: Record<TokenStatus, string> = {
 };
 
 function StatusBadge({ status }: { status: TokenStatus }) {
+  useUiLocale();
   return (
     <span
       className={cn(
@@ -57,6 +59,7 @@ function StatusBadge({ status }: { status: TokenStatus }) {
 }
 
 function TokenField({ label, value }: { label: string; value: ReactNode }) {
+  useUiLocale();
   return (
     <div className="min-w-0">
       <dt className="text-(length:--text-micro) font-semibold uppercase tracking-wide text-muted-foreground">{label}</dt>
@@ -66,12 +69,13 @@ function TokenField({ label, value }: { label: string; value: ReactNode }) {
 }
 
 function ExpiryValue({ token }: { token: ToolMcpGatewayToken }) {
+  useUiLocale();
   const expiresAt = toDate(token.expiresAt);
-  if (!expiresAt) return <>No expiry</>;
+  if (!expiresAt) return <>{uiText("No expiry")}</>;
   if (expiresAt.getTime() <= Date.now()) {
-    return <><span className="font-medium text-foreground">Expired</span> <RelativeTime value={token.expiresAt} /></>;
+    return <><span className="font-medium text-foreground">{uiText("Expired")}</span> <RelativeTime value={token.expiresAt} /></>;
   }
-  return <>Expires <RelativeTime value={token.expiresAt} /></>;
+  return <>{uiText("Expires ")}<RelativeTime value={token.expiresAt} /></>;
 }
 
 export function TokensPanel({
@@ -83,6 +87,7 @@ export function TokensPanel({
   gateway: ToolMcpGatewayWithTokens;
   onTokenCreated?: (token: ToolMcpGatewayTokenCreated) => void;
 }) {
+  useUiLocale();
   const queryClient = useQueryClient();
   const { pushToast } = useToast();
   const [minting, setMinting] = useState(false);
@@ -189,48 +194,38 @@ export function TokensPanel({
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="max-w-2xl space-y-1">
-          <p className="text-sm text-muted-foreground">
-            Issue a reusable token for an external client. Its name is also used as the client label.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Paperclip creates a fresh one-hour runtime token when an agent run starts, then revokes it when the
-            run ends. Codex can receive the same gateway through both an app connection and the managed-gateway
-            path, so one run may leave two revoked rows. These are audit history, not repeated manual tokens.
-          </p>
+          <p className="text-sm text-muted-foreground">{uiText("Issue a reusable token for an external client. Its name is also used as the client label.")}</p>
+          <p className="text-xs text-muted-foreground">{uiText("Paperclip creates a fresh one-hour runtime token when an agent run starts, then revokes it when the run ends. Codex can receive the same gateway through both an app connection and the managed-gateway path, so one run may leave two revoked rows. These are audit history, not repeated manual tokens.")}</p>
         </div>
         <Button size="sm" onClick={startIssuing}>
-          <Plus className="mr-1.5 h-3.5 w-3.5" />
-          Issue token
-        </Button>
+          <Plus className="mr-1.5 h-3.5 w-3.5" />{uiText("Issue token")}</Button>
       </div>
 
       {minting ? (
         <form className="space-y-3" onSubmit={submit}>
           <div className="grid gap-3 md:grid-cols-[1fr_auto]">
             <label className="space-y-1.5 text-sm">
-              <span className="text-xs font-medium text-muted-foreground">Token name</span>
+              <span className="text-xs font-medium text-muted-foreground">{uiText("Token name")}</span>
               <Input value={name} onChange={(event) => setName(event.target.value)} required autoFocus />
-              <span className="text-xs text-muted-foreground">Also used as the client label.</span>
+              <span className="text-xs text-muted-foreground">{uiText("Also used as the client label.")}</span>
             </label>
             <label className="space-y-1.5 text-sm">
-              <span className="text-xs font-medium text-muted-foreground">Expires</span>
+              <span className="text-xs font-medium text-muted-foreground">{uiText("Expires")}</span>
               <Input type="date" value={expiresAt} onChange={(event) => setExpiresAt(event.target.value)} required />
             </label>
           </div>
           <label className="block space-y-1.5 text-sm">
-            <span className="text-xs font-medium text-muted-foreground">Owner note (optional)</span>
+            <span className="text-xs font-medium text-muted-foreground">{uiText("Owner note (optional)")}</span>
             <Input
               value={ownerNote}
               onChange={(event) => setOwnerNote(event.target.value)}
-              placeholder="Who uses this token or why it exists"
+              placeholder={uiText("Who uses this token or why it exists")}
             />
           </label>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" size="sm" onClick={() => setMinting(false)}>
-              Cancel
-            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setMinting(false)}>{uiText("Cancel")}</Button>
             <Button type="submit" size="sm" disabled={createMutation.isPending || !name.trim()}>
-              {createMutation.isPending ? "Issuing…" : "Issue token"}
+              {createMutation.isPending ? uiText("Issuing…") : uiText("Issue token")}
             </Button>
           </div>
         </form>
@@ -240,14 +235,10 @@ export function TokensPanel({
         <div className="space-y-2 border-y border-border py-4">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <div className="text-sm font-semibold text-foreground">New token — copy now</div>
-              <div className="text-xs text-muted-foreground">
-                It is now available in Client snippets for a copy-ready configuration.
-              </div>
+              <div className="text-sm font-semibold text-foreground">{uiText("New token — copy now")}</div>
+              <div className="text-xs text-muted-foreground">{uiText("It is now available in Client snippets for a copy-ready configuration.")}</div>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setCreated(null)} aria-label="Dismiss new token">
-              Dismiss
-            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setCreated(null)} aria-label={uiText("Dismiss new token")}>{uiText("Dismiss")}</Button>
           </div>
           <div className="flex items-center gap-2">
             <code className="min-w-0 flex-1 truncate rounded bg-muted px-3 py-2 font-mono text-xs text-foreground">
@@ -255,11 +246,9 @@ export function TokensPanel({
             </code>
             {revealed ? (
               <Button variant="outline" size="sm" onClick={() => void copyToken(created.token)}>
-                <Copy className="mr-1 h-3.5 w-3.5" />
-                Copy
-              </Button>
+                <Copy className="mr-1 h-3.5 w-3.5" />{uiText("Copy")}</Button>
             ) : (
-              <Button variant="outline" size="sm" onClick={() => setRevealed(true)}>Show</Button>
+              <Button variant="outline" size="sm" onClick={() => setRevealed(true)}>{uiText("Show")}</Button>
             )}
           </div>
         </div>
@@ -269,28 +258,26 @@ export function TokensPanel({
         <CollapsibleTrigger asChild>
           <Button variant="ghost" className="h-auto w-full justify-between px-0 py-1 hover:bg-transparent">
             <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <KeyRound className="h-4 w-4 text-muted-foreground" />
-              Token history
-              <span className="font-normal text-muted-foreground">{tokens.length}</span>
+              <KeyRound className="h-4 w-4 text-muted-foreground" />{uiText("Token history")}<span className="font-normal text-muted-foreground">{tokens.length}</span>
             </span>
             {historyOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-3 pt-3">
           {tokens.length === 0 ? (
-            <p className="py-4 text-sm text-muted-foreground">No tokens have been issued for this gateway.</p>
+            <p className="py-4 text-sm text-muted-foreground">{uiText("No tokens have been issued for this gateway.")}</p>
           ) : (
             <>
               <div className="hidden overflow-x-auto rounded-lg border border-border sm:block">
                 <table className="w-full min-w-(--sz-44rem) text-sm">
                   <thead>
                     <tr className="border-b border-border bg-muted/40 text-left text-(length:--text-micro) font-semibold uppercase tracking-wide text-muted-foreground">
-                      <th className="px-4 py-2.5">Token</th>
-                      <th className="px-4 py-2.5">Owner</th>
-                      <th className="px-4 py-2.5">Created</th>
-                      <th className="px-4 py-2.5">Last used</th>
-                      <th className="px-4 py-2.5">Expiry</th>
-                      <th className="px-4 py-2.5">Status</th>
+                      <th className="px-4 py-2.5">{uiText("Token")}</th>
+                      <th className="px-4 py-2.5">{uiText("Owner")}</th>
+                      <th className="px-4 py-2.5">{uiText("Created")}</th>
+                      <th className="px-4 py-2.5">{uiText("Last used")}</th>
+                      <th className="px-4 py-2.5">{uiText("Expiry")}</th>
+                      <th className="px-4 py-2.5">{uiText("Status")}</th>
                       <th className="px-4 py-2.5 text-right" />
                     </tr>
                   </thead>
@@ -317,9 +304,7 @@ export function TokensPanel({
                                 size="sm"
                                 className="h-7 px-2 text-xs text-destructive hover:text-destructive"
                                 onClick={() => startRevoke(token)}
-                              >
-                                Revoke
-                              </Button>
+                              >{uiText("Revoke")}</Button>
                             ) : null}
                           </td>
                         </tr>
@@ -342,10 +327,10 @@ export function TokensPanel({
                         <StatusBadge status={status} />
                       </div>
                       <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                        <TokenField label="Owner" value={token.clientLabel || token.ownerNote || "—"} />
-                        <TokenField label="Created" value={<RelativeTime value={token.createdAt} />} />
-                        <TokenField label="Last used" value={token.lastUsedAt ? <RelativeTime value={token.lastUsedAt} /> : "—"} />
-                        <TokenField label="Expiry" value={<ExpiryValue token={token} />} />
+                        <TokenField label={uiText("Owner")} value={token.clientLabel || token.ownerNote || "—"} />
+                        <TokenField label={uiText("Created")} value={<RelativeTime value={token.createdAt} />} />
+                        <TokenField label={uiText("Last used")} value={token.lastUsedAt ? <RelativeTime value={token.lastUsedAt} /> : "—"} />
+                        <TokenField label={uiText("Expiry")} value={<ExpiryValue token={token} />} />
                       </dl>
                       {status !== "revoked" ? (
                         <Button
@@ -353,9 +338,7 @@ export function TokensPanel({
                           size="sm"
                           className="mt-3 w-full text-xs text-destructive hover:text-destructive"
                           onClick={() => startRevoke(token)}
-                        >
-                          Revoke
-                        </Button>
+                        >{uiText("Revoke")}</Button>
                       ) : null}
                     </div>
                   );
@@ -364,16 +347,14 @@ export function TokensPanel({
 
               {pageCount > 1 ? (
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs text-muted-foreground">
-                    Page {historyPage} of {pageCount} · {tokens.length} tokens
-                  </p>
+                  <p className="text-xs text-muted-foreground">{uiText("Page ")}{historyPage}{uiText(" of ")}{pageCount} · {tokens.length}{uiText(" tokens")}</p>
                   <div className="flex items-center gap-1">
                     <Button
                       variant="ghost"
                       size="sm"
                       disabled={historyPage === 1}
                       onClick={() => setHistoryPage((page) => Math.max(1, page - 1))}
-                      aria-label="Previous token page"
+                      aria-label={uiText("Previous token page")}
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
@@ -382,7 +363,7 @@ export function TokensPanel({
                       size="sm"
                       disabled={historyPage === pageCount}
                       onClick={() => setHistoryPage((page) => Math.min(pageCount, page + 1))}
-                      aria-label="Next token page"
+                      aria-label={uiText("Next token page")}
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
@@ -398,17 +379,14 @@ export function TokensPanel({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
           <div className="w-full max-w-md space-y-3 rounded-lg border border-border bg-card p-5 shadow-lg">
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Revoke this token?</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Any client using <span className="font-medium text-foreground">{confirmToken.name}</span> goes
-                silent immediately. This can’t be undone. Type the token name to confirm.
-              </p>
+              <h3 className="text-sm font-semibold text-foreground">{uiText("Revoke this token?")}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{uiText("Any client using ")}<span className="font-medium text-foreground">{confirmToken.name}</span>{uiText(" goes silent immediately. This can’t be undone. Type the token name to confirm.")}</p>
             </div>
             <Input
               value={revokeName}
               onChange={(event) => setRevokeName(event.target.value)}
               placeholder={confirmToken.name}
-              aria-label="Type the token name to confirm"
+              aria-label={uiText("Type the token name to confirm")}
               autoFocus
             />
             <div className="flex justify-end gap-2">
@@ -419,16 +397,14 @@ export function TokensPanel({
                   setConfirmToken(null);
                   setRevokeName("");
                 }}
-              >
-                Cancel
-              </Button>
+              >{uiText("Cancel")}</Button>
               <Button
                 variant="destructive"
                 size="sm"
                 disabled={revokeName.trim() !== confirmToken.name || revokeMutation.isPending}
                 onClick={() => revokeMutation.mutate(confirmToken.id)}
               >
-                {revokeMutation.isPending ? "Revoking…" : "Revoke token"}
+                {revokeMutation.isPending ? uiText("Revoking…") : uiText("Revoke token")}
               </Button>
             </div>
           </div>

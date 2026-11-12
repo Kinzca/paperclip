@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import type {
   IssueBlockerAttentionIssueSummary,
   IssueRelationIssueSummary,
@@ -101,6 +102,7 @@ function BlockerRow({
   label: string;
   blocker: IssueRelationIssueSummary | IssueBlockerAttentionIssueSummary;
 }) {
+  useUiLocale();
   const streamlined = useStreamlinedTaskChatPresentation();
   const issuePathId = blocker.identifier ?? blocker.id;
 
@@ -130,6 +132,7 @@ function BlockerRow({
 }
 
 function LiveWorkGlyph({ status }: { status: WaitingBlockerStatus }) {
+  useUiLocale();
   const label = status === "done" ? "Done" : status === "running" ? "Running" : "Waiting";
   if (status === "done") {
     return (
@@ -165,6 +168,7 @@ function LiveWorkLink({
   status: WaitingBlockerStatus;
   label?: string;
 }) {
+  useUiLocale();
   const streamlined = useStreamlinedTaskChatPresentation();
   const issuePathId = blocker.identifier ?? blocker.id;
   return (
@@ -192,6 +196,7 @@ export function TaskChatBlockerLinks({
   ultimateBlocker: IssueRelationIssueSummary | IssueBlockerAttentionIssueSummary | null;
   placement: "top" | "bottom";
 }) {
+  useUiLocale();
   const streamlined = useStreamlinedTaskChatPresentation();
   const directLabel = streamlined && placement === "bottom" ? "Still blocked by" : "Blocked by";
   const rootLabel = streamlined
@@ -199,7 +204,7 @@ export function TaskChatBlockerLinks({
     : "Ultimately blocked by";
   return (
     <div
-      aria-label="Task blockers"
+      aria-label={uiText("Task blockers")}
       data-placement={placement}
       data-testid="task-chat-blocker-links"
       className="flex min-w-0 flex-col gap-1 overflow-hidden text-(length:--text-micro) leading-4 text-amber-700 dark:text-amber-300"
@@ -219,11 +224,12 @@ export function TaskChatLiveWorkLinks({
   liveWork: ResolvedTaskChatLiveWork;
   placement: "top" | "bottom";
 }) {
+  useUiLocale();
   const streamlined = useStreamlinedTaskChatPresentation();
   const heading = streamlined && placement === "bottom" ? "Still waiting on live work" : "Waiting on live work";
   return (
     <div
-      aria-label="Tasks waiting on live work"
+      aria-label={uiText("Tasks waiting on live work")}
       data-placement={placement}
       data-testid="task-chat-live-work-links"
       className="flex min-w-0 flex-col gap-1.5 overflow-hidden text-(length:--text-micro) leading-4 text-blue-700 dark:text-blue-300"
@@ -254,10 +260,10 @@ export function TaskChatLiveWorkLinks({
         ))}
       </ol>
       {liveWork.nowRunning.map((blocker) => streamlined ? (
-        <LiveWorkLink key={blocker.id} blocker={blocker} status="running" label="Now running" />
+        <LiveWorkLink key={blocker.id} blocker={blocker} status="running" label={uiText("Now running")} />
       ) : (
         <div key={blocker.id} className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
-          <span className="shrink-0 font-medium">Now running</span>
+          <span className="shrink-0 font-medium">{uiText("Now running")}</span>
           <LiveWorkLink blocker={blocker} status="running" />
         </div>
       ))}

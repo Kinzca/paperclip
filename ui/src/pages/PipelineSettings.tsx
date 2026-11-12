@@ -1,3 +1,5 @@
+import { getUiLocale } from "@/i18n/ui";
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { SelectField } from "@/components/ui/select-field";
 import { useWorkspaceIsolationControls } from "@/hooks/useWorkspaceIsolationControls";
 import { AgentAvatar } from "@/components/AgentAvatar";
@@ -1075,6 +1077,7 @@ function FieldRow({
   label: string;
   children: ReactNode;
 }) {
+  useUiLocale();
   return (
     <div className="grid gap-2 py-3 text-sm sm:grid-cols-(--gtc-41) sm:items-center">
       <div className="font-medium text-muted-foreground">{label}</div>
@@ -1090,13 +1093,12 @@ function CarriedFieldTokenHelper({
   groups: CarryOverFieldGroup[];
   onInsert: (fieldKey: string) => void;
 }) {
+  useUiLocale();
   if (groups.length === 0) return null;
   return (
     <div className="rounded-md border border-dashed border-border bg-muted/25 px-3 py-2">
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold uppercase text-muted-foreground">
-          Already available on child items
-        </span>
+        <span className="text-xs font-semibold uppercase text-muted-foreground">{uiText("Already available on child items")}</span>
       </div>
       <div className="space-y-2">
         {groups.map((group) => (
@@ -1135,6 +1137,7 @@ function AutomationVariableTokenHelper({
   onInsert: (fieldKey: string) => void;
   label?: string;
 }) {
+  useUiLocale();
   if (groups.length === 0) return null;
   return (
     <div className="rounded-md border border-border bg-muted/20 px-3 py-2">
@@ -1177,11 +1180,12 @@ function StageSubSidebar({
   stageKind: string;
   onSectionChange: (section: StageSectionKey) => void;
 }) {
+  useUiLocale();
   const groups = stageNavGroups(stageKind);
   return (
     <>
       <div className="md:hidden">
-        <label className="sr-only" htmlFor="stage-section-picker">Stage section</label>
+        <label className="sr-only" htmlFor="stage-section-picker">{uiText("Stage section")}</label>
         <SelectField
           id="stage-section-picker"
           value={activeSection}
@@ -1198,7 +1202,7 @@ function StageSubSidebar({
         </SelectField>
       </div>
       <nav
-        aria-label="Stage sections"
+        aria-label={uiText("Stage sections")}
         className="sticky top-14 hidden max-h-(--sz-calc-39) w-52 shrink-0 flex-col gap-4 self-start overflow-y-auto border-r border-border bg-sidebar/30 px-3 py-4 md:flex"
       >
         {groups.map((group) => (
@@ -1243,6 +1247,7 @@ function StageEventsList({
   stages: PipelineStage[];
   emptyMessage: string;
 }) {
+  useUiLocale();
   if (events.length === 0) {
     return <EmptyState icon={ActivityIcon} message={emptyMessage} />;
   }
@@ -1265,7 +1270,7 @@ function StageEventsList({
             </Link>
             <p className="mt-0.5 text-sm text-muted-foreground">
               {formatPipelineItemEvent(event, stages)}
-              {event.actorAgent ? ` by ${event.actorAgent.name}` : null}
+              {event.actorAgent ? uiText(" by {{value0}}", { value0: event.actorAgent.name }) : null}
             </p>
           </div>
         </div>
@@ -1275,6 +1280,7 @@ function StageEventsList({
 }
 
 export function PipelineSettings() {
+  useUiLocale();
   const { pipelineId } = useParams<{ pipelineId: string }>();
   const { selectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
@@ -1647,11 +1653,11 @@ export function PipelineSettings() {
   useEffect(() => {
     if (!pipeline) return;
     setBreadcrumbs([
-      { label: "Pipelines", href: "/pipelines" },
+      { label: uiText("Pipelines"), href: "/pipelines" },
       { label: pipeline.name, href: `/pipelines/${pipeline.id}` },
-      { label: "Settings" },
+      { label: uiText("Settings") },
     ]);
-  }, [pipeline, setBreadcrumbs]);
+  }, [pipeline, setBreadcrumbs, getUiLocale()]);
 
   // Deep-link from a board-header health warning: ?stage=<id> preselects the
   // flagged stage so the warning's "fix" lands on the right panel.
@@ -2270,7 +2276,7 @@ export function PipelineSettings() {
     ? breakdownSummarySentence(breakdownConfigForCopy, breakdownCopyNames)
     : null;
   const transitionTargetsControl = !isReviewStage && !isPipelineTerminalStageKind(stageKind) ? (
-    <FieldRow label="Allowed next steps">
+    <FieldRow label={uiText("Allowed next steps")}>
       <div className="space-y-2">
         {otherStages.map((stage) => {
           const isCancelled = stage.kind === "cancelled";
@@ -2299,7 +2305,7 @@ export function PipelineSettings() {
               />
               <span className="flex-1">{stage.name}</span>
               {isCancelled ? (
-                <span className="text-xs text-muted-foreground">Always available</span>
+                <span className="text-xs text-muted-foreground">{uiText("Always available")}</span>
               ) : null}
             </label>
           );
@@ -2311,13 +2317,11 @@ export function PipelineSettings() {
     <div className="rounded-lg border border-border">
       <div className="flex items-start justify-between gap-4 border-b border-border p-4">
         <div className="space-y-1">
-          <h3 className="text-sm font-semibold text-foreground">Break into smaller pieces</h3>
-          <p className="max-w-md text-sm text-muted-foreground">
-            The agent decides what the pieces are. Paperclip creates and tracks them.
-          </p>
+          <h3 className="text-sm font-semibold text-foreground">{uiText("Break into smaller pieces")}</h3>
+          <p className="max-w-md text-sm text-muted-foreground">{uiText("The agent decides what the pieces are. Paperclip creates and tracks them.")}</p>
         </div>
         <ToggleSwitch
-          aria-label="Break into smaller pieces"
+          aria-label={uiText("Break into smaller pieces")}
           checked={breakdownEnabled}
           onCheckedChange={(checked) => {
             setBreakdownEnabled(checked);
@@ -2329,11 +2333,11 @@ export function PipelineSettings() {
       </div>
       {breakdownEnabled ? (
         <div className="divide-y divide-border px-4">
-          <FieldRow label="Create each piece in">
+          <FieldRow label={uiText("Create each piece in")}>
             <div className="space-y-1">
               <div className="flex w-full max-w-sm items-center">
                 <SelectField
-                  aria-label="Create each piece in"
+                  aria-label={uiText("Create each piece in")}
                   value={breakdownTargetPipelineId}
                   onValueChange={(optionValue) => {
                     setBreakdownTargetPipelineId(optionValue);
@@ -2341,7 +2345,7 @@ export function PipelineSettings() {
                   }}
                   className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm"
                 >
-                  <option value="">Choose a pipeline</option>
+                  <option value="">{uiText("Choose a pipeline")}</option>
                   {breakdownTargetOptions.map((candidate) => (
                     <option key={candidate.id} value={candidate.id}>{candidate.name}</option>
                   ))}
@@ -2349,8 +2353,8 @@ export function PipelineSettings() {
                 {breakdownTargetPipelineId ? (
                   <Link
                     to={`/pipelines/${breakdownTargetPipelineId}`}
-                    aria-label={`Open ${breakdownTargetPipeline?.name ?? "selected"} pipeline`}
-                    title={`Open ${breakdownTargetPipeline?.name ?? "selected"} pipeline`}
+                    aria-label={uiText("Open {{value0}} pipeline", { value0: breakdownTargetPipeline?.name ?? "selected" })}
+                    title={uiText("Open {{value0}} pipeline", { value0: breakdownTargetPipeline?.name ?? "selected" })}
                     className="ml-2 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <ArrowUpRight className="h-4 w-4" />
@@ -2358,52 +2362,48 @@ export function PipelineSettings() {
                 ) : null}
               </div>
               {!breakdownTargetPipelineId ? (
-                <p className="text-xs text-muted-foreground">A pipeline in this workspace</p>
+                <p className="text-xs text-muted-foreground">{uiText("A pipeline in this workspace")}</p>
               ) : null}
             </div>
           </FieldRow>
-          <FieldRow label="starting at">
+          <FieldRow label={uiText("starting at")}>
             <div className="space-y-1">
               <SelectField
-                aria-label="Starting stage for each piece"
+                aria-label={uiText("Starting stage for each piece")}
                 value={breakdownTargetStageKey}
                 onValueChange={(optionValue) => setBreakdownTargetStageKey(optionValue)}
                 disabled={!breakdownTargetPipelineId}
                 className="h-10 w-full max-w-sm rounded-md border border-input bg-background px-3 text-sm disabled:opacity-50"
               >
-                <option value="">Choose a stage</option>
+                <option value="">{uiText("Choose a stage")}</option>
                 {breakdownTargetStages.map((stage) => (
                   <option key={stage.id} value={stage.key}>{stage.name}</option>
                 ))}
               </SelectField>
-              <p className="text-xs text-muted-foreground">The stage every new piece starts in</p>
+              <p className="text-xs text-muted-foreground">{uiText("The stage every new piece starts in")}</p>
             </div>
           </FieldRow>
-          <FieldRow label="Call each piece a">
+          <FieldRow label={uiText("Call each piece a")}>
             <div className="space-y-1">
               <Input
-                aria-label="Call each piece a"
+                aria-label={uiText("Call each piece a")}
                 value={breakdownPieceNoun}
                 onChange={(event) => setBreakdownPieceNoun(event.target.value)}
-                placeholder="piece"
+                placeholder={uiText("piece")}
                 className="h-10 w-full max-w-sm"
               />
-              <p className="text-xs text-muted-foreground">
-                Drives copy on this case (e.g. “3 of 5 {breakdownPieceNounPlural} finished”)
-              </p>
+              <p className="text-xs text-muted-foreground">{uiText("Drives copy on this case (e.g. “3 of 5 ")}{breakdownPieceNounPlural}{uiText(" finished”)")}</p>
             </div>
           </FieldRow>
-          <FieldRow label="Carry over">
+          <FieldRow label={uiText("Carry over")}>
             <div className="space-y-2">
               <div className="space-y-1 rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-xs">
-                <p className="text-muted-foreground">
-                  Values are copied from this item and its ancestors. New eligible fields stay on unless you uncheck them.
-                </p>
+                <p className="text-muted-foreground">{uiText("Values are copied from this item and its ancestors. New eligible fields stay on unless you uncheck them.")}</p>
                 {breakdownTargetPipelineId ? (
                   <div className="flex flex-wrap items-center gap-1 text-muted-foreground">
-                    <span>Destination validation:</span>
+                    <span>{uiText("Destination validation:")}</span>
                     <span className="font-medium text-foreground">
-                      {breakdownTargetPipeline?.name ?? "selected pipeline"}
+                      {breakdownTargetPipeline?.name ?? uiText("selected pipeline")}
                     </span>
                     {breakdownIntakeStageName ? (
                       <>
@@ -2417,16 +2417,12 @@ export function PipelineSettings() {
                   <Link
                     to={breakdownIntakeSettingsHref}
                     className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
-                  >
-                    Review destination fields
-                    <ArrowUpRight className="h-3 w-3" />
+                  >{uiText("Review destination fields")}<ArrowUpRight className="h-3 w-3" />
                   </Link>
                 ) : null}
                 {breakdownTargetArchived ? (
                   <p className="flex items-center gap-1 text-amber-700 dark:text-amber-300">
-                    <Archive className="h-3 w-3 shrink-0" />
-                    This destination pipeline is archived, so its validation fields can't be edited until it's restored.
-                  </p>
+                    <Archive className="h-3 w-3 shrink-0" />{uiText("This destination pipeline is archived, so its validation fields can't be edited until it's restored.")}</p>
                 ) : null}
               </div>
               {breakdownCarryOverFieldGroups.length > 0 ? (
@@ -2464,12 +2460,10 @@ export function PipelineSettings() {
                               />
                               <span className="flex-1">{field.label}</span>
                               {targetField?.required ? (
-                                <span className="text-xs text-muted-foreground">
-                                  Required by {breakdownTargetPipeline?.name ?? "destination"}
+                                <span className="text-xs text-muted-foreground">{uiText("Required by ")}{breakdownTargetPipeline?.name ?? uiText("destination")}
                                 </span>
                               ) : targetField ? (
-                                <span className="text-xs text-muted-foreground">
-                                  Validated by {breakdownTargetPipeline?.name ?? "destination"}
+                                <span className="text-xs text-muted-foreground">{uiText("Validated by ")}{breakdownTargetPipeline?.name ?? uiText("destination")}
                                 </span>
                               ) : null}
                             </label>
@@ -2481,32 +2475,29 @@ export function PipelineSettings() {
                 </div>
               ) : null}
               {breakdownCarryOverFieldGroups.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  This pipeline and its ancestors do not define any fields that can be carried over yet.
-                </p>
+                <p className="text-sm text-muted-foreground">{uiText("This pipeline and its ancestors do not define any fields that can be carried over yet.")}</p>
               ) : null}
-              <p className="text-xs text-muted-foreground">
-                Name and title fields are kept unique for each new {breakdownPieceNoun.trim() || "piece"}.
+              <p className="text-xs text-muted-foreground">{uiText("Name and title fields are kept unique for each new ")}{breakdownPieceNoun.trim() || uiText("piece")}.
               </p>
             </div>
           </FieldRow>
-          <FieldRow label="Then move this case to">
+          <FieldRow label={uiText("Then move this case to")}>
             <div className="space-y-1">
               <SelectField
-                aria-label="Then move this case to"
+                aria-label={uiText("Then move this case to")}
                 value={breakdownAdvanceTo}
                 onValueChange={(optionValue) => setBreakdownAdvanceTo(optionValue)}
                 className="h-10 w-full max-w-sm rounded-md border border-input bg-background px-3 text-sm"
               >
-                <option value="">Stay on this step</option>
+                <option value="">{uiText("Stay on this step")}</option>
                 {otherStages.map((stage) => (
                   <option key={stage.id} value={stage.key}>{stage.name}</option>
                 ))}
               </SelectField>
-              <p className="text-xs text-muted-foreground">As soon as the pieces are created</p>
+              <p className="text-xs text-muted-foreground">{uiText("As soon as the pieces are created")}</p>
             </div>
           </FieldRow>
-          <FieldRow label="Wait">
+          <FieldRow label={uiText("Wait")}>
             <div className="space-y-2">
               <label className="flex items-start gap-2 text-sm">
                 <input
@@ -2521,25 +2512,22 @@ export function PipelineSettings() {
                     }
                   }}
                 />
-                <span className="font-medium text-foreground">
-                  Wait until all {breakdownPieceNounPlural} are finished, then move it to
-                </span>
+                <span className="font-medium text-foreground">{uiText("Wait until all ")}{breakdownPieceNounPlural}{uiText(" are finished, then move it to")}</span>
               </label>
               <SelectField
-                aria-label="Move this case when all pieces finish"
+                aria-label={uiText("Move this case when all pieces finish")}
                 value={breakdownWhenFinishedMoveTo}
                 onValueChange={(optionValue) => setBreakdownWhenFinishedMoveTo(optionValue)}
                 disabled={!breakdownWaitForPieces}
                 className="h-10 w-full max-w-sm rounded-md border border-input bg-background px-3 text-sm disabled:opacity-50"
               >
-                <option value="">Choose a stage</option>
+                <option value="">{uiText("Choose a stage")}</option>
                 {otherStages.map((stage) => (
                   <option key={stage.id} value={stage.key}>{stage.name}</option>
                 ))}
               </SelectField>
               {breakdownAdvanceTo ? (
-                <p className="text-xs text-muted-foreground">
-                  If nothing is worth splitting, this case still moves to {breakdownCopyNames.advanceToName}.
+                <p className="text-xs text-muted-foreground">{uiText("If nothing is worth splitting, this case still moves to ")}{breakdownCopyNames.advanceToName}.
                 </p>
               ) : null}
             </div>
@@ -2566,26 +2554,20 @@ export function PipelineSettings() {
         }}
       >
         <div className="mb-3 flex items-start justify-between gap-3">
-          <Link to={`/pipelines/${pipeline.id}`} className="text-sm text-muted-foreground hover:text-foreground">
-            Back to board
-          </Link>
+          <Link to={`/pipelines/${pipeline.id}`} className="text-sm text-muted-foreground hover:text-foreground">{uiText("Back to board")}</Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button type="button" variant="outline" size="icon" className="h-8 w-8" title="Pipeline actions">
+              <Button type="button" variant="outline" size="icon" className="h-8 w-8" title={uiText("Pipeline actions")}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {isArchived ? (
                 <DropdownMenuItem onSelect={() => archivePipeline.mutate(false)}>
-                  <Archive className="h-4 w-4" />
-                  Restore pipeline
-                </DropdownMenuItem>
+                  <Archive className="h-4 w-4" />{uiText("Restore pipeline")}</DropdownMenuItem>
               ) : (
                 <DropdownMenuItem variant="destructive" onSelect={() => setArchiveDialogOpen(true)}>
-                  <Archive className="h-4 w-4" />
-                  Archive pipeline
-                </DropdownMenuItem>
+                  <Archive className="h-4 w-4" />{uiText("Archive pipeline")}</DropdownMenuItem>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -2593,9 +2575,9 @@ export function PipelineSettings() {
         <div className="grid gap-3 md:grid-cols-(--gtc-13) md:items-end">
           <div className="space-y-3">
             <label className="block space-y-1.5 text-sm font-medium">
-              <span className="sr-only">Pipeline name</span>
+              <span className="sr-only">{uiText("Pipeline name")}</span>
               <Input
-                aria-label="Pipeline name"
+                aria-label={uiText("Pipeline name")}
                 value={pipelineName}
                 onChange={(event) => setPipelineName(event.target.value)}
                 required
@@ -2603,13 +2585,13 @@ export function PipelineSettings() {
               />
             </label>
             <label className="block space-y-1.5 text-sm font-medium">
-              <span className="sr-only">Pipeline description</span>
+              <span className="sr-only">{uiText("Pipeline description")}</span>
               <Textarea
-                aria-label="Pipeline description"
+                aria-label={uiText("Pipeline description")}
                 value={pipelineDescription}
                 onChange={(event) => setPipelineDescription(event.target.value)}
                 rows={2}
-                placeholder="Add a description"
+                placeholder={uiText("Add a description")}
                 className="min-h-0 resize-none border-0 bg-transparent px-0 py-0 text-sm text-muted-foreground shadow-none focus-visible:ring-0"
               />
             </label>
@@ -2617,7 +2599,7 @@ export function PipelineSettings() {
           {detailsDirty || savePipelineDetails.isPending ? (
             <Button type="submit" disabled={savePipelineDetails.isPending || !pipelineName.trim()}>
               <Save className="h-4 w-4" />
-              {savePipelineDetails.isPending ? "Saving..." : "Save details"}
+              {savePipelineDetails.isPending ? uiText("Saving...") : uiText("Save details")}
             </Button>
           ) : null}
         </div>
@@ -2665,30 +2647,26 @@ export function PipelineSettings() {
                             {warningCount > 0 ? (
                               <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
                                 <AlertTriangle className="h-3.5 w-3.5" />
-                                {warningCount} {warningCount === 1 ? "warning" : "warnings"}
+                                {warningCount} {warningCount === 1 ? uiText("warning") : uiText("warnings")}
                               </span>
                             ) : null}
                           </span>
-                          <span className="mt-1 block text-xs text-muted-foreground">Step {index + 1}</span>
+                          <span className="mt-1 block text-xs text-muted-foreground">{uiText("Step ")}{index + 1}</span>
                           {stageNewEntriesDisabled(stage) ? (
                             <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-300">
-                              <AlertTriangle className="h-3 w-3" />
-                              New entries paused
-                            </span>
+                              <AlertTriangle className="h-3 w-3" />{uiText("New entries paused")}</span>
                           ) : null}
                         </button>
                         <Link
                           to={`/pipelines/${pipelineId}`}
                           className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
-                        >
-                          View queue
-                          <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+                        >{uiText("View queue")}<ArrowUpRight className="h-3 w-3" aria-hidden="true" />
                         </Link>
                       </div>
                       {canInsertAfter ? (
                         <button
                           type="button"
-                          aria-label={`Insert stage after ${stage.name}`}
+                          aria-label={uiText("Insert stage after {{value0}}", { value0: stage.name })}
                           className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground hover:border-foreground hover:text-foreground"
                           onClick={() => addStage.mutate(stage)}
                           disabled={addStage.isPending}
@@ -2736,8 +2714,8 @@ export function PipelineSettings() {
                             newEntriesDisabled &&
                               "border-amber-500/50 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300",
                           )}
-                          title={newEntriesDisabled ? "Resume new entries" : "Pause new entries"}
-                          aria-label={newEntriesDisabled ? "Resume new entries" : "Pause new entries"}
+                          title={newEntriesDisabled ? uiText("Resume new entries") : uiText("Pause new entries")}
+                          aria-label={newEntriesDisabled ? uiText("Resume new entries") : uiText("Pause new entries")}
                           onClick={() => setNewEntriesDisabled((value) => !value)}
                         >
                           {newEntriesDisabled ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
@@ -2747,8 +2725,8 @@ export function PipelineSettings() {
                           variant="outline"
                           size="icon"
                           className="h-8 w-8 text-destructive hover:text-destructive"
-                          title={`Delete ${selectedStage.name}`}
-                          aria-label={`Delete ${selectedStage.name}`}
+                          title={uiText("Delete {{value0}}", { value0: selectedStage.name })}
+                          aria-label={uiText("Delete {{value0}}", { value0: selectedStage.name })}
                           onClick={() => setDeleteStageDialogOpen(true)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -2765,17 +2743,17 @@ export function PipelineSettings() {
                   {activeStageSection === "instructions" ? (
                     <div className="w-full max-w-3xl">
                       <div className="divide-y divide-border border-b border-border">
-                        <FieldRow label="Name">
+                        <FieldRow label={uiText("Name")}>
                           <Input value={stageName} onChange={(event) => setStageName(event.target.value)} required />
                         </FieldRow>
-                        <FieldRow label="Step type">
+                        <FieldRow label={uiText("Step type")}>
                           <div className="max-w-xl space-y-2">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button
                                   type="button"
                                   variant="outline"
-                                  aria-label="Step type"
+                                  aria-label={uiText("Step type")}
                                   className="h-auto min-h-10 w-full justify-between whitespace-normal px-3 py-2 text-left"
                                 >
                                   <span className="flex min-w-0 items-center gap-2">
@@ -2815,18 +2793,18 @@ export function PipelineSettings() {
                         </FieldRow>
 
                         {stageKind === "review" ? (
-                          <FieldRow label="Approver">
+                          <FieldRow label={uiText("Approver")}>
                             <InlineEntitySelector
                               value={selectedApproval === "any_human" ? "" : selectedApproval}
                               options={approvalOptions}
                               recentOptionIds={recentAssigneeOptionIds}
-                              placeholder="Approver"
+                              placeholder={uiText("Approver")}
                               noneLabel="Any human"
                               searchPlaceholder="Search approvers..."
-                              emptyMessage="No approvers found."
+                              emptyMessage={uiText("No approvers found.")}
                               onChange={(value) => setSelectedApproval(approverValueFromOption(value))}
                               renderTriggerValue={(option) => {
-                                if (!option) return <span className="text-muted-foreground">Any human</span>;
+                                if (!option) return <span className="text-muted-foreground">{uiText("Any human")}</span>;
                                 const agent = option.id.startsWith("agent:") ? agentById.get(option.id.slice("agent:".length)) : null;
                                 return (
                                   <>
@@ -2850,7 +2828,7 @@ export function PipelineSettings() {
                         ) : null}
 
                         {stageKind === "review" ? (
-                          <FieldRow label="Review outcomes">
+                          <FieldRow label={uiText("Review outcomes")}>
                             <div className="space-y-2">
                               {([
                                 ["Approved items move to", approveTarget, setApproveTarget, "Choose a stage"],
@@ -2876,22 +2854,20 @@ export function PipelineSettings() {
                                 </div>
                               ))}
                               <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-(--gtc-42)">
-                                <span className="text-sm font-medium">Ask for a note when requesting changes</span>
+                                <span className="text-sm font-medium">{uiText("Ask for a note when requesting changes")}</span>
                                 <div className="sm:justify-self-start">
                                   <ToggleSwitch checked={requireRequestChangesReason} onCheckedChange={setRequireRequestChangesReason} />
                                 </div>
                               </div>
                               <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-(--gtc-42)">
-                                <span className="text-sm font-medium">Ask for a note when declining</span>
+                                <span className="text-sm font-medium">{uiText("Ask for a note when declining")}</span>
                                 <div className="sm:justify-self-start">
                                   <ToggleSwitch checked={requireRejectReason} onCheckedChange={setRequireRejectReason} />
                                 </div>
                               </div>
                             </div>
                             {reviewTargetsMissing ? (
-                              <p className="mt-2 text-sm text-muted-foreground">
-                                Pick where approved and declined items should go before saving.
-                              </p>
+                              <p className="mt-2 text-sm text-muted-foreground">{uiText("Pick where approved and declined items should go before saving.")}</p>
                             ) : null}
                           </FieldRow>
                         ) : null}
@@ -2904,18 +2880,18 @@ export function PipelineSettings() {
                     <div className="mt-8 w-full max-w-3xl space-y-6">
                       <div className="overflow-x-auto overscroll-x-contain">
                         <div className="inline-flex min-w-full flex-wrap items-center gap-2 text-sm text-muted-foreground sm:min-w-max sm:flex-nowrap">
-                          <span>When an item enters this step</span>
+                          <span>{uiText("When an item enters this step")}</span>
                           <InlineEntitySelector
                             value={stageAssigneeOptionId(stageAssigneeAgentId)}
                             options={stageAssigneeOptions}
                             recentOptionIds={recentAssigneeOptionIds}
-                            placeholder="Pick agent"
+                            placeholder={uiText("Pick agent")}
                             noneLabel="No automation"
                             searchPlaceholder="Search agents..."
-                            emptyMessage="No agents found."
+                            emptyMessage={uiText("No agents found.")}
                             onChange={(value) => setStageAssigneeAgentId(stageAssigneeIdFromOption(value))}
                             renderTriggerValue={(option) => {
-                              if (!option) return <span className="text-muted-foreground">Pick agent</span>;
+                              if (!option) return <span className="text-muted-foreground">{uiText("Pick agent")}</span>;
                               const agent = stageAssigneeIdFromOption(option.id)
                                 ? agentById.get(stageAssigneeIdFromOption(option.id))
                                 : null;
@@ -2938,23 +2914,23 @@ export function PipelineSettings() {
                               );
                             }}
                           />
-                          <span>runs these instructions, then moves the item to the next step.</span>
+                          <span>{uiText("runs these instructions, then moves the item to the next step.")}</span>
                         </div>
                       </div>
 
                       {selectedAutomationAgent ? (
                         <>
                           <div className="divide-y divide-border border-y border-border">
-                            <FieldRow label="Project context">
+                            <FieldRow label={uiText("Project context")}>
                               <div className="grid gap-2 sm:grid-cols-(--gtc-43)">
                                 <InlineEntitySelector
                                   value={stageProjectId}
                                   options={projectOptions}
                                   recentOptionIds={recentProjectIds}
-                                  placeholder="Project"
+                                  placeholder={uiText("Project")}
                                   noneLabel="No project"
                                   searchPlaceholder="Search projects..."
-                                  emptyMessage="No projects found."
+                                  emptyMessage={uiText("No projects found.")}
                                   onChange={handleAutomationProjectChange}
                                   renderTriggerValue={(option) =>
                                     option && selectedAutomationProject ? (
@@ -2966,7 +2942,7 @@ export function PipelineSettings() {
                                         <span className="truncate">{option.label}</span>
                                       </>
                                     ) : (
-                                      <span className="text-muted-foreground">Project</span>
+                                      <span className="text-muted-foreground">{uiText("Project")}</span>
                                     )
                                   }
                                   renderOption={(option) => {
@@ -2985,36 +2961,32 @@ export function PipelineSettings() {
                                 />
                                 {selectedAutomationProject ? (
                                   <SelectField
-                                    aria-label="Project workspace"
+                                    aria-label={uiText("Project workspace")}
                                     value={stageProjectWorkspaceId}
                                     onValueChange={(optionValue) => handleAutomationProjectWorkspaceChange(optionValue)}
                                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                                   >
-                                    <option value="">Project fallback</option>
+                                    <option value="">{uiText("Project fallback")}</option>
                                     {(selectedAutomationProject.workspaces ?? []).map((workspace) => (
                                       <option key={workspace.id} value={workspace.id}>
-                                        {workspace.name}{workspace.isPrimary ? " · primary" : ""}
+                                        {workspace.name}{workspace.isPrimary ? uiText(" · primary") : ""}
                                       </option>
                                     ))}
                                   </SelectField>
                                 ) : (
-                                  <div className="flex h-10 items-center rounded-md border border-dashed border-border px-3 text-sm text-muted-foreground">
-                                    Project workspace
-                                  </div>
+                                  <div className="flex h-10 items-center rounded-md border border-dashed border-border px-3 text-sm text-muted-foreground">{uiText("Project workspace")}</div>
                                 )}
                               </div>
                               {selectedAutomationProject && !selectedAutomationProjectWorkspace ? (
-                                <p className="mt-2 text-xs text-muted-foreground">
-                                  This project has no saved workspace default. Paperclip will use the project fallback when automation runs.
-                                </p>
+                                <p className="mt-2 text-xs text-muted-foreground">{uiText("This project has no saved workspace default. Paperclip will use the project fallback when automation runs.")}</p>
                               ) : null}
                             </FieldRow>
 
                             {selectedAutomationProject && selectedProjectSupportsExecutionWorkspace ? (
-                              <FieldRow label="Execution workspace">
+                              <FieldRow label={uiText("Execution workspace")}>
                                 <div className="grid gap-2 sm:grid-cols-(--gtc-43)">
                                   <SelectField
-                                    aria-label="Execution workspace mode"
+                                    aria-label={uiText("Execution workspace mode")}
                                     value={stageExecutionWorkspacePreference || "shared_workspace"}
                                     onValueChange={(optionValue) => handleAutomationExecutionWorkspacePreferenceChange(optionValue)}
                                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -3027,12 +2999,12 @@ export function PipelineSettings() {
                                   </SelectField>
                                   {stageExecutionWorkspacePreference === "reuse_existing" ? (
                                     <SelectField
-                                      aria-label="Existing execution workspace"
+                                      aria-label={uiText("Existing execution workspace")}
                                       value={stageExecutionWorkspaceId}
                                       onValueChange={(optionValue) => handleAutomationExecutionWorkspaceIdChange(optionValue)}
                                       className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                                     >
-                                      <option value="">Choose an existing workspace</option>
+                                      <option value="">{uiText("Choose an existing workspace")}</option>
                                       {deduplicatedReusableWorkspaces.map((workspace) => (
                                         <option key={workspace.id} value={workspace.id}>
                                           {workspace.name} · {workspace.status} · {workspace.branchName ?? workspace.cwd ?? workspace.id.slice(0, 8)}
@@ -3042,32 +3014,29 @@ export function PipelineSettings() {
                                   ) : (
                                     <div className="flex h-10 items-center rounded-md border border-dashed border-border px-3 text-sm text-muted-foreground">
                                       {stageExecutionWorkspacePreference === "isolated_workspace"
-                                        ? "A new workspace will be created"
-                                        : "Project default workspace"}
+                                        ? uiText("A new workspace will be created")
+                                        : uiText("Project default workspace")}
                                     </div>
                                   )}
                                 </div>
                                 {stageExecutionWorkspacePreference === "reuse_existing" && selectedReusableExecutionWorkspace ? (
-                                  <p className="mt-2 text-xs text-muted-foreground">
-                                    Reusing {selectedReusableExecutionWorkspace.name} from {selectedReusableExecutionWorkspace.branchName ?? selectedReusableExecutionWorkspace.cwd ?? "existing workspace"}.
+                                  <p className="mt-2 text-xs text-muted-foreground">{uiText("Reusing ")}{selectedReusableExecutionWorkspace.name}{uiText(" from ")}{selectedReusableExecutionWorkspace.branchName ?? selectedReusableExecutionWorkspace.cwd ?? uiText("existing workspace")}.
                                   </p>
                                 ) : null}
                                 {!canSaveAutomationWorkspace ? (
-                                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-                                    Choose an existing workspace before saving reuse mode.
-                                  </p>
+                                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{uiText("Choose an existing workspace before saving reuse mode.")}</p>
                                 ) : null}
                               </FieldRow>
                             ) : null}
                           </div>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <AgentAvatar agent={selectedAutomationAgent} size={16} className="h-4 w-4 shrink-0"/>
-                            <span>{selectedAutomationAgent.name} runs this step automatically.</span>
+                            <span>{selectedAutomationAgent.name}{uiText(" runs this step automatically.")}</span>
                           </div>
-                          <FieldRow label="Issue title">
+                          <FieldRow label={uiText("Issue title")}>
                             <Input
                               ref={issueTitleTemplateInputRef}
-                              aria-label="Issue title template"
+                              aria-label={uiText("Issue title template")}
                               value={issueTitleTemplate}
                               onChange={(event) => setIssueTitleTemplate(event.target.value)}
                               placeholder={PIPELINE_AUTOMATION_DEFAULT_TITLE_TEMPLATE}
@@ -3077,14 +3046,12 @@ export function PipelineSettings() {
                           <AutomationVariableTokenHelper
                             groups={automationVariableGroups}
                             onInsert={insertIssueTitleVariableToken}
-                            label="Issue title variables"
+                            label={uiText("Issue title variables")}
                           />
                           {breakdownEnabled ? (
                             <div className="space-y-1">
-                              <h3 className="text-sm font-semibold text-foreground">What should the agent decide?</h3>
-                              <p className="text-sm text-muted-foreground">
-                                The mechanics are handled below. Write only the judgment.
-                              </p>
+                              <h3 className="text-sm font-semibold text-foreground">{uiText("What should the agent decide?")}</h3>
+                              <p className="text-sm text-muted-foreground">{uiText("The mechanics are handled below. Write only the judgment.")}</p>
                             </div>
                           ) : null}
                           <div data-testid="stage-instructions-editor">
@@ -3094,8 +3061,8 @@ export function PipelineSettings() {
                               onChange={setInstructionsBody}
                               placeholder={
                                 breakdownEnabled
-                                  ? "Describe the judgment the agent should make — what counts as a piece worth splitting out?"
-                                  : "Tell the agent exactly what to do when an item enters this step..."
+                                  ? uiText("Describe the judgment the agent should make — what counts as a piece worth splitting out?")
+                                  : uiText("Tell the agent exactly what to do when an item enters this step...")
                               }
                               bordered={false}
                               contentClassName="min-h-(--sz-120px) text-sm leading-7"
@@ -3168,13 +3135,13 @@ export function PipelineSettings() {
                     <div className="w-full max-w-3xl space-y-8">
                       <div className="divide-y divide-border border-b border-border">
                         <div className="py-3">
-                          <h3 className="text-sm font-semibold text-foreground">Transitions</h3>
+                          <h3 className="text-sm font-semibold text-foreground">{uiText("Transitions")}</h3>
                         </div>
-                        <FieldRow label="Strict mode">
+                        <FieldRow label={uiText("Strict mode")}>
                           <div className="space-y-1.5">
                             <div className="flex items-center gap-3">
                               <ToggleSwitch
-                                aria-label="Strictly enforce transitions"
+                                aria-label={uiText("Strictly enforce transitions")}
                                 checked={strictTransitionsEnabled}
                                 disabled={saveStrictTransitions.isPending}
                                 onCheckedChange={(checked) => {
@@ -3182,14 +3149,12 @@ export function PipelineSettings() {
                                   saveStrictTransitions.mutate(checked);
                                 }}
                               />
-                              <span className="text-sm font-medium text-foreground">
-                                Strictly enforce transitions
-                              </span>
+                              <span className="text-sm font-medium text-foreground">{uiText("Strictly enforce transitions")}</span>
                             </div>
                             <p className="max-w-2xl text-sm text-muted-foreground">
                               {strictTransitionsEnabled
-                                ? "Items can only move to configured next steps. Operators can force an off-path move by giving a reason."
-                                : "Items can move to any step. Saved allowed-next-step choices are kept, but they are not enforced."}
+                                ? uiText("Items can only move to configured next steps. Operators can force an off-path move by giving a reason.")
+                                : uiText("Items can move to any step. Saved allowed-next-step choices are kept, but they are not enforced.")}
                             </p>
                           </div>
                         </FieldRow>
@@ -3203,25 +3168,21 @@ export function PipelineSettings() {
                       ) : (
                         <div className="divide-y divide-border border-b border-border">
                           <div className="py-3">
-                            <h3 className="text-sm font-semibold text-foreground">Children</h3>
+                            <h3 className="text-sm font-semibold text-foreground">{uiText("Children")}</h3>
                           </div>
-                          <FieldRow label="Block children">
+                          <FieldRow label={uiText("Block children")}>
                             <div className="space-y-1.5">
                               <div className="flex items-center gap-3">
                                 <ToggleSwitch
                                   checked={requireChildrenTerminal}
                                   onCheckedChange={setRequireChildrenTerminal}
                                 />
-                                <span className="text-sm font-medium text-foreground">
-                                  Block until all child items are done or cancelled
-                                </span>
+                                <span className="text-sm font-medium text-foreground">{uiText("Block until all child items are done or cancelled")}</span>
                               </div>
-                              <p className="max-w-2xl text-sm text-muted-foreground">
-                                When on, this step can't move forward while any child item is still open. When off, items can move through even with open children.
-                              </p>
+                              <p className="max-w-2xl text-sm text-muted-foreground">{uiText("When on, this step can't move forward while any child item is still open. When off, items can move through even with open children.")}</p>
                             </div>
                           </FieldRow>
-                          <FieldRow label="Advance children">
+                          <FieldRow label={uiText("Advance children")}>
                             <div className="space-y-3">
                               <div className="flex items-center gap-3">
                                 <ToggleSwitch
@@ -3230,28 +3191,24 @@ export function PipelineSettings() {
                                     setAutoAdvanceOnChildrenTerminal(checked ? autoAdvanceOnChildrenTerminal || defaultAutoAdvanceStage?.key || "" : "");
                                   }}
                                 />
-                                <span className="text-sm font-medium text-foreground">
-                                  Advance when the last child is done
-                                </span>
+                                <span className="text-sm font-medium text-foreground">{uiText("Advance when the last child is done")}</span>
                               </div>
                               <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-(--gtc-44)">
-                                <span className="text-sm font-medium text-muted-foreground">Move to</span>
+                                <span className="text-sm font-medium text-muted-foreground">{uiText("Move to")}</span>
                                 <SelectField
-                                  aria-label="Move to stage when children finish"
+                                  aria-label={uiText("Move to stage when children finish")}
                                   value={autoAdvanceOnChildrenTerminal}
                                   onValueChange={(optionValue) => setAutoAdvanceOnChildrenTerminal(optionValue)}
                                   disabled={!autoAdvanceOnChildrenTerminal}
                                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm disabled:opacity-50"
                                 >
-                                  <option value="">Choose a stage</option>
+                                  <option value="">{uiText("Choose a stage")}</option>
                                   {otherStages.map((stage) => (
                                     <option key={stage.id} value={stage.key}>{stage.name}</option>
                                   ))}
                                 </SelectField>
                               </div>
-                              <p className="max-w-2xl text-sm text-muted-foreground">
-                                When on and every child is done, this step moves the item forward automatically. When off, someone has to move it.
-                              </p>
+                              <p className="max-w-2xl text-sm text-muted-foreground">{uiText("When on and every child is done, this step moves the item forward automatically. When off, someone has to move it.")}</p>
                             </div>
                           </FieldRow>
                         </div>
@@ -3267,7 +3224,7 @@ export function PipelineSettings() {
                         <StageEventsList
                           events={stageEvents}
                           stages={stages}
-                          emptyMessage="No stage activity yet."
+                          emptyMessage={uiText("No stage activity yet.")}
                         />
                       )}
                     </div>
@@ -3297,14 +3254,14 @@ export function PipelineSettings() {
               {stageDirty || saveStage.isPending ? (
                 <div className="sticky bottom-0 z-10 -mx-6 mt-6 flex items-center justify-between gap-3 border-t border-border bg-background/95 px-6 py-3 backdrop-blur motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
                   <span className="text-sm text-muted-foreground">
-                    {saveStage.isPending ? "Saving changes…" : "You have unsaved changes."}
+                    {saveStage.isPending ? uiText("Saving changes…") : uiText("You have unsaved changes.")}
                   </span>
                   <Button
                     type="submit"
                     disabled={saveStage.isPending || !stageName.trim() || reviewTargetsMissing || !canSaveAutomationWorkspace}
                   >
                     {saveStage.isPending ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
-                    {saveStage.isPending ? "Saving..." : "Save stage"}
+                    {saveStage.isPending ? uiText("Saving...") : uiText("Save stage")}
                   </Button>
                 </div>
               ) : null}
@@ -3317,17 +3274,15 @@ export function PipelineSettings() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete stage</DialogTitle>
-            <DialogDescription>
-              Delete {selectedStage?.name ?? "this stage"} from this pipeline. Connected stage transitions are removed.
-            </DialogDescription>
+            <DialogTitle>{uiText("Delete stage")}</DialogTitle>
+            <DialogDescription>{uiText("Delete ")}{selectedStage?.name ?? uiText("this stage")}{uiText(" from this pipeline. Connected stage transitions are removed.")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             {stages.length > 1 ? (
               <label className="block space-y-1.5 text-sm font-medium">
-                <span>Move existing items to</span>
+                <span>{uiText("Move existing items to")}</span>
                 <SelectField
-                  aria-label="Move existing items to"
+                  aria-label={uiText("Move existing items to")}
                   value={deleteMoveTargetStageId}
                   onValueChange={(optionValue) => setDeleteMoveTargetStageId(optionValue)}
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -3340,9 +3295,7 @@ export function PipelineSettings() {
                 </SelectField>
               </label>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                This is the only stage. Deletion succeeds only if it has no items.
-              </p>
+              <p className="text-sm text-muted-foreground">{uiText("This is the only stage. Deletion succeeds only if it has no items.")}</p>
             )}
             {deleteStage.error ? (
               <p className="text-sm text-destructive">{deleteStage.error.message}</p>
@@ -3354,9 +3307,7 @@ export function PipelineSettings() {
               variant="outline"
               onClick={() => setDeleteStageDialogOpen(false)}
               disabled={deleteStage.isPending}
-            >
-              Cancel
-            </Button>
+            >{uiText("Cancel")}</Button>
             <Button
               type="button"
               variant="destructive"
@@ -3364,7 +3315,7 @@ export function PipelineSettings() {
               onClick={() => deleteStage.mutate()}
             >
               <Trash2 className="h-4 w-4" />
-              {deleteStage.isPending ? "Deleting..." : "Delete stage"}
+              {deleteStage.isPending ? uiText("Deleting...") : uiText("Delete stage")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -3379,16 +3330,14 @@ export function PipelineSettings() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Archive pipeline</DialogTitle>
-            <DialogDescription>
-              Archiving hides this pipeline from everyday views. Its stages and items are kept and can be restored later.
-            </DialogDescription>
+            <DialogTitle>{uiText("Archive pipeline")}</DialogTitle>
+            <DialogDescription>{uiText("Archiving hides this pipeline from everyday views. Its stages and items are kept and can be restored later.")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <label className="block space-y-1.5 text-sm font-medium">
-              <span>Type {pipeline.name} to confirm</span>
+              <span>{uiText("Type ")}{pipeline.name}{uiText(" to confirm")}</span>
               <Input
-                aria-label="Archive confirmation"
+                aria-label={uiText("Archive confirmation")}
                 value={archiveConfirmation}
                 onChange={(event) => setArchiveConfirmation(event.target.value)}
                 autoComplete="off"
@@ -3404,9 +3353,7 @@ export function PipelineSettings() {
               variant="outline"
               onClick={() => setArchiveDialogOpen(false)}
               disabled={archivePipeline.isPending}
-            >
-              Cancel
-            </Button>
+            >{uiText("Cancel")}</Button>
             <Button
               type="button"
               variant="destructive"
@@ -3414,7 +3361,7 @@ export function PipelineSettings() {
               onClick={() => archivePipeline.mutate(true)}
             >
               <Archive className="h-4 w-4" />
-              {archivePipeline.isPending ? "Archiving..." : "Archive pipeline"}
+              {archivePipeline.isPending ? uiText("Archiving...") : uiText("Archive pipeline")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useQuery } from "@tanstack/react-query";
 import { FlaskConical, ChevronRight } from "lucide-react";
 import { Link } from "@/lib/router";
@@ -37,6 +38,7 @@ function formatTime(value: string | Date | null | undefined): string {
  * the Developer › Smoke Lab tab.
  */
 export function SmokeLabDashboardCard({ companyId }: { companyId: string }) {
+  useUiLocale();
   const { enabled, loaded } = useSmokeLabEnabled();
 
   const runsQuery = useQuery({
@@ -72,14 +74,14 @@ export function SmokeLabDashboardCard({ companyId }: { companyId: string }) {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", HEALTH_DOT[health])} />
-            <p className="truncate text-sm font-semibold text-foreground">Integration smoke</p>
+            <p className="truncate text-sm font-semibold text-foreground">{uiText("Integration smoke")}</p>
           </div>
           <p className="mt-0.5 truncate text-xs text-muted-foreground">
             {HEALTH_LABEL[health]}
             {failing.length > 0 && `: ${failing.join(", ")}`}
           </p>
           <p className="mt-0.5 truncate text-(length:--text-micro) text-muted-foreground/80">
-            {latestRun ? `Last run ${formatTime(latestRun.startedAt)}` : "Run one from the Smoke Lab tab"}
+            {latestRun ? uiText("Last run {{value0}}", { value0: formatTime(latestRun.startedAt) }) : uiText("Run one from the Smoke Lab tab")}
           </p>
         </div>
       </div>

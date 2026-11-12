@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useMemo, useState } from 'react';
 import type { SkillSourceCandidate } from '@paperclipai/shared';
 import { FileTree, buildFileTree, collectAllPaths, type FileTreeNode } from '@/components/FileTree';
@@ -57,6 +58,7 @@ export function SkillSourceTree({ candidates, selected, excludedFolders, onChang
   onChange: (selected: Set<string>, excludedFolders: string[]) => void;
   onPreview?: (skill: SkillTreeCandidate, filePath?: string) => void; disabled?: boolean;
 }) {
+  useUiLocale();
   const [search, setSearch] = useState('');
   const [expansion, setExpansion] = useState(new Map<string, boolean>());
   const { nodes, included } = useMemo(() => buildSkillPackageTree(candidates), [candidates]);
@@ -97,17 +99,17 @@ export function SkillSourceTree({ candidates, selected, excludedFolders, onChang
   return <div className="flex min-h-0 flex-col overflow-hidden rounded-md border border-border">
     <div className="flex items-center gap-2 px-3">
       <Search className="size-4 shrink-0 text-muted-foreground" />
-      <Input className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search skills or files…" aria-label="Search discovered skills" />
+      <Input className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent" value={search} onChange={event => setSearch(event.target.value)} placeholder={uiText("Search skills or files…")} aria-label={uiText("Search discovered skills")} />
     </div>
     <div className="flex items-center justify-between gap-2 border-y border-border bg-muted/30 px-3 py-1.5">
       <label className="flex items-center gap-2 text-xs text-muted-foreground">
-        <input type="checkbox" className="size-3.5 accent-foreground" aria-label="Import folder Repository"
+        <input type="checkbox" className="size-3.5 accent-foreground" aria-label={uiText("Import folder Repository")}
           checked={candidates.length > 0 && selectedCount === candidates.length}
           ref={element => { if (element) element.indeterminate = selectedCount > 0 && selectedCount < candidates.length; }}
           disabled={disabled || candidates.length === 0} onChange={() => toggleCheck('')} />
-        <span>{selectedCount} of {candidates.length} selected</span>
+        <span>{selectedCount}{uiText(" of ")}{candidates.length}{uiText(" selected")}</span>
       </label>
-      <Button type="button" variant="ghost" size="xs" className="font-normal text-muted-foreground" disabled={disabled || Boolean(search) || allDirs.size === 0} onClick={() => setExpansion(new Map([...allDirs].map(path => [path, allCollapsed])))}>{allCollapsed ? 'Expand all' : 'Collapse all'}</Button>
+      <Button type="button" variant="ghost" size="xs" className="font-normal text-muted-foreground" disabled={disabled || Boolean(search) || allDirs.size === 0} onClick={() => setExpansion(new Map([...allDirs].map(path => [path, allCollapsed])))}>{allCollapsed ? uiText("Expand all") : uiText("Collapse all")}</Button>
     </div>
     <div className="min-h-0 max-h-(--sz-480px) overflow-auto py-1">
       <FileTree layout="explorer" wrapLabels={false}
@@ -136,17 +138,17 @@ export function SkillSourceTree({ candidates, selected, excludedFolders, onChang
         }}
         renderNodeExtra={node => {
           const skill = skillsByPath.get(node.path);
-          if (!skill) return node.kind === 'file' ? <span className="text-xs text-muted-foreground">Included</span> : null;
+          if (!skill) return node.kind === 'file' ? <span className="text-xs text-muted-foreground">{uiText("Included")}</span> : null;
           const label = skill.error ? 'Invalid' : skill.inspection?.references.length ? 'Check references' : skill.note === 'New skill' ? 'New' : skill.note === 'Already imported' ? 'Installed' : skill.note?.startsWith('Removed from source') ? 'Removed' : skill.note;
           const count = skill.inspection?.files.length ?? skill.fileCount;
           return <>
             {label && <Badge variant="outline" className={skill.error ? 'font-normal text-destructive' : 'hidden font-normal text-muted-foreground sm:inline-flex'} title={skill.error ?? skill.note}>{label}</Badge>}
-            {count !== undefined && <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{count} {count === 1 ? 'file' : 'files'}</span>}
-            {onPreview && <Button type="button" size="icon-xs" variant="ghost" disabled={disabled} aria-label={`Inspect ${skill.name}`} onKeyDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); onPreview(skill); }}>{skill.inspection?.references.length ? <AlertTriangle className="size-3.5" /> : <Info className="size-3.5" />}</Button>}
+            {count !== undefined && <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{count} {count === 1 ? uiText("file") : uiText("files")}</span>}
+            {onPreview && <Button type="button" size="icon-xs" variant="ghost" disabled={disabled} aria-label={uiText("Inspect {{value0}}", { value0: skill.name })} onKeyDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); onPreview(skill); }}>{skill.inspection?.references.length ? <AlertTriangle className="size-3.5" /> : <Info className="size-3.5" />}</Button>}
           </>;
         }}
       />
     </div>
-    <p className="border-t border-border px-3 py-2 text-xs text-muted-foreground">Select whole skill packages. Expand a skill to see its included files. Nested skills are selected separately.</p>
+    <p className="border-t border-border px-3 py-2 text-xs text-muted-foreground">{uiText("Select whole skill packages. Expand a skill to see its included files. Nested skills are selected separately.")}</p>
   </div>;
 }

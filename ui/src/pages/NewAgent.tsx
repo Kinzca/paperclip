@@ -1,14 +1,17 @@
+import { getUiLocale } from "@/i18n/ui";
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useEffect } from "react";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
 import { NewAgentSetup } from "../components/new-agent/NewAgentSetup";
 
 export function NewAgent() {
+  useUiLocale();
   const { setBreadcrumbs } = useBreadcrumbs();
   useEffect(() => {
     setBreadcrumbs([
-      { label: "Agents", href: "/agents" },
-      { label: "New agent" },
+      { label: uiText("Agents"), href: "/agents" },
+      { label: uiText("New agent") },
     ]);
-  }, [setBreadcrumbs]);
+  }, [setBreadcrumbs, getUiLocale()]);
   return <NewAgentSetup />;
 }

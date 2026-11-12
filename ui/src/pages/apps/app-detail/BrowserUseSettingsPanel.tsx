@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { SelectField } from "@/components/ui/select-field";
 import { useEffect, useId, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -18,6 +19,7 @@ function CredentialSettings({
   companyId: string;
   grantId: string;
 }) {
+  useUiLocale();
   const id = useId();
   const saved = useQuery({
     queryKey: ["browser-use-cloud-settings", grantId],
@@ -49,36 +51,27 @@ function CredentialSettings({
   return (
     <div className="space-y-3">
       <div className="space-y-2">
-        <Label htmlFor={`${id}-limit`}>
-          Maximum cost per browser run (USD)
-        </Label>
+        <Label htmlFor={`${id}-limit`}>{uiText("Maximum cost per browser run (USD)")}</Label>
         <Input
           id={`${id}-limit`}
           type="number"
           min="0"
           step="0.01"
           value={limit}
-          placeholder="Use the remaining Paperclip budget"
+          placeholder={uiText("Use the remaining Paperclip budget")}
           onChange={(e) => setLimit(e.target.value)}
         />
-        <p className="text-sm text-muted-foreground">
-          The agent can choose a lower limit. Paperclip also applies any
-          remaining hard budget limit.
-        </p>
+        <p className="text-sm text-muted-foreground">{uiText("The agent can choose a lower limit. Paperclip also applies any remaining hard budget limit.")}</p>
       </div>
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">Allowed saved profiles</legend>
-        <p className="text-sm text-muted-foreground">
-          Fresh browsers are the default. Selected profiles let agents use their
-          saved website logins. Manage profiles in{" "}
+        <legend className="text-sm font-medium">{uiText("Allowed saved profiles")}</legend>
+        <p className="text-sm text-muted-foreground">{uiText("Fresh browsers are the default. Selected profiles let agents use their saved website logins. Manage profiles in")}{" "}
           <a
             href="https://cloud.browser-use.com"
             target="_blank"
             rel="noreferrer"
             className="underline"
-          >
-            Browser Use Cloud
-          </a>
+          >{uiText("Browser Use Cloud")}</a>
           .
         </p>
         {profiles.data?.map((p) => (
@@ -97,34 +90,26 @@ function CredentialSettings({
           </Label>
         ))}
         {profiles.data?.length === 0 && (
-          <p className="text-sm text-muted-foreground">No saved profiles.</p>
+          <p className="text-sm text-muted-foreground">{uiText("No saved profiles.")}</p>
         )}
         {profiles.isLoading && (
-          <p className="text-sm text-muted-foreground">Loading profiles…</p>
+          <p className="text-sm text-muted-foreground">{uiText("Loading profiles…")}</p>
         )}
         {profiles.isError && (
-          <p role="alert" className="text-sm text-destructive">
-            Could not load profiles.{" "}
+          <p role="alert" className="text-sm text-destructive">{uiText("Could not load profiles.")}{" "}
             <Button
               size="sm"
               variant="ghost"
               onClick={() => void profiles.refetch()}
-            >
-              Retry
-            </Button>
+            >{uiText("Retry")}</Button>
           </p>
         )}
       </fieldset>
       {saved.isError || save.isError ? (
-        <p role="alert" className="text-sm text-destructive">
-          Could not save or load browser settings. Check your credential access
-          and try again.
-        </p>
+        <p role="alert" className="text-sm text-destructive">{uiText("Could not save or load browser settings. Check your credential access and try again.")}</p>
       ) : null}
       {save.isSuccess && (
-        <p role="status" className="text-sm text-muted-foreground">
-          Browser settings saved.
-        </p>
+        <p role="status" className="text-sm text-muted-foreground">{uiText("Browser settings saved.")}</p>
       )}
       <div className="flex justify-end">
         <Button
@@ -137,9 +122,7 @@ function CredentialSettings({
             )
           }
           onClick={() => save.mutate()}
-        >
-          Save browser settings
-        </Button>
+        >{uiText("Save browser settings")}</Button>
       </div>
     </div>
   );
@@ -151,6 +134,7 @@ export function BrowserUseSettingsPanel({
   connection: ToolConnection;
   grants?: ConnectionGrantsResponse;
 }) {
+  useUiLocale();
   const eligible =
     grants?.grants.filter(
       (g) =>
@@ -163,18 +147,16 @@ export function BrowserUseSettingsPanel({
   const grantId = selected || eligible[0]?.id;
   return (
     <section className="space-y-4">
-      <h2 className="text-lg font-semibold">Browser settings</h2>
+      <h2 className="text-lg font-semibold">{uiText("Browser settings")}</h2>
       {eligible.length > 1 && (
-        <Label className="flex flex-col gap-2">
-          Credential
-          <SelectField
+        <Label className="flex flex-col gap-2">{uiText("Credential")}<SelectField
             value={grantId}
             onValueChange={(optionValue) => setSelected(optionValue)}
             className="rounded-md border bg-background p-2"
           >
             {eligible.map((g, i) => (
               <option key={g.id} value={g.id}>
-                {g.kind === "user" ? "Personal" : "Shared"} credential {i + 1}
+                {g.kind === "user" ? uiText("Personal") : uiText("Shared")}{uiText(" credential ")}{i + 1}
               </option>
             ))}
           </SelectField>
@@ -187,10 +169,7 @@ export function BrowserUseSettingsPanel({
           grantId={grantId}
         />
       ) : (
-        <p className="text-sm text-muted-foreground">
-          The credential owner or a shared connection manager can configure
-          saved profiles and cost limits.
-        </p>
+        <p className="text-sm text-muted-foreground">{uiText("The credential owner or a shared connection manager can configure saved profiles and cost limits.")}</p>
       )}
     </section>
   );

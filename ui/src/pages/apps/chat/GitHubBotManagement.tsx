@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useEffect, useRef, useState } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -52,6 +53,7 @@ export function GitHubRepositoryAccess({
   onChange: (id: string, enabled: boolean) => void;
   onToggleAll: (enabled: boolean) => void;
 }) {
+  useUiLocale();
   const [search, setSearch] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
   const more = useRef<HTMLDivElement>(null);
@@ -78,54 +80,45 @@ export function GitHubRepositoryAccess({
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold">Repositories</h2>
+        <h2 className="text-base font-semibold">{uiText("Repositories")}</h2>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Manage repositories"
+              aria-label={uiText("Manage repositories")}
             >
               <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem asChild>
-              <a href={managementUrl} target="_blank" rel="noreferrer">
-                Manage on GitHub
-                <ExternalLink className="size-4" />
+              <a href={managementUrl} target="_blank" rel="noreferrer">{uiText("Manage on GitHub")}<ExternalLink className="size-4" />
               </a>
             </DropdownMenuItem>
             <DropdownMenuItem disabled={pending} onClick={onRefresh}>
-              <RefreshCw className="size-4" />
-              Refresh repositories
-            </DropdownMenuItem>
+              <RefreshCw className="size-4" />{uiText("Refresh repositories")}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Choose where the bot can receive messages and use tools. Repository
-        changes save immediately.
-      </p>
+      <p className="text-xs text-muted-foreground">{uiText("Choose where the bot can receive messages and use tools. Repository changes save immediately.")}</p>
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative min-w-0 flex-1 basis-48">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input aria-label="Search repositories" placeholder="Search repositories" className="pl-9"
+          <Input aria-label={uiText("Search repositories")} placeholder={uiText("Search repositories")} className="pl-9"
             value={search} maxLength={200} onChange={(event) => setSearch(event.target.value)} />
         </div>
         <Button variant="outline" size="sm" disabled={pending || list.isFetching || !summary || !summary.totalCount || (!disableAll && !summary.availableCount)}
-          aria-label={`${disableAll ? "Disable" : "Enable"} all repositories`}
+          aria-label={uiText("{{value0}} all repositories", { value0: disableAll ? "Disable" : "Enable" })}
           onClick={() => onToggleAll(!disableAll)}>
-          {disableAll ? "Disable all" : "Enable all"}
+          {disableAll ? uiText("Disable all") : uiText("Enable all")}
         </Button>
       </div>
       {summary && <p className="text-xs text-muted-foreground">
-        {summary.enabledCount} of {summary.totalCount} repositories enabled. Toggle all applies across the entire connection.
+        {summary.enabledCount}{uiText(" of ")}{summary.totalCount}{uiText(" repositories enabled. Toggle all applies across the entire connection.")}</p>}
+      {list.isError && <p role="alert" className="text-sm text-destructive">{uiText("Could not load repositories. ")}<Button variant="link" size="sm" onClick={() => void list.refetch()}>{uiText("Try again")}</Button>
       </p>}
-      {list.isError && <p role="alert" className="text-sm text-destructive">
-        Could not load repositories. <Button variant="link" size="sm" onClick={() => void list.refetch()}>Try again</Button>
-      </p>}
-      <div ref={scroller} role="region" aria-label="Repositories" tabIndex={0}
+      <div ref={scroller} role="region" aria-label={uiText("Repositories")} tabIndex={0}
         className="max-h-96 overflow-y-auto overscroll-contain border-y border-border">
         <div className="divide-y divide-border">
         {rows.map((resource) => (
@@ -140,22 +133,22 @@ export function GitHubRepositoryAccess({
               description={
                 resource.availability === "available"
                   ? undefined
-                  : "Unavailable on GitHub. Update the App’s installation access, then refresh."
+                  : uiText("Unavailable on GitHub. Update the App’s installation access, then refresh.")
               }
               onChange={(enabled) => onChange(resource.id, enabled)}
             />
           </div>
         ))}
         </div>
-        {list.isPending ? <p role="status" className="py-4 text-sm text-muted-foreground">Loading repositories…</p> : rows.length === 0 && !list.isError && (
+        {list.isPending ? <p role="status" className="py-4 text-sm text-muted-foreground">{uiText("Loading repositories…")}</p> : rows.length === 0 && !list.isError && (
           <p className="py-4 text-sm text-muted-foreground">
-            {search ? "No repositories match your search." : "No repositories available. Add repository access on GitHub, then refresh."}
+            {search ? uiText("No repositories match your search.") : uiText("No repositories available. Add repository access on GitHub, then refresh.")}
           </p>
         )}
         {list.hasNextPage && <div ref={more} className="flex justify-center py-2">
           <Button variant="ghost" size="sm" disabled={pending || list.isFetching}
             onClick={() => void list.fetchNextPage({ cancelRefetch: false })}>
-            {list.isFetchingNextPage ? "Loading repositories…" : "Load more repositories"}
+            {list.isFetchingNextPage ? uiText("Loading repositories…") : uiText("Load more repositories")}
           </Button>
         </div>}
       </div>
@@ -170,6 +163,7 @@ export function GitHubBotManagement({
   endpoint: ChatEndpoint;
   view: "settings" | "access";
 }) {
+  useUiLocale();
   const client = useQueryClient();
   const query = useQuery({
     queryKey: ["github-bot-configuration", endpoint.id],
@@ -215,23 +209,18 @@ export function GitHubBotManagement({
   };
   if (query.isError)
     return (
-      <p role="alert" className="text-sm text-destructive">
-        Could not load the bot configuration.{" "}
+      <p role="alert" className="text-sm text-destructive">{uiText("Could not load the bot configuration.")}{" "}
         <Button
           variant="link"
           onClick={() => {
             void query.refetch();
           }}
-        >
-          Try again
-        </Button>
+        >{uiText("Try again")}</Button>
       </p>
     );
   if (!record)
     return (
-      <p role="status" className="text-sm text-muted-foreground">
-        Loading configuration…
-      </p>
+      <p role="status" className="text-sm text-muted-foreground">{uiText("Loading configuration…")}</p>
     );
   const config = record.configuration;
   return (
@@ -280,25 +269,18 @@ export function GitHubBotManagement({
             />
             {!config.toolsEnabled && (
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  This saved bot has GitHub tools disabled, so it cannot start
-                  work or respond.
-                </p>
+                <p className="text-sm text-muted-foreground">{uiText("This saved bot has GitHub tools disabled, so it cannot start work or respond.")}</p>
                 <Button
                   variant="outline"
                   onClick={() => edit({ ...config, toolsEnabled: true })}
-                >
-                  Enable bot tools
-                </Button>
+                >{uiText("Enable bot tools")}</Button>
               </div>
             )}
             {endpoint.connectionId && (
               <Link
                 className="text-xs text-muted-foreground underline underline-offset-4"
                 to={`/apps/${endpoint.connectionId}`}
-              >
-                Manage tool permissions
-              </Link>
+              >{uiText("Manage tool permissions")}</Link>
             )}
           </>
         ) : (
@@ -337,9 +319,7 @@ export function GitHubBotManagement({
               setEditorVersion((value) => value + 1);
               setError("");
             }}
-          >
-            Discard changes
-          </Button>
+          >{uiText("Discard changes")}</Button>
           <Button
             disabled={pending || !scoreValid}
             onClick={() =>
@@ -360,7 +340,7 @@ export function GitHubBotManagement({
               })
             }
           >
-            {pending ? "Saving…" : "Save changes"}
+            {pending ? uiText("Saving…") : uiText("Save changes")}
           </Button>
         </div>
       )}
@@ -397,14 +377,14 @@ export function gitHubReviewResultLabel(review: GitHubTaskReview) {
 }
 
 function ReviewResult({ review }: { review: GitHubTaskReview }) {
+  useUiLocale();
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <span className="text-sm font-medium">
           {gitHubReviewResultLabel(review)}
         </span>
-        <span className="text-xs text-muted-foreground">
-          Commit <code>{review.headSha.slice(0, 7)}</code> ·{" "}
+        <span className="text-xs text-muted-foreground">{uiText("Commit ")}<code>{review.headSha.slice(0, 7)}</code> ·{" "}
           {formatDateTime(review.updatedAt)}
         </span>
       </div>
@@ -413,26 +393,20 @@ function ReviewResult({ review }: { review: GitHubTaskReview }) {
           {review.assessment.summary}
         </MarkdownBody>
       ) : (
-        <p className="text-sm text-muted-foreground">
-          No assessment has been submitted yet.
-        </p>
+        <p className="text-sm text-muted-foreground">{uiText("No assessment has been submitted yet.")}</p>
       )}
       <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
         <Link
           className="underline underline-offset-4"
           to={`/issues/${review.issueId}`}
-        >
-          Paperclip task
-        </Link>
+        >{uiText("Paperclip task")}</Link>
         {review.summaryUrl && (
           <a
             className="underline underline-offset-4"
             href={review.summaryUrl}
             target="_blank"
             rel="noreferrer"
-          >
-            GitHub comment
-          </a>
+          >{uiText("GitHub comment")}</a>
         )}
         {review.checkUrl && (
           <a
@@ -440,28 +414,24 @@ function ReviewResult({ review }: { review: GitHubTaskReview }) {
             href={review.checkUrl}
             target="_blank"
             rel="noreferrer"
-          >
-            Check
-          </a>
+          >{uiText("Check")}</a>
         )}
       </div>
-      <section className="space-y-4 text-sm" aria-label="Review evidence">
+      <section className="space-y-4 text-sm" aria-label={uiText("Review evidence")}>
         <div className="space-y-3">
           {review.runId && (
             <Link
               className="text-xs underline underline-offset-4"
               to={`/issues/${review.issueId}?runId=${review.runId}`}
-            >
-              Agent run
-            </Link>
+            >{uiText("Agent run")}</Link>
           )}
           {review.assessment && (
             <>
-              <h3 className="font-medium">Rationale</h3>
+              <h3 className="font-medium">{uiText("Rationale")}</h3>
               <MarkdownBody>{review.assessment.rationale}</MarkdownBody>
               {review.assessment.findings.length > 0 && (
                 <section className="space-y-3">
-                  <h3 className="font-medium">Findings</h3>
+                  <h3 className="font-medium">{uiText("Findings")}</h3>
                   {review.assessment.findings.map((finding) => (
                     <div
                       key={finding.key}
@@ -475,11 +445,9 @@ function ReviewResult({ review }: { review: GitHubTaskReview }) {
                   ))}
                 </section>
               )}
-              <h3 className="font-medium">Coverage</h3>
+              <h3 className="font-medium">{uiText("Coverage")}</h3>
               <p className="text-xs text-muted-foreground">
-                {review.assessment.coverage.reviewedPaths.length} files reviewed
-                · {review.assessment.coverage.omittedPaths.length} omitted
-              </p>
+                {review.assessment.coverage.reviewedPaths.length}{uiText(" files reviewed · ")}{review.assessment.coverage.omittedPaths.length}{uiText(" omitted")}</p>
               {review.assessment.coverage.limitations.map((limit, index) => (
                 <p key={index} className="text-xs text-muted-foreground">
                   {limit}
@@ -500,17 +468,18 @@ export function GitHubReviewList({
   endpointId: string;
   reviews: GitHubTaskReview[];
 }) {
+  useUiLocale();
   if (!reviews.length)
     return (
       <EmptyState
         icon={GitPullRequest}
         message="No reviews yet"
-        description="Mention the bot on a pull request, or enable automatic events in Settings."
+        description={uiText("Mention the bot on a pull request, or enable automatic events in Settings.")}
       />
     );
   return (
     <ul
-      aria-label="Reviews"
+      aria-label={uiText("Reviews")}
       className="divide-y divide-border border-y border-border"
     >
       {orderedGitHubReviews(reviews).map((review) => (
@@ -521,7 +490,7 @@ export function GitHubReviewList({
           >
             <div className="min-w-0 flex-1 basis-48 space-y-1">
               <p className="break-words font-medium">
-                {review.event.title || `Pull request #${review.pullNumber}`}
+                {review.event.title || uiText("Pull request #{{value0}}", { value0: review.pullNumber })}
               </p>
               <p className="break-all text-xs text-muted-foreground">
                 {review.repository} #{review.pullNumber} ·{" "}
@@ -551,17 +520,16 @@ export function GitHubReviewDetail({
   endpointId: string;
   review: GitHubTaskReview;
 }) {
+  useUiLocale();
   return (
     <article className="max-w-3xl space-y-6">
       <Link
         className="text-sm text-muted-foreground hover:underline"
         to={`/apps/chat/${endpointId}/reviews`}
-      >
-        ← All reviews
-      </Link>
+      >{uiText("← All reviews")}</Link>
       <header className="space-y-2">
         <h2 className="text-lg font-semibold">
-          {review.event.title || `Pull request #${review.pullNumber}`}
+          {review.event.title || uiText("Pull request #{{value0}}", { value0: review.pullNumber })}
         </h2>
         <a
           className="break-all text-sm text-muted-foreground hover:underline"
@@ -584,6 +552,7 @@ export function GitHubReviews({
   endpointId: string;
   reviewId?: string;
 }) {
+  useUiLocale();
   const query = useQuery({
     queryKey: ["github-bot-reviews", endpointId, reviewId ?? "list"],
     queryFn: async () => reviewId ? [await githubChatApi.review(endpointId, reviewId)] : githubChatApi.reviews(endpointId),
@@ -592,17 +561,13 @@ export function GitHubReviews({
   if (query.isError)
     return (
       <p role="alert" className="text-sm text-destructive">
-        {reviewId ? "This review could not be loaded or was not found in this connection." : "Reviews could not be loaded."}{" "}
-        <Button variant="link" onClick={() => void query.refetch()}>
-          Try again
-        </Button>
+        {reviewId ? uiText("This review could not be loaded or was not found in this connection.") : uiText("Reviews could not be loaded.")}{" "}
+        <Button variant="link" onClick={() => void query.refetch()}>{uiText("Try again")}</Button>
       </p>
     );
   if (query.isPending)
     return (
-      <p role="status" className="text-sm text-muted-foreground">
-        Loading reviews…
-      </p>
+      <p role="status" className="text-sm text-muted-foreground">{uiText("Loading reviews…")}</p>
     );
   if (reviewId) {
     const review = query.data.find((review) => review.id === reviewId);
@@ -610,15 +575,11 @@ export function GitHubReviews({
       <GitHubReviewDetail endpointId={endpointId} review={review} />
     ) : (
       <div className="space-y-3">
-        <p role="alert" className="text-sm text-muted-foreground">
-          This review was not found in this connection.
-        </p>
+        <p role="alert" className="text-sm text-muted-foreground">{uiText("This review was not found in this connection.")}</p>
         <Link
           to={`/apps/chat/${endpointId}/reviews`}
           className="text-sm underline"
-        >
-          All reviews
-        </Link>
+        >{uiText("All reviews")}</Link>
       </div>
     );
   }

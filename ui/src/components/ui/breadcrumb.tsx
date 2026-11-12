@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import * as React from "react"
 import { ChevronRight, MoreHorizontal } from "lucide-react"
 import { Slot } from "radix-ui"
@@ -5,10 +6,12 @@ import { Slot } from "radix-ui"
 import { cn } from "@/lib/utils"
 
 function Breadcrumb({ ...props }: React.ComponentProps<"nav">) {
-  return <nav aria-label="breadcrumb" data-slot="breadcrumb" {...props} />
+  useUiLocale();
+  return <nav aria-label={uiText("breadcrumb")} data-slot="breadcrumb" {...props} />
 }
 
 function BreadcrumbList({ className, ...props }: React.ComponentProps<"ol">) {
+  useUiLocale();
   return (
     <ol
       data-slot="breadcrumb-list"
@@ -22,6 +25,7 @@ function BreadcrumbList({ className, ...props }: React.ComponentProps<"ol">) {
 }
 
 function BreadcrumbItem({ className, ...props }: React.ComponentProps<"li">) {
+  useUiLocale();
   return (
     <li
       data-slot="breadcrumb-item"
@@ -38,6 +42,7 @@ function BreadcrumbLink({
 }: React.ComponentProps<"a"> & {
   asChild?: boolean
 }) {
+  useUiLocale();
   const Comp = asChild ? Slot.Root : "a"
 
   return (
@@ -50,6 +55,7 @@ function BreadcrumbLink({
 }
 
 function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
+  useUiLocale();
   return (
     <span
       data-slot="breadcrumb-page"
@@ -67,6 +73,7 @@ function BreadcrumbSeparator({
   className,
   ...props
 }: React.ComponentProps<"li">) {
+  useUiLocale();
   return (
     <li
       data-slot="breadcrumb-separator"
@@ -84,6 +91,7 @@ function BreadcrumbEllipsis({
   className,
   ...props
 }: React.ComponentProps<"span">) {
+  useUiLocale();
   return (
     <span
       data-slot="breadcrumb-ellipsis"
@@ -93,7 +101,7 @@ function BreadcrumbEllipsis({
       {...props}
     >
       <MoreHorizontal className="size-4" />
-      <span className="sr-only">More</span>
+      <span className="sr-only">{uiText("More")}</span>
     </span>
   )
 }

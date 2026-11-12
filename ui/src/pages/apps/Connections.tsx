@@ -1,3 +1,5 @@
+import { getUiLocale } from "@/i18n/ui";
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { isRetiredComposioConnection, RETIRED_COMPOSIO_MESSAGE } from "@paperclipai/shared";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -111,6 +113,7 @@ const STATUS_CLASS: Record<AppStatus["tone"], string> = {
 };
 
 export function Connections() {
+  const locale = useUiLocale();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { pushToast } = useToast();
@@ -127,11 +130,11 @@ export function Connections() {
 
   useEffect(() => {
     setBreadcrumbs([
-      { label: "Connectors", href: "/apps" },
-      { label: "Connections" },
+      { label: uiText("Connectors"), href: "/apps" },
+      { label: uiText("Connections") },
     ]);
     return () => setBreadcrumbs([]);
-  }, [setBreadcrumbs]);
+  }, [setBreadcrumbs, locale, getUiLocale()]);
 
   const galleryQuery = useQuery({
     queryKey: queryKeys.apps.gallery(selectedCompanyId ?? "__none__"),
@@ -304,7 +307,7 @@ export function Connections() {
   const visibleRows = filter === "attention" ? rowsNeedingAttention : rows;
 
   if (!selectedCompanyId) {
-    return <div className="p-6 text-sm text-muted-foreground">Select an organization to manage apps.</div>;
+    return <div className="p-6 text-sm text-muted-foreground">{uiText("Select an organization to manage apps.")}</div>;
   }
 
   const loading = applicationsQuery.isLoading || connectionsQuery.isLoading || galleryQuery.isLoading;
@@ -334,25 +337,21 @@ export function Connections() {
         <div className="space-y-5">
           <header className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Connections</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                The tools you’ve connected, and whether they’re working.
-              </p>
+              <h1 className="text-2xl font-bold tracking-tight">{uiText("Connections")}</h1>
+              <p className="mt-1 text-sm text-muted-foreground">{uiText("The tools you’ve connected, and whether they’re working.")}</p>
             </div>
-            <Button onClick={() => navigate(BROWSE_HREF)}>Connect an app</Button>
+            <Button onClick={() => navigate(BROWSE_HREF)}>{uiText("Connect an app")}</Button>
           </header>
 
           <div className="flex flex-wrap items-center gap-2">
-            <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>
-              All ({rows.length})
+            <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>{uiText("All (")}{rows.length})
             </FilterChip>
             <FilterChip
               active={filter === "attention"}
               tone="danger"
               disabled={rowsNeedingAttention.length === 0}
               onClick={() => setFilter("attention")}
-            >
-              Needs attention ({rowsNeedingAttention.length})
+            >{uiText("Needs attention (")}{rowsNeedingAttention.length})
             </FilterChip>
           </div>
 
@@ -365,13 +364,10 @@ export function Connections() {
               <ShieldQuestion className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-                  {reviewCount} {reviewCount === 1 ? "action is" : "actions are"} waiting for your OK
-                </div>
-                <div className="truncate text-xs text-amber-700 dark:text-amber-300">
-                  Your agents paused to check with you before making a change.
-                </div>
+                  {reviewCount} {reviewCount === 1 ? uiText("action is") : uiText("actions are")}{uiText(" waiting for your OK")}</div>
+                <div className="truncate text-xs text-amber-700 dark:text-amber-300">{uiText("Your agents paused to check with you before making a change.")}</div>
               </div>
-              <span className="shrink-0 text-xs font-semibold text-amber-800 dark:text-amber-200">Review →</span>
+              <span className="shrink-0 text-xs font-semibold text-amber-800 dark:text-amber-200">{uiText("Review →")}</span>
             </button>
           )}
 
@@ -384,13 +380,12 @@ export function Connections() {
               <ShieldAlert className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold text-red-900 dark:text-red-100">
-                  {rowsNeedingAttention.length} {rowsNeedingAttention.length === 1 ? "connection needs" : "connections need"} attention
-                </div>
+                  {rowsNeedingAttention.length} {rowsNeedingAttention.length === 1 ? uiText("connection needs") : uiText("connections need")}{uiText(" attention")}</div>
                 <div className="truncate text-xs text-red-700 dark:text-red-300">
                   {floatSummary(rowsNeedingAttention)}
                 </div>
               </div>
-              <span className="shrink-0 text-xs font-semibold text-red-800 dark:text-red-200">Fix →</span>
+              <span className="shrink-0 text-xs font-semibold text-red-800 dark:text-red-200">{uiText("Fix →")}</span>
             </button>
           )}
 
@@ -398,12 +393,12 @@ export function Connections() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/40 text-left text-(length:--text-micro) font-semibold uppercase tracking-wide text-muted-foreground">
-                  <th className="px-4 py-2.5">Connection</th>
-                  <th className="px-4 py-2.5">Type</th>
-                  <th className="px-4 py-2.5">Connected by</th>
-                  <th className="px-4 py-2.5">Status</th>
-                  <th className="px-4 py-2.5">Actions</th>
-                  <th className="px-4 py-2.5">Last used</th>
+                  <th className="px-4 py-2.5">{uiText("Connection")}</th>
+                  <th className="px-4 py-2.5">{uiText("Type")}</th>
+                  <th className="px-4 py-2.5">{uiText("Connected by")}</th>
+                  <th className="px-4 py-2.5">{uiText("Status")}</th>
+                  <th className="px-4 py-2.5">{uiText("Actions")}</th>
+                  <th className="px-4 py-2.5">{uiText("Last used")}</th>
                   <th className="px-4 py-2.5" />
                 </tr>
               </thead>
@@ -464,7 +459,7 @@ export function Connections() {
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-xs font-medium text-foreground">
-                          {connection ? connectionTypeLabel(connection.credentialPolicy) : "—"}
+                          {connection ? uiText(connectionTypeLabel(connection.credentialPolicy)) : "—"}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -477,11 +472,11 @@ export function Connections() {
                             STATUS_CLASS[status.tone],
                           )}
                         >
-                          {status.label}
+                          {uiText(status.label)}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-xs text-muted-foreground">{row.actionCount} on</span>
+                        <span className="text-xs text-muted-foreground">{row.actionCount}{uiText(" on")}</span>
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-xs text-muted-foreground">
@@ -505,7 +500,7 @@ export function Connections() {
                               variant="ghost"
                               size="icon-sm"
                               className="text-muted-foreground hover:text-destructive"
-                              aria-label={`Delete ${row.displayName} connection`}
+                              aria-label={uiText("Delete {{value0}} connection", { value0: row.displayName })}
                               onClick={(event) => {
                                 event.stopPropagation();
                                 setConnectionToDelete({
@@ -529,9 +524,7 @@ export function Connections() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs text-muted-foreground">
-              Apps you connect become available to every agent unless you change “Who can use it”.
-            </p>
+            <p className="text-xs text-muted-foreground">{uiText("Apps you connect become available to every agent unless you change “Who can use it”.")}</p>
           </div>
         </div>
       )}
@@ -544,17 +537,15 @@ export function Connections() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              Delete {connectionToDelete?.appName ?? "this"} connection?
-            </AlertDialogTitle>
+            <AlertDialogTitle>{uiText("Delete ")}{connectionToDelete?.appName ?? uiText("this")}{uiText(" connection?")}</AlertDialogTitle>
             <AlertDialogDescription>
               {connectionToDelete && connectionToDelete.remainingConnectionCount > 0
-                ? `This connection's saved credentials are deleted and agents lose access through it immediately. Agents can still use ${connectionToDelete.appName} through ${connectionToDelete.remainingConnectionCount} other active ${connectionToDelete.remainingConnectionCount === 1 ? "connection" : "connections"}.`
-                : "The saved credentials are deleted and agents lose access immediately. Connecting it again later needs a new sign-in or key."}
+                ? uiText("This connection's saved credentials are deleted and agents lose access through it immediately. Agents can still use {{value0}} through {{value1}} other active {{value2}}.", { value0: connectionToDelete.appName, value1: connectionToDelete.remainingConnectionCount, value2: connectionToDelete.remainingConnectionCount === 1 ? "connection" : "connections" })
+                : uiText("The saved credentials are deleted and agents lose access immediately. Connecting it again later needs a new sign-in or key.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteConnection.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteConnection.isPending}>{uiText("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={!connectionToDelete || deleteConnection.isPending}
@@ -564,7 +555,7 @@ export function Connections() {
               }}
             >
               {deleteConnection.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              {deleteConnection.isPending ? "Deleting..." : "Delete connection"}
+              {deleteConnection.isPending ? uiText("Deleting...") : uiText("Delete connection")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -584,15 +575,14 @@ function CloudConnectorEnrollmentBanner({
   busy: boolean;
   onEnable: () => void;
 }) {
+  useUiLocale();
   if (status?.configured) {
     return (
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
         <ShieldCheck className="h-5 w-5 text-primary" />
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold text-foreground">Paperclip-managed sign-in is ready</div>
-          <div className="truncate text-xs text-muted-foreground">
-            Provider authorization uses {status.brokerBaseUrl}; credentials stay in this instance.
-          </div>
+          <div className="text-sm font-semibold text-foreground">{uiText("Paperclip-managed sign-in is ready")}</div>
+          <div className="truncate text-xs text-muted-foreground">{uiText("Provider authorization uses ")}{status.brokerBaseUrl}{uiText("; credentials stay in this instance.")}</div>
         </div>
       </div>
     );
@@ -601,7 +591,7 @@ function CloudConnectorEnrollmentBanner({
     return (
       <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
         <Cloud className="h-5 w-5 text-muted-foreground" />
-        <div className="text-sm text-muted-foreground">Paperclip Cloud enrollment status is unavailable.</div>
+        <div className="text-sm text-muted-foreground">{uiText("Paperclip Cloud enrollment status is unavailable.")}</div>
       </div>
     );
   }
@@ -610,15 +600,13 @@ function CloudConnectorEnrollmentBanner({
       <Cloud className="h-5 w-5 text-muted-foreground" />
       <div className="min-w-0 flex-1">
         <div className="text-sm font-semibold text-foreground">
-          {status?.status === "pending" ? "Finish Paperclip Cloud enrollment" : "Enable Paperclip-managed sign-in"}
+          {status?.status === "pending" ? uiText("Finish Paperclip Cloud enrollment") : uiText("Enable Paperclip-managed sign-in")}
         </div>
-        <div className="text-xs text-muted-foreground">
-          Confirm this server’s exact address before Cloud can return encrypted Google credentials to it.
-        </div>
+        <div className="text-xs text-muted-foreground">{uiText("Confirm this server’s exact address before Cloud can return encrypted Google credentials to it.")}</div>
       </div>
       <Button variant="outline" size="sm" disabled={busy} onClick={onEnable}>
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-        {status?.status === "pending" ? "Continue enrollment" : "Enable"}
+        {status?.status === "pending" ? uiText("Continue enrollment") : uiText("Enable")}
       </Button>
     </div>
   );
@@ -637,6 +625,7 @@ function FilterChip({
   onClick: () => void;
   children: ReactNode;
 }) {
+  useUiLocale();
   return (
     <button
       type="button"
@@ -672,27 +661,21 @@ function floatSummary(rows: AppRow[]): string {
 }
 
 function EmptyConnections({ onBrowse }: { onBrowse: () => void }) {
+  useUiLocale();
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold tracking-tight">Connections</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          The tools you’ve connected, and whether they’re working.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{uiText("Connections")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{uiText("The tools you’ve connected, and whether they’re working.")}</p>
       </header>
 
       <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
           <AppWindow className="h-6 w-6 text-muted-foreground" />
         </div>
-        <p className="mt-4 text-sm font-medium text-foreground">No connections yet.</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Add one from <span className="font-medium text-foreground">Apps</span> to give your agents
-          the tools they need.
-        </p>
-        <Button className="mt-6" onClick={onBrowse}>
-          Browse apps
-        </Button>
+        <p className="mt-4 text-sm font-medium text-foreground">{uiText("No connections yet.")}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{uiText("Add one from ")}<span className="font-medium text-foreground">{uiText("Apps")}</span>{uiText(" to give your agents the tools they need.")}</p>
+        <Button className="mt-6" onClick={onBrowse}>{uiText("Browse apps")}</Button>
       </div>
     </div>
   );

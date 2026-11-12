@@ -1,3 +1,4 @@
+import { getUiLocale } from "@/i18n/ui";
 import { SelectField } from "@/components/ui/select-field";
 import { uiText, useUiLocale } from "@/i18n/ui";
 import { useConnectionModels } from "./ai-connections/useConnectionModels";
@@ -328,6 +329,7 @@ function ConfigSections({ order, className, children }: {
   className: string;
   children: ReactNode;
 }) {
+  useUiLocale();
   if (!order) return <div className={className}>{children}</div>;
   const rank = (child: ReactNode) => {
     const key = isValidElement<{ "data-config-section"?: string }>(child)
@@ -2183,6 +2185,7 @@ const ADAPTER_LOGIN_POLL_INTERVAL_MS = 2000;
 // A copy-to-clipboard button. It mirrors the workspace service control bar: a
 // short "copied" flash, then it returns to the copy icon.
 function AdapterLoginCopyButton({ value, label }: { value: string; label: string }) {
+  useUiLocale();
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
@@ -2352,6 +2355,7 @@ function adapterLoginTitle(adapterType: string): string {
 }
 
 export function AdapterLoginPanel(props: AdapterLoginPanelProps) {
+  useUiLocale();
   const getCapabilities = useAdapterCapabilities();
   const panelMode = getCapabilities(props.adapterType).login?.panelMode;
   if (panelMode === "submitted_browser_code") {
@@ -3649,7 +3653,7 @@ export function AdapterTypeDropdown({
       ].filter(
         (item) => !disabledTypes.has(item.value),
       ),
-    [disabledTypes, openAiDotEnabled],
+    [disabledTypes, openAiDotEnabled, getUiLocale()],
   );
 
   return (

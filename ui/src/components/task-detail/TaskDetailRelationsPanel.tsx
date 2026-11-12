@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { isLockedIssueStub, LockedIssueChip } from "@/components/LockedIssueChip";
 import type { Issue, IssueStatus, IssueLockedStub } from "@paperclipai/shared";
 import { Plus } from "lucide-react";
@@ -28,6 +29,7 @@ export function RelationNavigationList({
   ariaLabel: string;
   issueLinkState?: unknown;
 }) {
+  useUiLocale();
   if (items.length === 0) {
     return <p className="py-6 text-center text-sm text-muted-foreground">{emptyMessage}</p>;
   }
@@ -99,6 +101,7 @@ export function TaskDetailTaskList({
   ariaLabel: string;
   issueLinkState?: unknown;
 }) {
+  useUiLocale();
   return (
     <ul className="flex flex-col gap-0.5" aria-label={ariaLabel}>
       {items.map((item) => (
@@ -124,22 +127,23 @@ export function TaskDetailSubtasksPanel({
   onAddSubtask?: () => void;
   issueLinkState?: unknown;
 }) {
+  useUiLocale();
   const completed = items.filter((item) => item.status === "done").length;
   const progress = items.length > 0 ? Math.round((completed / items.length) * 100) : 0;
   const { nextAction, rootBlocker, remainingItems } = resolveTaskDetailSubtaskState(items);
   const allCompleted = items.length > 0 && completed === items.length;
 
   return (
-    <section className="flex flex-col gap-4" aria-label="Subtasks">
+    <section className="flex flex-col gap-4" aria-label={uiText("Subtasks")}>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-          <span>Progress</span>
-          <span className="font-mono">{completed} of {items.length} complete</span>
+          <span>{uiText("Progress")}</span>
+          <span className="font-mono">{completed}{uiText(" of ")}{items.length}{uiText(" complete")}</span>
         </div>
         <div
           className="h-1.5 overflow-hidden rounded-full bg-muted"
           role="progressbar"
-          aria-label="Subtask completion"
+          aria-label={uiText("Subtask completion")}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={progress}
@@ -153,9 +157,7 @@ export function TaskDetailSubtasksPanel({
 
       {rootBlocker ? (
         <section className="flex flex-col gap-1.5" aria-labelledby="task-root-blocker-heading">
-          <h3 id="task-root-blocker-heading" className="text-xs font-medium text-muted-foreground">
-            Root blocker
-          </h3>
+          <h3 id="task-root-blocker-heading" className="text-xs font-medium text-muted-foreground">{uiText("Root blocker")}</h3>
           <RelationNavigationList
             items={[rootBlocker]}
             emptyMessage=""
@@ -168,7 +170,7 @@ export function TaskDetailSubtasksPanel({
       {nextAction ? (
         <section className="flex flex-col gap-1.5" aria-labelledby="task-next-action-heading">
           <h3 id="task-next-action-heading" className="text-xs font-medium text-muted-foreground">
-            {nextAction.status === "blocked" ? "Blocked subtask" : "Next action"}
+            {nextAction.status === "blocked" ? uiText("Blocked subtask") : uiText("Next action")}
           </h3>
           <TaskDetailTaskList
             items={[nextAction]}
@@ -178,16 +180,16 @@ export function TaskDetailSubtasksPanel({
         </section>
       ) : items.length > 0 ? (
         <p className="text-xs text-muted-foreground">
-          {allCompleted ? "All subtasks are complete." : "No remaining subtask actions."}
+          {allCompleted ? uiText("All subtasks are complete.") : uiText("No remaining subtask actions.")}
         </p>
       ) : (
-        <p className="py-6 text-center text-sm text-muted-foreground">No subtasks yet.</p>
+        <p className="py-6 text-center text-sm text-muted-foreground">{uiText("No subtasks yet.")}</p>
       )}
 
       {remainingItems.length > 0 ? (
         <section className="flex flex-col gap-1.5" aria-labelledby="task-other-subtasks-heading">
           <h3 id="task-other-subtasks-heading" className="text-xs font-medium text-muted-foreground">
-            {nextAction ? "Other subtasks" : "Subtasks"}
+            {nextAction ? uiText("Other subtasks") : uiText("Subtasks")}
           </h3>
           <TaskDetailTaskList
             items={remainingItems}
@@ -199,9 +201,7 @@ export function TaskDetailSubtasksPanel({
 
       {onAddSubtask ? (
         <Button type="button" variant="outline" size="sm" className="self-start" onClick={onAddSubtask}>
-          <Plus className="h-3.5 w-3.5" />
-          Add subtask
-        </Button>
+          <Plus className="h-3.5 w-3.5" />{uiText("Add subtask")}</Button>
       ) : null}
     </section>
   );
@@ -216,26 +216,23 @@ export function TaskDetailReferencesPanel({
   mentionedIn: TaskDetailRelationItem[];
   issueLinkState?: unknown;
 }) {
+  useUiLocale();
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-2" aria-labelledby="task-referenced-heading">
-        <h3 id="task-referenced-heading" className="text-xs font-medium text-muted-foreground">
-          Referenced
-        </h3>
+        <h3 id="task-referenced-heading" className="text-xs font-medium text-muted-foreground">{uiText("Referenced")}</h3>
         <RelationNavigationList
           items={referenced}
-          emptyMessage="This task does not reference another task."
+          emptyMessage={uiText("This task does not reference another task.")}
           ariaLabel="Referenced tasks"
           issueLinkState={issueLinkState}
         />
       </section>
       <section className="flex flex-col gap-2" aria-labelledby="task-mentioned-in-heading">
-        <h3 id="task-mentioned-in-heading" className="text-xs font-medium text-muted-foreground">
-          Mentioned in
-        </h3>
+        <h3 id="task-mentioned-in-heading" className="text-xs font-medium text-muted-foreground">{uiText("Mentioned in")}</h3>
         <RelationNavigationList
           items={mentionedIn}
-          emptyMessage="No other task mentions this task."
+          emptyMessage={uiText("No other task mentions this task.")}
           ariaLabel="Tasks that mention this task"
           issueLinkState={issueLinkState}
         />

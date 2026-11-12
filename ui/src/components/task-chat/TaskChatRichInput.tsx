@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useEffect, useRef, useState } from "react";
 import { ImagePlus, Loader2 } from "lucide-react";
 import {
@@ -39,6 +40,7 @@ export function TaskChatRichInput({
   attachAriaLabel = "Attach image",
   showImageAttachControls = false,
 }: TaskChatRichInputProps) {
+  useUiLocale();
   const editorRef = useRef<MarkdownEditorRef>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadCountRef = useRef(0);
@@ -131,10 +133,8 @@ export function TaskChatRichInput({
               <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" />
             ) : (
               <ImagePlus aria-hidden className="h-3.5 w-3.5" />
-            )}
-            Attach image
-          </Button>
-          <span>or drop/paste an image into the note</span>
+            )}{uiText("Attach image")}</Button>
+          <span>{uiText("or drop/paste an image into the note")}</span>
         </div>
       ) : null}
       {uploadError ? (

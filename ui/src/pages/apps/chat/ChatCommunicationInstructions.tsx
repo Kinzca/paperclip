@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,6 +7,7 @@ export function ChatCommunicationInstructions({ value, onSave }: {
   value: string;
   onSave: (instructions: string) => Promise<void>;
 }) {
+  useUiLocale();
   const id = useId();
   const [draft, setDraft] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -31,10 +33,8 @@ export function ChatCommunicationInstructions({ value, onSave }: {
       }
     }}>
       <div className="space-y-1">
-        <label id={`${id}-label`} htmlFor={id} className="text-sm font-semibold">Additional communication instructions</label>
-        <p id={`${id}-help`} className="text-sm text-muted-foreground">
-          Applies to new conversations.
-        </p>
+        <label id={`${id}-label`} htmlFor={id} className="text-sm font-semibold">{uiText("Additional communication instructions")}</label>
+        <p id={`${id}-help`} className="text-sm text-muted-foreground">{uiText("Applies to new conversations.")}</p>
       </div>
       <Textarea
         id={id}
@@ -43,16 +43,16 @@ export function ChatCommunicationInstructions({ value, onSave }: {
         disabled={pending}
         maxLength={4000}
         rows={4}
-        placeholder="For example: Keep replies brief and explain technical terms."
+        placeholder={uiText("For example: Keep replies brief and explain technical terms.")}
         onChange={(event) => { setDraft(event.target.value); setSaved(false); setError(null); }}
       />
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <div className="flex items-center justify-between gap-3">
         <div>
-          {dirty ? <Button type="button" variant="ghost" disabled={pending} onClick={() => { setDraft(null); setError(null); setSaved(false); }}>Cancel</Button>
-            : saved ? <span role="status" className="text-sm text-muted-foreground">Saved. Applies to new tasks.</span> : null}
+          {dirty ? <Button type="button" variant="ghost" disabled={pending} onClick={() => { setDraft(null); setError(null); setSaved(false); }}>{uiText("Cancel")}</Button>
+            : saved ? <span role="status" className="text-sm text-muted-foreground">{uiText("Saved. Applies to new tasks.")}</span> : null}
         </div>
-        <Button type="submit" disabled={!dirty || pending}>{pending ? "Saving…" : "Save instructions"}</Button>
+        <Button type="submit" disabled={!dirty || pending}>{pending ? uiText("Saving…") : uiText("Save instructions")}</Button>
       </div>
     </form>
   );

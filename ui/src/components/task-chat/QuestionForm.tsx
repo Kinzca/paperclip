@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Check,
@@ -131,6 +132,7 @@ function SelectOption({
   disabled: boolean;
   onClick: () => void;
 }) {
+  useUiLocale();
   return (
     <button
       type="button"
@@ -172,9 +174,7 @@ function SelectOption({
         <span className="flex flex-wrap items-center gap-1.5 text-sm font-medium leading-5 text-foreground">
           <span>{label}</span>
           {recommended ? (
-            <span className="rounded-sm bg-background/70 px-1.5 py-0.5 text-(length:--text-micro) font-medium text-muted-foreground">
-              Recommended
-            </span>
+            <span className="rounded-sm bg-background/70 px-1.5 py-0.5 text-(length:--text-micro) font-medium text-muted-foreground">{uiText("Recommended")}</span>
           ) : null}
         </span>
         {description ? (
@@ -194,6 +194,7 @@ export function QuestionResponseSummary({
   questionSet: PaperclipQuestionSet;
   response: PaperclipQuestionResponse;
 }) {
+  useUiLocale();
   return (
     <dl className="grid gap-2 text-sm">
       {questionSet.questions.map((question) => {
@@ -221,7 +222,7 @@ export function QuestionResponseSummary({
               </span>
             </dt>
             <dd className="mt-0.5 text-foreground">
-              {values.length > 0 ? values.join(", ") : "No answer"}
+              {values.length > 0 ? values.join(", ") : uiText("No answer")}
             </dd>
           </div>
         );
@@ -231,6 +232,7 @@ export function QuestionResponseSummary({
 }
 
 export function QuestionForm(props: QuestionFormProps) {
+  useUiLocale();
   // Takeovers can reuse this component for another pending request. Remount
   // before draft persistence runs so one request cannot overwrite another.
   return <QuestionFormForRequest key={JSON.stringify([props.id, props.draftKey])} {...props} />;
@@ -248,6 +250,7 @@ function QuestionFormForRequest({
   onSubmit,
   onCancel,
 }: QuestionFormProps) {
+  useUiLocale();
   const takeoverActions = useTaskChatComposerTakeoverActions();
   // A provider default is an editable draft only. An existing response or
   // saved draft, including an explicitly cleared value, always wins. State
@@ -327,9 +330,7 @@ function QuestionFormForRequest({
   );
   if (!question)
     return (
-      <p className="text-sm text-muted-foreground">
-        No answerable questions were provided.
-      </p>
+      <p className="text-sm text-muted-foreground">{uiText("No answerable questions were provided.")}</p>
     );
   const answer = answers[question.id] ?? {};
   const selected = answer.selectedOptionIds ?? [];
@@ -466,26 +467,26 @@ function QuestionFormForRequest({
     questionSet.questions.length > 1 ? (
       <nav
         className="flex shrink-0 items-center gap-1"
-        aria-label="Question pagination"
+        aria-label={uiText("Question pagination")}
       >
         <Button
           type="button"
           size="icon-xs"
           variant="ghost"
-          aria-label="Previous question"
+          aria-label={uiText("Previous question")}
           disabled={disabled || working != null || page === 0}
           onClick={() => setPage((current) => current - 1)}
         >
           <ChevronLeft aria-hidden />
         </Button>
         <span className="min-w-10 text-center tabular-nums">
-          {page + 1} of {questionSet.questions.length}
+          {page + 1}{uiText(" of ")}{questionSet.questions.length}
         </span>
         <Button
           type="button"
           size="icon-xs"
           variant="ghost"
-          aria-label="Next question"
+          aria-label={uiText("Next question")}
           // The arrows browse; they do not validate. A send that finds an
           // earlier answer missing returns to that question (see submit).
           disabled={disabled || working != null || isLastPage}
@@ -532,7 +533,7 @@ function QuestionFormForRequest({
       {questionSet.description ? (
         <div
           role="region"
-          aria-label="Question context"
+          aria-label={uiText("Question context")}
           tabIndex={0}
           className="mb-3 max-h-96 overflow-auto text-sm text-muted-foreground"
         >
@@ -541,7 +542,7 @@ function QuestionFormForRequest({
       ) : null}
       {question.answerMode === "text" ? (
         <div className="mb-2 flex items-center gap-3 text-xs text-muted-foreground">
-          {question.answerMode === "text" ? <span>Write an answer</span> : null}
+          {question.answerMode === "text" ? <span>{uiText("Write an answer")}</span> : null}
         </div>
       ) : null}
       {pagination ? (
@@ -583,7 +584,7 @@ function QuestionFormForRequest({
             value={answer.text ?? ""}
             disabled={disabled || working != null}
             onChange={(value) => updateAnswer({ text: value })}
-            placeholder="Write your answer"
+            placeholder={uiText("Write your answer")}
             imageUploadHandler={imageUploadHandler}
             mentions={mentions}
             autoFocus
@@ -614,8 +615,8 @@ function QuestionFormForRequest({
                     [question.id]: event.target.value,
                   }))
                 }
-                placeholder="Filter choices"
-                aria-label={`Filter choices for ${question.prompt}`}
+                placeholder={uiText("Filter choices")}
+                aria-label={uiText("Filter choices for {{value0}}", { value0: question.prompt })}
                 className="pl-8"
               />
             </label>
@@ -637,7 +638,7 @@ function QuestionFormForRequest({
             <div className="space-y-1.5">
               <SelectOption
                 id={`${id}-${question.id}-custom`}
-                label={question.customAnswer?.label ?? "Other"}
+                label={question.customAnswer?.label ?? uiText("Other")}
                 selected={isCustomActive}
                 multiple={multiple}
                 disabled={disabled || working != null}
@@ -649,7 +650,7 @@ function QuestionFormForRequest({
                   testId="question-other-answer-composer"
                   value={answer.customText ?? ""}
                   placeholder={
-                    question.customAnswer?.placeholder ?? "Type your answer"
+                    question.customAnswer?.placeholder ?? uiText("Type your answer")
                   }
                   disabled={disabled || working != null}
                   onChange={(value) =>
@@ -691,9 +692,7 @@ function QuestionFormForRequest({
           >
             {working === "cancel" ? (
               <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
-            ) : null}{" "}
-            Cancel
-          </Button>
+            ) : null}{" "}{uiText("Cancel")}</Button>
         ) : null}
         {!question.required ? (
           <Button
@@ -702,9 +701,7 @@ function QuestionFormForRequest({
             variant="outline"
             disabled={busy}
             onClick={skipQuestion}
-          >
-            Skip
-          </Button>
+          >{uiText("Skip")}</Button>
         ) : null}
         <Button
           type="button"
@@ -715,7 +712,7 @@ function QuestionFormForRequest({
           {working === "submit" ? (
             <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
           ) : null}
-          {isLastPage ? (questionSet.submitLabel ?? "Submit answers") : "Next"}
+          {isLastPage ? (questionSet.submitLabel ?? uiText("Submit answers")) : uiText("Next")}
         </Button>
       </div>
     </div>

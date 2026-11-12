@@ -1,3 +1,4 @@
+import { getUiLocale } from "@/i18n/ui";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, GitBranch, Pencil, RotateCcw } from "lucide-react";
@@ -169,7 +170,7 @@ function CompanyWorkflows({
 
   useEffect(() => {
     setBreadcrumbs([{ label: uiText("Task workflows") }]);
-  }, [setBreadcrumbs, locale]);
+  }, [setBreadcrumbs, locale, getUiLocale()]);
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => {

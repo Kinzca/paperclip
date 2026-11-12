@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import * as React from "react";
 import { useMemo } from "react";
 import * as RouterDom from "react-router-dom";
@@ -120,6 +121,7 @@ function summarizeIssueDescription(description: string | null | undefined) {
 
 /** "·" between facts in the quicklook's meta and status lines. */
 function QuicklookSeparator({ className }: { className?: string }) {
+  useUiLocale();
   return (
     <span className={cn("text-xs", className)} aria-hidden>
       ·
@@ -169,6 +171,7 @@ export function IssueQuicklookCard({
   linkState?: unknown;
   compact?: boolean;
 }) {
+  useUiLocale();
   const description = useMemo(() => summarizeIssueDescription(issue.description), [issue.description]);
   const projectName = issue.project?.name;
 
@@ -246,6 +249,7 @@ export const IssueLinkQuicklook = React.forwardRef<
   },
   ref,
 ) {
+  useUiLocale();
   const queryClient = useQueryClient();
   const instanceId = React.useMemo(() => Symbol("issue-quicklook"), []);
   const open = useIsQuicklookOpen(instanceId);
@@ -442,7 +446,7 @@ export const IssueLinkQuicklook = React.forwardRef<
             <div className="h-4 w-full rounded bg-accent/40" />
             <div className="h-4 w-3/4 rounded bg-accent/30" />
             {!isLoading ? (
-              <p className="text-xs text-muted-foreground">Unable to load task preview.</p>
+              <p className="text-xs text-muted-foreground">{uiText("Unable to load task preview.")}</p>
             ) : null}
           </div>
         )}

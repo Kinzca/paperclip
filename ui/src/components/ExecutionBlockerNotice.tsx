@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ExecutionBlocker } from "@paperclipai/shared";
 import { agentsApi } from "../api/agents";
@@ -14,6 +15,7 @@ export function ExecutionBlockerNotice({ companyId, issueId, blocker, onRetried,
   blocker: ExecutionBlocker;
   onRetried: () => void;
 }) {
+  useUiLocale();
   const queryClient = useQueryClient();
   const { data: runs, error: runsError } = useQuery({
     queryKey: queryKeys.issues.runs(issueId),
@@ -35,37 +37,34 @@ export function ExecutionBlockerNotice({ companyId, issueId, blocker, onRetried,
     },
   });
   return (
-    <div role="status" aria-label="Task recovery" className={cn("task-context-notice flex flex-wrap items-center justify-between gap-2", className)}>
+    <div role="status" aria-label={uiText("Task recovery")} className={cn("task-context-notice flex flex-wrap items-center justify-between gap-2", className)}>
       <div className="min-w-0 flex-1 break-words">
-        <p>{modelRejected ? "Model unavailable." : "Recovery needed."}{blocker.runError ? ` ${blocker.runError}` : ""}</p>
-        {modelRejected && <p>Choose a supported model or clear the task's model override, then retry.</p>}
+        <p>{modelRejected ? uiText("Model unavailable.") : uiText("Recovery needed.")}{blocker.runError ? ` ${blocker.runError}` : ""}</p>
+        {modelRejected && <p>{uiText("Choose a supported model or clear the task's model override, then retry.")}</p>}
         {blocker.workspaceRepairRequired ? (
           <>
             {/* The stored next action is an operator runbook step; lead with what happened. This hold also covers
                 unsafe archives and local runs, so do not claim retries or a retained sandbox here. */}
-            <p>
-              Paperclip could not restore the agent's workspace files after its last run. A board operator must
-              recover the files before the agent can continue.
-            </p>
+            <p>{uiText("Paperclip could not restore the agent's workspace files after its last run. A board operator must recover the files before the agent can continue.")}</p>
             <details>
-              <summary className="cursor-pointer">Technical details</summary>
+              <summary className="cursor-pointer">{uiText("Technical details")}</summary>
               <p>{blocker.nextAction}</p>
             </details>
           </>
         ) : <p>{blocker.nextAction}</p>}
         {Boolean(blocker.savedMessageCount) && (
-          <p>{blocker.savedMessageCount} saved {blocker.savedMessageCount === 1 ? "message is" : "messages are"} waiting for recovery.</p>
+          <p>{blocker.savedMessageCount}{uiText(" saved ")}{blocker.savedMessageCount === 1 ? uiText("message is") : uiText("messages are")}{uiText(" waiting for recovery.")}</p>
         )}
       </div>
       {blocker.agentId && blocker.runId && (
         <Button variant="outline" size="sm" asChild>
-          <Link to={`/agents/${blocker.agentId}/runs/${blocker.runId}`}>Inspect run</Link>
+          <Link to={`/agents/${blocker.agentId}/runs/${blocker.runId}`}>{uiText("Inspect run")}</Link>
         </Button>
       )}
       {!blocker.workspaceRepairRequired && (!requiresInspection || blocker.canRetry) && blocker.agentId && blocker.runId &&
         ((blocker.cause === "legacy_execution_requires_reconciliation" && failedRun) || blocker.canContinue || blocker.canRetry) && (
         <Button variant="outline" size="sm" disabled={retry.isPending} onClick={() => retry.mutate()}>
-          {retry.isPending ? "Starting…" : blocker.canContinue ? "Continue" : "Retry"}
+          {retry.isPending ? uiText("Starting…") : blocker.canContinue ? uiText("Continue") : uiText("Retry")}
         </Button>
       )}
       {retry.isError && (

@@ -1,3 +1,4 @@
+import { getUiLocale } from "@/i18n/ui";
 import { uiText, useUiLocale } from "@/i18n/ui";
 import { useEffect, useMemo } from "react";
 import { Link, Navigate } from "@/lib/router";
@@ -102,8 +103,8 @@ export function Workspaces({ storageContext = false }: { storageContext?: boolea
       { label: uiText("Settings"), href: "/company/settings" },
       { label: uiText("Storage"), href: "/company/settings/instance/storage" },
       { label: uiText("Managed workspaces") },
-    ] : [{ label: "Workspaces" }]);
-  }, [setBreadcrumbs, storageContext, locale]);
+    ] : [{ label: uiText("Workspaces") }]);
+  }, [setBreadcrumbs, storageContext, locale, getUiLocale()]);
 
   const overviewPages = overviewQuery.data?.pages ?? [];
   const overviewItems = useMemo(
@@ -124,18 +125,18 @@ export function Workspaces({ storageContext = false }: { storageContext?: boolea
   return (
     <div className={storageContext ? "mx-auto flex w-full max-w-5xl flex-col gap-6" : "space-y-6"}>
       <div>
-        <h2 className={storageContext ? "text-lg font-semibold" : "text-xl font-bold"}>{storageContext ? uiText("Managed workspaces") : "Workspaces"}</h2>
+        <h2 className={storageContext ? "text-lg font-semibold" : "text-xl font-bold"}>{storageContext ? uiText("Managed workspaces") : uiText("Workspaces")}</h2>
       </div>
 
       <SummarySlotCard
         companyId={selectedCompanyId}
         scopeKind="workspaces_overview"
-        title="Workspace summary"
-        description="Summarizer tracks workspace activity, live services, and follow-up needs across projects."
+        title={uiText("Workspace summary")}
+        description={uiText("Summarizer tracks workspace activity, live services, and follow-up needs across projects.")}
       />
 
       {groups.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No workspace activity yet.</p>
+        <p className="text-sm text-muted-foreground">{uiText("No workspace activity yet.")}</p>
       ) : (
         <div className="space-y-8">
           {groups.map((group) => (
@@ -150,7 +151,7 @@ export function Workspaces({ storageContext = false }: { storageContext?: boolea
                   </Link>
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  {group.summaries.length} workspace{group.summaries.length === 1 ? "" : "s"}
+                  {group.summaries.length}{uiText(" workspace")}{group.summaries.length === 1 ? "" : uiText("s")}
                 </span>
               </div>
               <ProjectWorkspacesContent
@@ -163,9 +164,7 @@ export function Workspaces({ storageContext = false }: { storageContext?: boolea
           ))}
           {overviewQuery.hasNextPage ? (
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-              <p className="text-sm text-muted-foreground">
-                Showing {overviewItems.length} of {totalWorkspaceCount} workspaces.
-              </p>
+              <p className="text-sm text-muted-foreground">{uiText("Showing ")}{overviewItems.length}{uiText(" of ")}{totalWorkspaceCount}{uiText(" workspaces.")}</p>
               <Button
                 type="button"
                 variant="outline"
@@ -173,7 +172,7 @@ export function Workspaces({ storageContext = false }: { storageContext?: boolea
                 onClick={() => void overviewQuery.fetchNextPage()}
                 disabled={overviewQuery.isFetchingNextPage}
               >
-                {overviewQuery.isFetchingNextPage ? "Loading..." : "Load more"}
+                {overviewQuery.isFetchingNextPage ? uiText("Loading...") : uiText("Load more")}
               </Button>
             </div>
           ) : null}

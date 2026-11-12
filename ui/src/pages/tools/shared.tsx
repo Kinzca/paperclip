@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import type { ReactNode } from "react";
 import type {
   ToolRiskLevel,
@@ -12,7 +13,8 @@ import { ApiError } from "@/api/client";
 
 /** Risk classification badge for a catalog tool. */
 export function RiskBadge({ risk }: { risk: ToolRiskLevel | null | undefined }) {
-  if (!risk) return <Badge variant="outline">unknown</Badge>;
+  useUiLocale();
+  if (!risk) return <Badge variant="outline">{uiText("unknown")}</Badge>;
   const variant =
     risk === "high" || risk === "critical"
       ? "destructive"
@@ -32,17 +34,19 @@ export function CapabilityBadges({
   isWrite?: boolean;
   isDestructive?: boolean;
 }) {
+  useUiLocale();
   return (
     <span className="inline-flex flex-wrap gap-1">
-      {isReadOnly ? <Badge variant="outline">read-only</Badge> : null}
-      {isWrite ? <Badge variant="secondary">write</Badge> : null}
-      {isDestructive ? <Badge variant="destructive">destructive</Badge> : null}
+      {isReadOnly ? <Badge variant="outline">{uiText("read-only")}</Badge> : null}
+      {isWrite ? <Badge variant="secondary">{uiText("write")}</Badge> : null}
+      {isDestructive ? <Badge variant="destructive">{uiText("destructive")}</Badge> : null}
     </span>
   );
 }
 
 /** Catalog quarantine marker — canonical status key. */
 export function QuarantineBadge() {
+  useUiLocale();
   return <StatusBadge status="quarantined" />;
 }
 
@@ -75,6 +79,7 @@ export function HealthBadge({
   status: ToolConnectionHealthStatus | string | null | undefined;
   label?: string;
 }) {
+  useUiLocale();
   const raw = (status ?? "unknown").toString();
   return <StatusBadge status={healthToStatusKey(raw)} label={label ?? raw} />;
 }
@@ -109,6 +114,7 @@ function decisionToStatusKey(decision: string): { key: string; label: string } {
 
 /** Policy/gateway decision badge — canonical status colors. */
 export function DecisionBadge({ decision }: { decision: ToolPolicyDecision | string | null | undefined }) {
+  useUiLocale();
   if (!decision) return <Badge variant="outline">—</Badge>;
   const { key, label } = decisionToStatusKey(decision.toString());
   return <StatusBadge status={key} label={label} />;
@@ -116,7 +122,8 @@ export function DecisionBadge({ decision }: { decision: ToolPolicyDecision | str
 
 /** Compact relative time, falling back to absolute. */
 export function RelativeTime({ value }: { value: Date | string | null | undefined }) {
-  if (!value) return <span className="text-muted-foreground">never</span>;
+  useUiLocale();
+  if (!value) return <span className="text-muted-foreground">{uiText("never")}</span>;
   const date = typeof value === "string" ? new Date(value) : value;
   if (Number.isNaN(date.getTime())) return <span className="text-muted-foreground">—</span>;
   const diffMs = Date.now() - date.getTime();
@@ -146,6 +153,7 @@ export function ToolsPageHeader({
   description?: ReactNode;
   actions?: ReactNode;
 }) {
+  useUiLocale();
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="space-y-1">
@@ -158,6 +166,7 @@ export function ToolsPageHeader({
 }
 
 export function LoadingState({ label = "Loading…" }: { label?: string }) {
+  useUiLocale();
   return (
     <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
       <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
@@ -168,6 +177,7 @@ export function LoadingState({ label = "Loading…" }: { label?: string }) {
 
 /** Actionable error surface — surfaces the server message and HTTP status. */
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+  useUiLocale();
   let message: string;
   if (error instanceof ApiError) {
     if (error.status === 403) {
@@ -189,7 +199,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
         <div className="flex items-start gap-2 text-sm text-destructive">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
-            <p className="font-medium">Could not load this view</p>
+            <p className="font-medium">{uiText("Could not load this view")}</p>
             <p className="text-destructive/80">{message}</p>
           </div>
         </div>
@@ -198,9 +208,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
             type="button"
             onClick={onRetry}
             className="self-start rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent"
-          >
-            Retry
-          </button>
+          >{uiText("Retry")}</button>
         ) : null}
       </CardContent>
     </Card>
@@ -221,6 +229,7 @@ export function PendingBackendNotice({
   body: ReactNode;
   issue?: { identifier: string; href: string };
 }) {
+  useUiLocale();
   return (
     <Card className="border-dashed">
       <CardContent className="flex flex-col gap-2 py-8">
@@ -230,8 +239,7 @@ export function PendingBackendNotice({
         </div>
         <p className="max-w-2xl text-sm text-muted-foreground">{body}</p>
         {issue ? (
-          <a href={issue.href} className="text-sm font-medium text-primary hover:underline">
-            Tracked in {issue.identifier} →
+          <a href={issue.href} className="text-sm font-medium text-primary hover:underline">{uiText("Tracked in ")}{issue.identifier} →
           </a>
         ) : null}
       </CardContent>

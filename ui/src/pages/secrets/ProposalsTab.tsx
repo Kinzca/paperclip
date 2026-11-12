@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -50,6 +51,7 @@ function ProposalRow({
   onReject: (p: SecretProposalView) => void;
   disabled: boolean;
 }) {
+  useUiLocale();
   const isSecret = proposal.kind === "secret";
   const expiry = expiryLabel(proposal.expiresAt);
   const secret = bindingSecretLabel(proposal);
@@ -74,7 +76,7 @@ function ProposalRow({
               {proposal.target ? (
                 <AgentRefChip agent={proposal.target} className="font-medium" />
               ) : (
-                <span className="text-muted-foreground">agent</span>
+                <span className="text-muted-foreground">{uiText("agent")}</span>
               )}
               <DeliveryBadge configPath={proposal.configPath} />
               <code className="font-mono text-xs">{envKey || proposal.configPath}</code>
@@ -90,8 +92,7 @@ function ProposalRow({
 
         {/* Provenance meta */}
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1">
-            by <AgentRefChip agent={proposal.proposedBy} className="font-medium text-foreground" />
+          <span className="inline-flex items-center gap-1">{uiText("by ")}<AgentRefChip agent={proposal.proposedBy} className="font-medium text-foreground" />
           </span>
           {proposal.originIssue ? (
             <>
@@ -144,6 +145,7 @@ export function ProposalsTab({
   companyId: string;
   providerConfigs: CompanySecretProviderConfig[];
 }) {
+  useUiLocale();
   const proposalsQuery = useQuery({
     queryKey: queryKeys.secrets.proposals(companyId, "pending"),
     queryFn: () => secretsApi.listProposals(companyId, "pending"),
@@ -167,16 +169,14 @@ export function ProposalsTab({
   if (proposalsQuery.isError) {
     return (
       <div className="flex items-center gap-2 py-4 text-sm text-destructive">
-        <AlertCircle className="size-4" /> Couldn’t load proposals. Try again.
-      </div>
+        <AlertCircle className="size-4" />{uiText(" Couldn’t load proposals. Try again.")}</div>
     );
   }
 
   if (proposalsQuery.isPending) {
     return (
       <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" /> Loading proposals…
-      </div>
+        <Loader2 className="size-4 animate-spin" />{uiText(" Loading proposals…")}</div>
     );
   }
 
@@ -184,7 +184,7 @@ export function ProposalsTab({
     return (
       <EmptyState
         icon={Inbox}
-        title="No pending proposals"
+        title={uiText("No pending proposals")}
         message="When an agent proposes a secret or an access binding, it shows up here for review."
       />
     );
@@ -192,10 +192,7 @@ export function ProposalsTab({
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-muted-foreground">
-        Agents propose credentials and access bindings; you approve or reject them here. Proposed
-        values are never shown — only a fingerprint and length.
-      </p>
+      <p className="text-xs text-muted-foreground">{uiText("Agents propose credentials and access bindings; you approve or reject them here. Proposed values are never shown — only a fingerprint and length.")}</p>
       {sorted.map((proposal) => (
         <ProposalRow
           key={proposal.id}

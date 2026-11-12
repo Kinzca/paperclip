@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useId, useState } from "react";
 import { completedActivitySummary } from "./completed-activity-summary";
 import {
@@ -109,6 +110,7 @@ function ActivityContent({
   item: Activity;
   active: boolean;
 }) {
+  useUiLocale();
   const row = presentation(item, active);
   if (!row) return null;
   const Icon = row.icon;
@@ -163,6 +165,7 @@ function RollingActivity({
   item: Activity;
   active: boolean;
 }) {
+  useUiLocale();
   const reducedMotion = useReducedMotion();
   const [frame, setFrame] = useState({
     current: item,
@@ -208,6 +211,7 @@ function RollingActivity({
 }
 
 function ActivityDetails({ item }: { item: Activity }) {
+  useUiLocale();
   if (item.kind === "thinking")
     return <MarkdownBody softBreaks>{item.lines.join("\n")}</MarkdownBody>;
   if (item.kind === "usage") return <TaskChatUsageReadout item={item} />;
@@ -229,7 +233,7 @@ function ActivityDetails({ item }: { item: Activity }) {
           {item.detail}
         </pre>
       ) : null}
-      {item.decision ? <p>Permission {item.decision}</p> : null}
+      {item.decision ? <p>{uiText("Permission ")}{item.decision}</p> : null}
       {item.diff ? (
         <p className="break-all font-mono">
           {item.diff.path} · +{item.diff.added} −{item.diff.removed}
@@ -263,6 +267,7 @@ function ExpandedActivity({
   item: Activity;
   active: boolean;
 }) {
+  useUiLocale();
   const [open, setOpen] = useTaskChatExpansion(
     `runner-detail:${item.id}`,
     false,
@@ -312,6 +317,7 @@ export function TaskChatRunnerActivityGroup({
   item: TaskChatActivityPhaseItem;
   defaultExpanded?: boolean;
 }) {
+  useUiLocale();
   const [expanded, setExpanded] = useTaskChatExpansion(
     item.id,
     defaultExpanded,
@@ -386,7 +392,7 @@ export function TaskChatRunnerActivityGroup({
             <ol
               id={historyId}
               className="flex min-w-0 flex-col gap-1"
-              aria-label="Activity history"
+              aria-label={uiText("Activity history")}
               data-testid="task-chat-runner-activity-list"
             >
               {activities.map((activity, index) => (

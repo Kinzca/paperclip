@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useQuery } from "@tanstack/react-query";
 import { fastResponsesApi } from "@/api/fast-responses";
 import { DecisionHistoryTable } from "@/components/decision-models/DecisionHistory";
@@ -12,6 +13,7 @@ export function FastResponseHistory({
   from?: string | null;
   to?: string | null;
 }) {
+  useUiLocale();
   const { enabled } = useFastResponsesEnabled();
   const query = useQuery({
     queryKey: ["fast-response-history", companyId, from, to],
@@ -28,17 +30,13 @@ export function FastResponseHistory({
   });
   if (query.isPending)
     return (
-      <p className="text-sm text-muted-foreground">Loading fast responses…</p>
+      <p className="text-sm text-muted-foreground">{uiText("Loading fast responses…")}</p>
     );
   if (query.error)
     return (
       <div role="alert">
-        <p className="text-sm text-destructive">
-          Could not load fast responses.
-        </p>
-        <Button variant="outline" onClick={() => void query.refetch()}>
-          Try again
-        </Button>
+        <p className="text-sm text-destructive">{uiText("Could not load fast responses.")}</p>
+        <Button variant="outline" onClick={() => void query.refetch()}>{uiText("Try again")}</Button>
       </div>
     );
   return <DecisionHistoryTable entries={query.data ?? []} fastResponse connectionsEnabled={enabled} />;

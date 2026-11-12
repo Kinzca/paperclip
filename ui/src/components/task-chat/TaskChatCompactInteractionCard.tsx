@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import {
   useEffect,
   useMemo,
@@ -131,6 +132,7 @@ function statusTone(status: IssueThreadInteraction["status"]): string {
 }
 
 function StatusIcon({ status }: { status: IssueThreadInteraction["status"] }) {
+  useUiLocale();
   if (status === "pending") {
     return (
       <Circle
@@ -163,6 +165,7 @@ function InteractionShell({
   presentation: "timeline" | "takeover";
   children: ReactNode;
 }) {
+  useUiLocale();
   const kind = KIND_COPY[interaction.kind];
   const Icon = kind.icon;
   const title = (
@@ -223,6 +226,7 @@ function InteractionShell({
 }
 
 function InteractionActionError({ message }: { message: string | null }) {
+  useUiLocale();
   return (
     <div aria-live="assertive" data-testid="interaction-action-error">
       {message ? (
@@ -235,12 +239,12 @@ function InteractionActionError({ message }: { message: string | null }) {
 }
 
 function Details({ children }: { children?: ReactNode }) {
+  useUiLocale();
   if (!children) return null;
   return (
     <details className="mt-2">
       <summary className="flex cursor-pointer list-none items-center gap-1 text-xs font-medium text-muted-foreground">
-        <ChevronDown aria-hidden className="h-3.5 w-3.5" /> Details
-      </summary>
+        <ChevronDown aria-hidden className="h-3.5 w-3.5" />{uiText(" Details")}</summary>
       <div className="mt-2 rounded-sm bg-muted/40 px-2.5 py-2 text-sm text-muted-foreground">
         {children}
       </div>
@@ -255,6 +259,7 @@ function ActionRow({
   children: ReactNode;
   hint?: string | null;
 }) {
+  useUiLocale();
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2">
       {hint ? (
@@ -293,6 +298,7 @@ function CompactTarget({
     | RequestCheckboxConfirmationInteraction
     | RequestItemVerdictsInteraction;
 }) {
+  useUiLocale();
   const target = interaction.payload.target;
   const label = targetLabel(interaction);
   if (!target || !label) return null;
@@ -323,6 +329,7 @@ function PlanReviewPreview({
   interaction: RequestConfirmationInteraction;
   planDocument?: IssueDocument | null;
 }) {
+  useUiLocale();
   const target = interaction.payload.target;
   if (target?.type !== "issue_document" || target.key !== "plan") return null;
 
@@ -375,6 +382,7 @@ function ReceiptDisclosure({
   externalReferences?: SharedInteractionProps["externalReferences"];
   compact?: boolean;
 }) {
+  useUiLocale();
   const reason = receiptReason(interaction);
   const answerReason =
     reason ??
@@ -416,8 +424,7 @@ function ReceiptDisclosure({
                   {question.helpText}
                 </p>
               ) : null}
-              <p className="mt-1 text-sm font-medium text-foreground">
-                Answer: {values.length > 0 ? values.join(", ") : "No answer"}
+              <p className="mt-1 text-sm font-medium text-foreground">{uiText("Answer: ")}{values.length > 0 ? values.join(", ") : uiText("No answer")}
               </p>
             </div>
           );
@@ -433,11 +440,10 @@ function ReceiptDisclosure({
       <div>
         <p className="text-sm text-foreground">{interaction.payload.prompt}</p>
         {interaction.status === "accepted" ? (
-          <p className="mt-1 text-sm font-medium text-foreground">
-            Answer:{" "}
+          <p className="mt-1 text-sm font-medium text-foreground">{uiText("Answer:")}{" "}
             {selectedLabels.length > 0
               ? selectedLabels.join(", ")
-              : "No options selected"}
+              : uiText("No options selected")}
           </p>
         ) : null}
         {interaction.payload.detailsMarkdown ? (
@@ -473,9 +479,7 @@ function ReceiptDisclosure({
             })}
           </ul>
         ) : (
-          <p className="mt-1 text-sm font-medium text-foreground">
-            No verdicts submitted
-          </p>
+          <p className="mt-1 text-sm font-medium text-foreground">{uiText("No verdicts submitted")}</p>
         )}
         {interaction.payload.detailsMarkdown ? (
           <div className="mt-2 text-sm">
@@ -504,16 +508,14 @@ function ReceiptDisclosure({
             ))}
           </ul>
         ) : interaction.status === "accepted" ? (
-          <p className="text-sm font-medium text-foreground">
-            No tasks created
-          </p>
+          <p className="text-sm font-medium text-foreground">{uiText("No tasks created")}</p>
         ) : null}
       </div>
     );
   } else if (interaction.kind === "connection_intent") {
     request = (
       <p className="text-sm text-foreground">
-        {interaction.payload.requestingAgentName} requested access to{" "}
+        {interaction.payload.requestingAgentName}{uiText(" requested access to")}{" "}
         {interaction.payload.serviceName}.
       </p>
     );
@@ -532,10 +534,8 @@ function ReceiptDisclosure({
           <div className="rounded-sm bg-muted/45 px-3 py-2.5 text-sm">
             <p>
               <strong>{interaction.payload.toolAction.toolDisplayName}</strong>{" "}
-              · {interaction.payload.toolAction.risk} risk
-            </p>
-            <p className="mt-1">
-              Expires{" "}
+              · {interaction.payload.toolAction.risk}{uiText(" risk")}</p>
+            <p className="mt-1">{uiText("Expires")}{" "}
               {new Date(
                 interaction.payload.toolAction.expiresAt,
               ).toLocaleString()}
@@ -556,22 +556,22 @@ function ReceiptDisclosure({
         {interaction.payload.secretProposal ? (
           <dl className="grid gap-1 rounded-sm bg-muted/45 px-3 py-2.5 text-sm">
             <div>
-              <dt className="text-xs text-muted-foreground">Secret</dt>
+              <dt className="text-xs text-muted-foreground">{uiText("Secret")}</dt>
               <dd>{interaction.payload.secretProposal.sourceSecretLabel}</dd>
             </div>
             <div>
-              <dt className="text-xs text-muted-foreground">Binding</dt>
+              <dt className="text-xs text-muted-foreground">{uiText("Binding")}</dt>
               <dd className="font-mono text-xs">
                 {interaction.payload.secretProposal.configPath} →{" "}
                 {interaction.payload.secretProposal.targetAgentName}
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-muted-foreground">Why</dt>
+              <dt className="text-xs text-muted-foreground">{uiText("Why")}</dt>
               <dd>{interaction.payload.secretProposal.justification}</dd>
             </div>
             <div>
-              <dt className="text-xs text-muted-foreground">Expires</dt>
+              <dt className="text-xs text-muted-foreground">{uiText("Expires")}</dt>
               <dd>
                 {new Date(
                   interaction.payload.secretProposal.expiresAt,
@@ -595,7 +595,7 @@ function ReceiptDisclosure({
       {request}
       {answerReason ? (
         <p className="text-sm text-muted-foreground">
-          <span className="font-medium">Reason:</span> {answerReason}
+          <span className="font-medium">{uiText("Reason:")}</span> {answerReason}
         </p>
       ) : null}
     </div>
@@ -643,9 +643,7 @@ function ReceiptDisclosure({
 
   return (
     <details className="mt-2">
-      <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
-        View original request and resolution
-      </summary>
+      <summary className="cursor-pointer text-xs font-medium text-muted-foreground">{uiText("View original request and resolution")}</summary>
       {detail}
     </details>
   );
@@ -740,6 +738,7 @@ function AskUserQuestionsCard({
   onUploadImage?: SharedInteractionProps["onUploadImage"];
   mentions?: MentionOption[];
 }) {
+  useUiLocale();
   const questionSet = questionSetForInteraction(interaction);
   const initialResponse = questionResponseForInteraction(
     interaction,
@@ -817,6 +816,7 @@ function ConfirmationCard({
   onUploadImage?: SharedInteractionProps["onUploadImage"];
   mentions?: MentionOption[];
 }) {
+  useUiLocale();
   const preparingApproval = isInteractionPreparingApproval(interaction);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState(() =>
@@ -867,7 +867,7 @@ function ConfirmationCard({
         <div className="space-y-2">
           <p className="whitespace-pre-line break-words text-sm leading-5 text-foreground">
             {isPlanConfirmation
-              ? "Do you accept this plan?"
+              ? uiText("Do you accept this plan?")
               : interaction.payload.prompt}
           </p>
           {!isPlanConfirmation ? (
@@ -894,10 +894,8 @@ function ConfirmationCard({
                   : "text-muted-foreground",
               )}
             >
-              {interaction.payload.toolAction.risk} risk
-            </span>
-            <span className="ml-auto text-xs text-muted-foreground">
-              Expires{" "}
+              {interaction.payload.toolAction.risk}{uiText(" risk")}</span>
+            <span className="ml-auto text-xs text-muted-foreground">{uiText("Expires")}{" "}
               {new Date(
                 interaction.payload.toolAction.expiresAt,
               ).toLocaleString()}
@@ -907,9 +905,7 @@ function ConfirmationCard({
             {interaction.payload.toolAction.previewMarkdown}
           </MarkdownBody>
           <details>
-            <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
-              Arguments and audit hash
-            </summary>
+            <summary className="cursor-pointer text-xs font-medium text-muted-foreground">{uiText("Arguments and audit hash")}</summary>
             <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono text-xs text-foreground">
               {interaction.payload.toolAction.argumentsSummaryJson}
             </pre>
@@ -922,22 +918,22 @@ function ConfirmationCard({
       {interaction.payload.secretProposal ? (
         <dl className="mt-3 grid gap-2 rounded-sm bg-muted/45 px-3 py-2.5 text-sm">
           <div>
-            <dt className="text-xs text-muted-foreground">Secret</dt>
+            <dt className="text-xs text-muted-foreground">{uiText("Secret")}</dt>
             <dd>{interaction.payload.secretProposal.sourceSecretLabel}</dd>
           </div>
           <div>
-            <dt className="text-xs text-muted-foreground">Binding</dt>
+            <dt className="text-xs text-muted-foreground">{uiText("Binding")}</dt>
             <dd className="font-mono text-xs">
               {interaction.payload.secretProposal.configPath} →{" "}
               {interaction.payload.secretProposal.targetAgentName}
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-muted-foreground">Why</dt>
+            <dt className="text-xs text-muted-foreground">{uiText("Why")}</dt>
             <dd>{interaction.payload.secretProposal.justification}</dd>
           </div>
           <div>
-            <dt className="text-xs text-muted-foreground">Expires</dt>
+            <dt className="text-xs text-muted-foreground">{uiText("Expires")}</dt>
             <dd>
               {new Date(
                 interaction.payload.secretProposal.expiresAt,
@@ -952,8 +948,8 @@ function ConfirmationCard({
             id={`${interaction.id}-reject-reason-label`}
             className="text-xs font-medium leading-4 text-foreground"
           >
-            {interaction.payload.rejectReasonLabel ?? "What should change?"}
-            {interaction.payload.rejectRequiresReason ? "" : " (optional)"}
+            {interaction.payload.rejectReasonLabel ?? uiText("What should change?")}
+            {interaction.payload.rejectRequiresReason ? "" : uiText(" (optional)")}
           </p>
           {isPlanConfirmation ? (
             <TaskChatRichInput
@@ -961,7 +957,7 @@ function ConfirmationCard({
               onChange={setReason}
               placeholder={
                 interaction.payload.declineReasonPlaceholder ??
-                "Describe what should change"
+                uiText("Describe what should change")
               }
               imageUploadHandler={onUploadImage}
               mentions={mentions}
@@ -982,7 +978,7 @@ function ConfirmationCard({
               onChange={(event) => setReason(event.target.value)}
               placeholder={
                 interaction.payload.declineReasonPlaceholder ??
-                "Add a short note"
+                uiText("Add a short note")
               }
               className={TAKEOVER_TEXTAREA_CLASS}
               autoFocus
@@ -1003,9 +999,7 @@ function ConfirmationCard({
               onClick={() => {
                 setRejecting(false);
               }}
-            >
-              Back
-            </Button>
+            >{uiText("Back")}</Button>
             <Button
               type="button"
               size="sm"
@@ -1022,7 +1016,7 @@ function ConfirmationCard({
               {working === "reject" ? (
                 <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
               ) : null}
-              {interaction.payload.rejectLabel ?? "Reject"}
+              {interaction.payload.rejectLabel ?? uiText("Reject")}
             </Button>
           </>
         ) : (
@@ -1038,7 +1032,7 @@ function ConfirmationCard({
                   : void resolve("reject")
               }
             >
-              {interaction.payload.rejectLabel ?? "Reject"}
+              {interaction.payload.rejectLabel ?? uiText("Reject")}
             </Button>
             <Button
               type="button"
@@ -1049,7 +1043,7 @@ function ConfirmationCard({
               {working === "accept" ? (
                 <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
               ) : null}
-              {interaction.payload.acceptLabel ?? "Approve"}
+              {interaction.payload.acceptLabel ?? uiText("Approve")}
             </Button>
           </>
         )}
@@ -1073,6 +1067,7 @@ function CheckboxConfirmationCard({
   errorMessage: (error: unknown) => string;
   draftKey?: string;
 }) {
+  useUiLocale();
   const restored = draftKey
     ? loadStructuredDraft<{ selected: string[]; reason: string }>(draftKey, {
         selected: interaction.payload.defaultSelectedOptionIds ?? [],
@@ -1174,8 +1169,8 @@ function CheckboxConfirmationCard({
             <Input
               value={filter}
               onChange={(event) => setFilter(event.target.value)}
-              placeholder="Filter options"
-              aria-label="Filter options"
+              placeholder={uiText("Filter options")}
+              aria-label={uiText("Filter options")}
               className="pl-8"
             />
           </label>
@@ -1216,15 +1211,15 @@ function CheckboxConfirmationCard({
             htmlFor={`${interaction.id}-reject-reason`}
             className="text-xs font-medium text-foreground"
           >
-            {interaction.payload.rejectReasonLabel ?? "What should change?"}
-            {interaction.payload.rejectRequiresReason ? "" : " (optional)"}
+            {interaction.payload.rejectReasonLabel ?? uiText("What should change?")}
+            {interaction.payload.rejectRequiresReason ? "" : uiText(" (optional)")}
           </label>
           <Textarea
             id={`${interaction.id}-reject-reason`}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
             placeholder={
-              interaction.payload.declineReasonPlaceholder ?? "Add a short note"
+              interaction.payload.declineReasonPlaceholder ?? uiText("Add a short note")
             }
             className={TAKEOVER_TEXTAREA_CLASS}
             autoFocus
@@ -1242,9 +1237,7 @@ function CheckboxConfirmationCard({
               variant="ghost"
               disabled={working !== null}
               onClick={() => setRejecting(false)}
-            >
-              Back
-            </Button>
+            >{uiText("Back")}</Button>
             <Button
               type="button"
               size="sm"
@@ -1260,7 +1253,7 @@ function CheckboxConfirmationCard({
               {working === "reject" ? (
                 <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
               ) : null}
-              {interaction.payload.rejectLabel ?? "Decline"}
+              {interaction.payload.rejectLabel ?? uiText("Decline")}
             </Button>
           </>
         ) : (
@@ -1276,7 +1269,7 @@ function CheckboxConfirmationCard({
                   : void resolve("reject")
               }
             >
-              {interaction.payload.rejectLabel ?? "Decline"}
+              {interaction.payload.rejectLabel ?? uiText("Decline")}
             </Button>
             <Button
               type="button"
@@ -1287,7 +1280,7 @@ function CheckboxConfirmationCard({
               {working === "accept" ? (
                 <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
               ) : null}
-              {interaction.payload.acceptLabel ?? "Confirm selection"}
+              {interaction.payload.acceptLabel ?? uiText("Confirm selection")}
             </Button>
           </>
         )}
@@ -1305,6 +1298,7 @@ function SuggestedTaskRow({
   selected: Set<string>;
   onToggle: (node: SuggestedTaskTreeNode) => void;
 }) {
+  useUiLocale();
   if (node.task.hiddenInPreview) return null;
   const hiddenCount = collectSuggestedTaskClientKeys(node).filter(
     (key) =>
@@ -1327,8 +1321,7 @@ function SuggestedTaskRow({
           </span>
           {hiddenCount > 0 ? (
             <span className="block text-xs text-muted-foreground">
-              + {hiddenCount} hidden follow-up
-            </span>
+              + {hiddenCount}{uiText(" hidden follow-up")}</span>
           ) : null}
         </span>
       </label>
@@ -1361,6 +1354,7 @@ function SuggestedTasksCard({
   errorMessage: (error: unknown) => string;
   draftKey?: string;
 }) {
+  useUiLocale();
   const roots = useMemo(
     () => buildSuggestedTaskTree(interaction.payload.tasks),
     [interaction.payload.tasks],
@@ -1444,9 +1438,7 @@ function SuggestedTasksCard({
 
   return (
     <div>
-      <p className="text-sm leading-5 text-foreground">
-        Select the tasks to create.
-      </p>
+      <p className="text-sm leading-5 text-foreground">{uiText("Select the tasks to create.")}</p>
       {interaction.payload.tasks.length > 10 ? (
         <label className="relative mt-3 block">
           <Search
@@ -1456,15 +1448,15 @@ function SuggestedTasksCard({
           <Input
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
-            placeholder="Filter suggested tasks"
-            aria-label="Filter suggested tasks"
+            placeholder={uiText("Filter suggested tasks")}
+            aria-label={uiText("Filter suggested tasks")}
             className="pl-8"
           />
         </label>
       ) : null}
       <ul
         className="mt-2 max-h-(--sz-28dvh) overflow-y-auto scrollbar-auto-hide"
-        aria-label="Suggested tasks"
+        aria-label={uiText("Suggested tasks")}
       >
         {visibleRoots.map((node) => (
           <SuggestedTaskRow
@@ -1480,14 +1472,12 @@ function SuggestedTasksCard({
           <label
             htmlFor={`${interaction.id}-reject-reason`}
             className="text-xs font-medium text-foreground"
-          >
-            Why should these tasks change? (optional)
-          </label>
+          >{uiText("Why should these tasks change? (optional)")}</label>
           <Textarea
             id={`${interaction.id}-reject-reason`}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            placeholder="Add a short note"
+            placeholder={uiText("Add a short note")}
             className={TAKEOVER_TEXTAREA_CLASS}
             autoFocus
           />
@@ -1495,7 +1485,7 @@ function SuggestedTasksCard({
       ) : null}
       <InteractionActionError message={actionError} />
       <ActionRow
-        hint={`${selected.size} of ${interaction.payload.tasks.length} selected`}
+        hint={uiText("{{value0}} of {{value1}} selected", { value0: selected.size, value1: interaction.payload.tasks.length })}
       >
         {rejecting ? (
           <>
@@ -1505,9 +1495,7 @@ function SuggestedTasksCard({
               variant="ghost"
               disabled={working !== null}
               onClick={() => setRejecting(false)}
-            >
-              Back
-            </Button>
+            >{uiText("Back")}</Button>
             <Button
               type="button"
               size="sm"
@@ -1517,9 +1505,7 @@ function SuggestedTasksCard({
             >
               {working === "reject" ? (
                 <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
-              ) : null}
-              Send back
-            </Button>
+              ) : null}{uiText("Send back")}</Button>
           </>
         ) : (
           <>
@@ -1529,9 +1515,7 @@ function SuggestedTasksCard({
               variant="ghost"
               disabled={working !== null || !onRejectInteraction}
               onClick={() => setRejecting(true)}
-            >
-              Revise
-            </Button>
+            >{uiText("Revise")}</Button>
             <Button
               type="button"
               size="sm"
@@ -1542,9 +1526,7 @@ function SuggestedTasksCard({
             >
               {working === "accept" ? (
                 <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
-              ) : null}
-              Create selected
-            </Button>
+              ) : null}{uiText("Create selected")}</Button>
           </>
         )}
       </ActionRow>
@@ -1571,6 +1553,7 @@ function ItemVerdictsCard({
   errorMessage: (error: unknown) => string;
   draftKey?: string;
 }) {
+  useUiLocale();
   const takeoverActions = useTaskChatComposerTakeoverActions();
   const items = interaction.payload.items;
   const resolvedById = useMemo(
@@ -1624,9 +1607,7 @@ function ItemVerdictsCard({
   const item = items[page];
   if (!item)
     return (
-      <p className="text-sm text-muted-foreground">
-        No review items were provided.
-      </p>
+      <p className="text-sm text-muted-foreground">{uiText("No review items were provided.")}</p>
     );
   const resolved = resolvedById.get(item.id);
   const draft = drafts.get(item.id);
@@ -1716,30 +1697,30 @@ function ItemVerdictsCard({
   return (
     <div>
       <div className="mb-2 flex items-center text-xs text-muted-foreground">
-        <span>{drafts.size + resolvedById.size} decided</span>
+        <span>{drafts.size + resolvedById.size}{uiText(" decided")}</span>
         <TaskChatComposerTakeoverControls>
           <nav
             className="flex shrink-0 items-center gap-1"
-            aria-label="Item pagination"
+            aria-label={uiText("Item pagination")}
           >
             <Button
               type="button"
               size="icon-xs"
               variant="ghost"
-              aria-label="Previous item"
+              aria-label={uiText("Previous item")}
               disabled={working || page === 0}
               onClick={() => setPage((current) => current - 1)}
             >
               <ChevronLeft aria-hidden />
             </Button>
             <span className="min-w-10 text-center tabular-nums">
-              {page + 1} of {items.length}
+              {page + 1}{uiText(" of ")}{items.length}
             </span>
             <Button
               type="button"
               size="icon-xs"
               variant="ghost"
-              aria-label="Next item"
+              aria-label={uiText("Next item")}
               disabled={
                 working ||
                 page === items.length - 1 ||
@@ -1767,9 +1748,7 @@ function ItemVerdictsCard({
           <a
             href={itemHref}
             className="text-xs font-medium text-primary hover:underline"
-          >
-            Open
-          </a>
+          >{uiText("Open")}</a>
         ) : null}
       </div>
       {item.previewMarkdown ? (
@@ -1788,7 +1767,7 @@ function ItemVerdictsCard({
         <div
           className="mt-3 flex flex-wrap gap-1.5"
           role="group"
-          aria-label={`Verdict for ${item.label}`}
+          aria-label={uiText("Verdict for {{value0}}", { value0: item.label })}
         >
           {enabledVerdicts.map((verdict) => (
             <Button
@@ -1827,13 +1806,13 @@ function ItemVerdictsCard({
             htmlFor={`${interaction.id}-${item.id}-reason`}
             className="text-xs font-medium text-foreground"
           >
-            {interaction.payload.reasonLabel ?? "Reason"}
+            {interaction.payload.reasonLabel ?? uiText("Reason")}
           </label>
           <Textarea
             id={`${interaction.id}-${item.id}-reason`}
             value={draft.reason}
             onChange={(event) => setReason(event.target.value)}
-            placeholder="Add a short reason"
+            placeholder={uiText("Add a short reason")}
             className={TAKEOVER_TEXTAREA_CLASS}
             autoFocus
           />
@@ -1844,9 +1823,7 @@ function ItemVerdictsCard({
               variant="outline"
               disabled={!draft.reason.trim() || working}
               onClick={confirmRejectionReason}
-            >
-              Submit rejection reason
-            </Button>
+            >{uiText("Submit rejection reason")}</Button>
           </div>
         </div>
       ) : null}
@@ -1869,7 +1846,7 @@ function ItemVerdictsCard({
           {working ? (
             <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
           ) : null}
-          {drafts.size > 0 ? `Apply ${drafts.size}` : "Apply decisions"}
+          {drafts.size > 0 ? uiText("Apply {{value0}}", { value0: drafts.size }) : uiText("Apply decisions")}
         </Button>
       </ActionRow>
     </div>
@@ -1894,6 +1871,7 @@ export function TaskChatCompactInteractionCard({
   draftKey,
   mentions,
 }: TaskChatCompactInteractionCardProps) {
+  useUiLocale();
   const creatorLabel = interaction.createdByAgentId
     ? agentMap?.get(interaction.createdByAgentId)?.name
     : interaction.createdByUserId

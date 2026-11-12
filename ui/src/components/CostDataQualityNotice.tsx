@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -41,6 +42,7 @@ export function CostDataQualityNotice({ companyId, from, to, reportKey, unpriced
   companyId: string; from?: string; to?: string; reportKey: readonly unknown[];
   unpricedCount: number; pendingCount: number; unknownBillingCount: number;
 }) {
+  useUiLocale();
   const [open, setOpen] = useState(false);
   const unavailableCount = unpricedCount + pendingCount;
   const hasCostGaps = unavailableCount > 0 || unknownBillingCount > 0;
@@ -99,14 +101,14 @@ export function CostDataQualityNotice({ companyId, from, to, reportKey, unpriced
         <Badge variant="outline" className="font-normal text-muted-foreground">{explanation.label}</Badge>
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <time dateTime={item.occurredAt}>{formatDateTime(item.occurredAt)}</time>
-          {item.runId && item.agentId && <Link className="text-primary underline underline-offset-4 hover:text-primary/80" to={`/agents/${item.agentId}/runs/${item.runId}`}>View run</Link>}
+          {item.runId && item.agentId && <Link className="text-primary underline underline-offset-4 hover:text-primary/80" to={`/agents/${item.agentId}/runs/${item.runId}`}>{uiText("View run")}</Link>}
           {item.reason === "retryable" && item.runId && data?.canRetry && <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs font-normal underline hover:text-primary/80" disabled={retry.isPending}
-            onClick={() => { retry.reset(); retry.mutate(item.runId!); }}>Retry cost recording</Button>}
+            onClick={() => { retry.reset(); retry.mutate(item.runId!); }}>{uiText("Retry cost recording")}</Button>}
         </div>
       </div>
       <p>{explanation.description}</p>
-      {retry.variables === item.runId && retry.isPending && <p role="status">Recording saved costs…</p>}
-      {retry.variables === item.runId && retry.error && <p role="status">Cost recording failed. Try again shortly.</p>}
+      {retry.variables === item.runId && retry.isPending && <p role="status">{uiText("Recording saved costs…")}</p>}
+      {retry.variables === item.runId && retry.error && <p role="status">{uiText("Cost recording failed. Try again shortly.")}</p>}
     </li>;
   }
 
@@ -116,21 +118,21 @@ export function CostDataQualityNotice({ companyId, from, to, reportKey, unpriced
       {label}
     </Button>
     {open && <div id={detailsId} className="space-y-2">
-      {hasCostGaps && isPending && <p role="status">Loading affected runs…</p>}
-      {hasCostGaps && error && !data && <div className="flex flex-wrap items-center gap-2"><p role="status">Cost details could not be loaded.</p><Button variant="outline" size="sm" onClick={() => refetch()}>Retry loading</Button></div>}
+      {hasCostGaps && isPending && <p role="status">{uiText("Loading affected runs…")}</p>}
+      {hasCostGaps && error && !data && <div className="flex flex-wrap items-center gap-2"><p role="status">{uiText("Cost details could not be loaded.")}</p><Button variant="outline" size="sm" onClick={() => refetch()}>{uiText("Retry loading")}</Button></div>}
       {hasCostGaps && data && <>
-        {error && <p role="status">Showing the last loaded cost details. Updates will resume automatically.</p>}
-        {data.events.length === 0 && data.runs.length === 0 && <p role="status">No cost gaps remain in this period.</p>}
-        <ul aria-label="Cost details by agent" className="space-y-4">
+        {error && <p role="status">{uiText("Showing the last loaded cost details. Updates will resume automatically.")}</p>}
+        {data.events.length === 0 && data.runs.length === 0 && <p role="status">{uiText("No cost gaps remain in this period.")}</p>}
+        <ul aria-label={uiText("Cost details by agent")} className="space-y-4">
           {sortedGroups.map(group => <li key={group.agent.id ?? "services"}>
             <h3 className="flex items-center gap-2 font-medium text-foreground">
               <AgentAvatar agent={group.agent} size={20} />
               {group.agent.id ? <Link className="text-primary underline underline-offset-4 hover:text-primary/80" to={`/agents/${group.agent.id}/configuration`}>{group.agent.name}</Link> : group.agent.name}
             </h3>
-            <ul aria-label={`${group.agent.name} cost details`}>{group.items.map(({ item, source }) => itemRow(item, source))}</ul>
+            <ul aria-label={uiText("{{value0}} cost details", { value0: group.agent.name })}>{group.items.map(({ item, source }) => itemRow(item, source))}</ul>
           </li>)}
         </ul>
-        {(data.hasMoreEvents || data.hasMoreRuns) && <p className="text-xs">Showing the 25 most recent entries in each category. Select a shorter date range to inspect more.</p>}
+        {(data.hasMoreEvents || data.hasMoreRuns) && <p className="text-xs">{uiText("Showing the 25 most recent entries in each category. Select a shorter date range to inspect more.")}</p>}
       </>}
     </div>}
   </div>;

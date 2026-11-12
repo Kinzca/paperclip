@@ -1,3 +1,5 @@
+import { getUiLocale } from "@/i18n/ui";
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { buildSlackAppManifest, defaultSlackAppConfiguration } from "@paperclipai/shared";
 import { SlackAppDetails, SlackSetupAdvanced } from "./SlackAppDetails";
 import { SlackAutomaticSetup } from "./SlackAutomaticSetup";
@@ -110,19 +112,18 @@ export function ChatConnectionPurpose({ provider, onChat, onTools }: {
   onChat: () => void;
   onTools: () => void;
 }) {
+  useUiLocale();
   const { setBreadcrumbs } = useBreadcrumbs();
   useEffect(() => {
-    setBreadcrumbs([{ label: "Connectors", href: "/apps" }, { label: "Choose connection" }]);
+    setBreadcrumbs([{ label: uiText("Connectors"), href: "/apps" }, { label: uiText("Choose connection") }]);
     return () => setBreadcrumbs([]);
-  }, [setBreadcrumbs]);
+  }, [setBreadcrumbs, getUiLocale()]);
   return (
       <div className="max-w-2xl space-y-6">
         <ChatSetupNavigation labels={provider === "slack" ? ["Choose agent", "App configuration access token", "Install Slack app", "Send a message"] : undefined} step={0} availableStep={0} onSelect={onChat} />
         <div>
-          <h1 className="text-xl font-bold">Choose how to connect</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            What should this {providerNames[provider]} connection do?
-          </p>
+          <h1 className="text-xl font-bold">{uiText("Choose how to connect")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{uiText("What should this ")}{providerNames[provider]}{uiText(" connection do?")}</p>
         </div>
         <div className="grid gap-3">
           <button
@@ -132,13 +133,8 @@ export function ChatConnectionPurpose({ provider, onChat, onTools }: {
           >
             <AgentAvatar size={48} />
             <span>
-              <span className="block text-sm font-semibold">
-                Chat with an agent
-              </span>
-              <span className="mt-1 block text-sm text-muted-foreground">
-                People in {providerNames[provider]} can start and continue
-                Paperclip tasks.
-              </span>
+              <span className="block text-sm font-semibold">{uiText("Chat with an agent")}</span>
+              <span className="mt-1 block text-sm text-muted-foreground">{uiText("People in ")}{providerNames[provider]}{uiText(" can start and continue Paperclip tasks.")}</span>
             </span>
           </button>
           <button
@@ -150,13 +146,8 @@ export function ChatConnectionPurpose({ provider, onChat, onTools }: {
               <Hammer className="size-8" />
             </span>
             <span>
-              <span className="block text-sm font-semibold">
-                Use this connection as an agent tool
-              </span>
-              <span className="mt-1 block text-sm text-muted-foreground">
-                Let agents use {providerNames[provider]} actions and data while
-                they work.
-              </span>
+              <span className="block text-sm font-semibold">{uiText("Use this connection as an agent tool")}</span>
+              <span className="mt-1 block text-sm text-muted-foreground">{uiText("Let agents use ")}{providerNames[provider]}{uiText(" actions and data while they work.")}</span>
             </span>
           </button>
         </div>
@@ -165,12 +156,14 @@ export function ChatConnectionPurpose({ provider, onChat, onTools }: {
 }
 
 export function ChatEndpointSetup() {
+  useUiLocale();
   const [params] = useSearchParams();
   if (params.get("provider") === "github") return <GitHubChatSetup />;
   return params.get("provider") === "agentmail" ? <EmailEndpointSetup /> : <ChatSdkEndpointSetup />;
 }
 
 function ChatSdkEndpointSetup() {
+  useUiLocale();
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -200,11 +193,11 @@ function ChatSdkEndpointSetup() {
 
   useEffect(() => {
     setBreadcrumbs([
-      { label: "Connectors", href: "/apps" },
-      { label: "Connect chat" },
+      { label: uiText("Connectors"), href: "/apps" },
+      { label: uiText("Connect chat") },
     ]);
     return () => setBreadcrumbs([]);
-  }, [setBreadcrumbs]);
+  }, [setBreadcrumbs, getUiLocale()]);
 
   const agentsQuery = useQuery({
     queryKey: ["chat-endpoint-setup-agents", selectedCompanyId],
@@ -495,15 +488,11 @@ function ChatSdkEndpointSetup() {
 
   if (!provider)
     return (
-      <p className="text-sm text-destructive">
-        This chat provider is not supported.
-      </p>
+      <p className="text-sm text-destructive">{uiText("This chat provider is not supported.")}</p>
     );
   if (!selectedCompanyId)
     return (
-      <p className="text-sm text-muted-foreground">
-        Select an organization to connect chat.
-      </p>
+      <p className="text-sm text-muted-foreground">{uiText("Select an organization to connect chat.")}</p>
     );
 
   if (purpose === "choice") {
@@ -523,28 +512,23 @@ function ChatSdkEndpointSetup() {
         {step === 0 ? (
           <>
             <div>
-              <h1 className="text-xl font-bold">
-                Which agent do you want to chat with?
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                This agent is permanent for the connection. Connect another
-                channel to represent a different agent.
-              </p>
+              <h1 className="text-xl font-bold">{uiText("Which agent do you want to chat with?")}</h1>
+              <p className="mt-1 text-sm text-muted-foreground">{uiText("This agent is permanent for the connection. Connect another channel to represent a different agent.")}</p>
             </div>
             {endpoint ? (
-              <Input aria-label="Assigned agent" value={endpoint.assignedAgentName ?? selectedAgent?.name ?? agentId} readOnly />
+              <Input aria-label={uiText("Assigned agent")} value={endpoint.assignedAgentName ?? selectedAgent?.name ?? agentId} readOnly />
             ) : <AgentSelect
               agents={activeAgents}
               value={agentId}
               onChange={setAgentId}
-              placeholder="Choose an active agent"
-              emptyMessage="No active agents are available."
+              placeholder={uiText("Choose an active agent")}
+              emptyMessage={uiText("No active agents are available.")}
             />}
             {isSlack && (selectedAgent || endpoint) && <SlackSetupAdvanced>
               <SlackAppDetails value={slackDetails} readOnly={!slackDetailsEditable || createEndpoint.isPending}
                 onChange={app => setSlackDraft({ agentId, app })}
                 onBlur={() => void persistSlackDetails().catch(() => {})} />
-              {saveSlackDetails.isError && <p role="alert" className="text-sm text-destructive">Couldn&apos;t save the Slack app details. Try again before continuing.</p>}
+              {saveSlackDetails.isError && <p role="alert" className="text-sm text-destructive">{uiText("Couldn't save the Slack app details. Try again before continuing.")}</p>}
             </SlackSetupAdvanced>}
             {provider === "github" && <GitHubAgentTrustWarning agent={selectedAgent} />}
             <SetupWizardFooter disabled={createEndpoint.isPending || saveSlackDetails.isPending} onSaveExit={() => void continueFromAgent(true)}>
@@ -554,9 +538,7 @@ function ChatSdkEndpointSetup() {
               >
                 {createEndpoint.isPending && (
                   <Loader2 className="h-4 w-4 animate-spin" />
-                )}
-                Continue
-              </Button>
+                )}{uiText("Continue")}</Button>
             </SetupWizardFooter>
           </>
         ) : null}
@@ -567,7 +549,7 @@ function ChatSdkEndpointSetup() {
                 role="alert"
                 className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
               >
-                <p className="font-medium">Connection failed</p>
+                <p className="font-medium">{uiText("Connection failed")}</p>
                 <p className="mt-1">{setupError}</p>
               </div>
             ) : null}
@@ -620,21 +602,18 @@ function ChatSdkEndpointSetup() {
             <AgentCharacter
               agent={selectedAgent ?? { id: endpoint.assignedAgentId, name: endpoint.assignedAgentName }}
               size={256} state="success" trackingScope="page"
-              label={`${selectedAgent?.name ?? endpoint.assignedAgentName} avatar`}
+              label={uiText("{{value0}} avatar", { value0: selectedAgent?.name ?? endpoint.assignedAgentName })}
             />
             <div className="flex flex-col items-center gap-3">
               <h1 className="flex items-center gap-2 text-2xl font-bold">
-                <CheckCircle2 aria-hidden="true" className="size-6 text-(--status-task-done)" />
-                Success
-              </h1>
+                <CheckCircle2 aria-hidden="true" className="size-6 text-(--status-task-done)" />{uiText("Success")}</h1>
               <p className="flex flex-wrap items-center justify-center gap-2 text-base text-muted-foreground">
-                <span>You can now talk to {selectedAgent?.name ?? endpoint.assignedAgentName} in Slack</span>
+                <span>{uiText("You can now talk to ")}{selectedAgent?.name ?? endpoint.assignedAgentName}{uiText(" in Slack")}</span>
                 <img src="/brands/apps/slack.svg" alt="" aria-hidden="true" className="size-6" />
               </p>
             </div>
             <Button disabled={testConnection.isPending} onClick={() => testConnection.mutate()}>
-              {testConnection.isPending && <Loader2 className="size-4 animate-spin" />}Done
-            </Button>
+              {testConnection.isPending && <Loader2 className="size-4 animate-spin" />}{uiText("Done")}</Button>
           </div> : <TryStep
             endpointId={endpoint.id}
             provider={provider}
@@ -661,9 +640,7 @@ function ChatSdkEndpointSetup() {
           />
         )}
         {step !== 0 && !isSlack && <div className="flex justify-start">
-          <Button className="text-muted-foreground" variant="ghost" onClick={() => navigate("/apps")}>
-            Save &amp; exit
-          </Button>
+          <Button className="text-muted-foreground" variant="ghost" onClick={() => navigate("/apps")}>{uiText("Save & exit")}</Button>
         </div>}
       </div>
     </div>
@@ -712,6 +689,7 @@ function ProviderConnectStep({
     values?: Record<string, string>,
   ) => void;
 }) {
+  useUiLocale();
   const { pushToast } = useToast();
   const navigate = useNavigate();
   const slackBotToken = (credentials.botToken ?? "").trim();
@@ -753,7 +731,7 @@ function ProviderConnectStep({
       <p className="text-sm font-medium">{label}</p>
       <div className="rounded-lg border border-border bg-muted p-3 font-mono text-xs break-all">
         {value ??
-          "This endpoint is unavailable. Check the server's public URL."}
+          uiText("This endpoint is unavailable. Check the server's public URL.")}
       </div>
     </div>
   );
@@ -898,55 +876,36 @@ function ProviderConnectStep({
     return (
       <div className="space-y-5">
         <div>
-          <h1 className="text-xl font-bold">Connect {agentName} to Discord</h1>
+          <h1 className="text-xl font-bold">{uiText("Connect ")}{agentName}{uiText(" to Discord")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {repairing
-              ? "Reconnect verifies this same Discord application and server installation. It does not add or remove the bot from the server. Leave fields blank to reuse saved credentials."
-              : "Create one dedicated Discord application and bot for this Paperclip agent."}
+              ? uiText("Reconnect verifies this same Discord application and server installation. It does not add or remove the bot from the server. Leave fields blank to reuse saved credentials.")
+              : uiText("Create one dedicated Discord application and bot for this Paperclip agent.")}
           </p>
         </div>
       <ol className="list-decimal space-y-2 pl-5 text-sm">
-          <li>
-            In Discord Developer Portal, create an application. Copy its
-            Application ID from General Information.
-          </li>
-          <li>
-            Open Bot, create the bot, enable Message Content Intent, then reset
-            and copy its token.
-          </li>
-          <li>
-            Enable Developer Mode in Discord, right-click the target server, and
-            copy its Server ID.
-          </li>
-          <li>
-            Enter those values below, then use the generated install link to add
-            the bot to that server.
-          </li>
+          <li>{uiText("In Discord Developer Portal, create an application. Copy its Application ID from General Information.")}</li>
+          <li>{uiText("Open Bot, create the bot, enable Message Content Intent, then reset and copy its token.")}</li>
+          <li>{uiText("Enable Developer Mode in Discord, right-click the target server, and copy its Server ID.")}</li>
+          <li>{uiText("Enter those values below, then use the generated install link to add the bot to that server.")}</li>
         </ol>
         <Button
           variant="outline"
           onClick={() =>
             openProviderSetup("https://discord.com/developers/applications")
           }
-        >
-          Open Discord Developer Portal <ExternalLink />
+        >{uiText("Open Discord Developer Portal ")}<ExternalLink />
         </Button>
         {field("applicationId", "Application ID", "text")}
         {field("guildId", "Server ID", "text")}
         {field("botToken", "Bot token")}
         {installUrl && (
           <Button asChild variant="outline">
-            <a href={installUrl} target="_blank" rel="noreferrer">
-              Install bot in this server <ExternalLink />
+            <a href={installUrl} target="_blank" rel="noreferrer">{uiText("Install bot in this server ")}<ExternalLink />
             </a>
           </Button>
         )}
-        <p className="text-sm text-muted-foreground">
-          The install link grants only View Channels, Send Messages, Create
-          Public Threads, Send Messages in Threads, Read Message History, Add
-          Reactions, Embed Links, and Attach Files. Paperclip still requires
-          each discovered channel to be enabled in Access.
-        </p>
+        <p className="text-sm text-muted-foreground">{uiText("The install link grants only View Channels, Send Messages, Create Public Threads, Send Messages in Threads, Read Message History, Add Reactions, Embed Links, and Attach Files. Paperclip still requires each discovered channel to be enabled in Access.")}</p>
         <Button
           disabled={
             (!repairing &&
@@ -960,7 +919,7 @@ function ProviderConnectStep({
           }
         >
           {pending && <Loader2 className="h-4 w-4 animate-spin" />}
-          {repairing ? "Reconnect Discord bot" : "Connect Discord bot"}
+          {repairing ? uiText("Reconnect Discord bot") : uiText("Connect Discord bot")}
         </Button>
       </div>
     );
@@ -969,41 +928,30 @@ function ProviderConnectStep({
     return (
       <div className="space-y-5">
         <div>
-          <h1 className="text-xl font-bold">Create {agentName} in Telegram</h1>
+          <h1 className="text-xl font-bold">{uiText("Create ")}{agentName}{uiText(" in Telegram")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {repairing
-              ? "Reconnect verifies this same BotFather bot and automatically refreshes its Paperclip webhook and command menu. It does not recreate the bot or change its chat memberships. Leave the token blank to reuse the saved credential."
-              : "Create a bot with BotFather, then paste the token it gives you."}
+              ? uiText("Reconnect verifies this same BotFather bot and automatically refreshes its Paperclip webhook and command menu. It does not recreate the bot or change its chat memberships. Leave the token blank to reuse the saved credential.")
+              : uiText("Create a bot with BotFather, then paste the token it gives you.")}
           </p>
         </div>
         <ol className="list-decimal space-y-2 pl-5 text-sm">
-          <li>
-            Open BotFather and send <code>/newbot</code>.
+          <li>{uiText("Open BotFather and send ")}<code>/newbot</code>.
           </li>
-          <li>Enter the bot display name.</li>
-          <li>
-            Choose an available username ending in <code>bot</code>.
+          <li>{uiText("Enter the bot display name.")}</li>
+          <li>{uiText("Choose an available username ending in ")}<code>bot</code>.
           </li>
         </ol>
-        <p className="rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
-          Paperclip works with Telegram&apos;s default bot privacy mode and
-          registers its command menu automatically. In a group, ordinary
-          mentions are not delivered to bots: start or continue work with{" "}
-          <code>/task@bot_username &lt;request&gt;</code>, or reply directly to
-          a message from the bot.
-        </p>
+        <p className="rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">{uiText("Paperclip works with Telegram's default bot privacy mode and registers its command menu automatically. In a group, ordinary mentions are not delivered to bots: start or continue work with")}{" "}
+          <code>/task@bot_username &lt;request&gt;</code>{uiText(", or reply directly to a message from the bot.")}</p>
         <Button
           variant="outline"
           onClick={() => openProviderSetup("https://t.me/BotFather")}
-        >
-          Open BotFather <ExternalLink />
+        >{uiText("Open BotFather ")}<ExternalLink />
         </Button>
         {field("botToken", "Bot token")}
         {(!endpoint.setup?.webhookUrl || automaticSlack && !endpoint.setup?.slackOAuthCallbackUri?.startsWith("https://")) && (
-          <p className="text-sm text-destructive">
-            Configure a public HTTPS URL for this Paperclip instance before
-            connecting Telegram.
-          </p>
+          <p className="text-sm text-destructive">{uiText("Configure a public HTTPS URL for this Paperclip instance before connecting Telegram.")}</p>
         )}
         <Button
           disabled={
@@ -1016,7 +964,7 @@ function ProviderConnectStep({
           }
         >
           {pending && <Loader2 className="h-4 w-4 animate-spin" />}
-          {repairing ? "Reconnect bot" : "Connect bot"}
+          {repairing ? uiText("Reconnect bot") : uiText("Connect bot")}
         </Button>
       </div>
     );
@@ -1024,44 +972,18 @@ function ProviderConnectStep({
     return (
       <div className="space-y-5">
         <div>
-          <h1 className="text-xl font-bold">
-            Connect {agentName} to Microsoft Teams
-          </h1>
+          <h1 className="text-xl font-bold">{uiText("Connect ")}{agentName}{uiText(" to Microsoft Teams")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {repairing
-              ? "Reconnect verifies this same Microsoft app, tenant, and bot identity. It does not upload or reinstall the Teams app. Leave fields blank to reuse saved credentials."
-              : "Use your own Microsoft app credentials for this bot."}
+              ? uiText("Reconnect verifies this same Microsoft app, tenant, and bot identity. It does not upload or reinstall the Teams app. Leave fields blank to reuse saved credentials.")
+              : uiText("Use your own Microsoft app credentials for this bot.")}
           </p>
         </div>
-        <p className="rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
-          This setup requires a Microsoft 365 work or school organization where
-          you can register an Entra app, create an Azure Bot, and upload or
-          install a Teams app. Personal or free Teams accounts at teams.live.com
-          cannot complete this setup. This release supports Microsoft 365
-          commercial cloud tenants only; GCC, GCC High, DoD, and Microsoft 365
-          operated by 21Vianet are not supported yet.
-        </p>
+        <p className="rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">{uiText("This setup requires a Microsoft 365 work or school organization where you can register an Entra app, create an Azure Bot, and upload or install a Teams app. Personal or free Teams accounts at teams.live.com cannot complete this setup. This release supports Microsoft 365 commercial cloud tenants only; GCC, GCC High, DoD, and Microsoft 365 operated by 21Vianet are not supported yet.")}</p>
         <ol className="list-decimal space-y-2 pl-5 text-sm">
-          <li>
-            In Microsoft Entra, create a single-tenant app registration. Copy
-            its Application (client) ID and Directory (tenant) ID, then create a
-            client secret and copy its value.
-          </li>
-          <li>
-            In Azure, create an Azure Bot. Choose Single Tenant, use that
-            Application ID, set its messaging endpoint to the Paperclip URL
-            below, and add the Microsoft Teams channel.
-          </li>
-          <li>
-            In Teams Developer Portal, create an app, add a bot with the same
-            Application ID, then apply the manifest settings shown below. The
-            block binds the Teams resource-specific consent permissions to that
-            Entra app; these are not Microsoft Graph permissions in Entra. These
-            permissions let the installed app receive every message in a team or
-            group chat without an @mention, so describe that access to
-            installers. Download the package and install it in the target team
-            or group chat.
-          </li>
+          <li>{uiText("In Microsoft Entra, create a single-tenant app registration. Copy its Application (client) ID and Directory (tenant) ID, then create a client secret and copy its value.")}</li>
+          <li>{uiText("In Azure, create an Azure Bot. Choose Single Tenant, use that Application ID, set its messaging endpoint to the Paperclip URL below, and add the Microsoft Teams channel.")}</li>
+          <li>{uiText("In Teams Developer Portal, create an app, add a bot with the same Application ID, then apply the manifest settings shown below. The block binds the Teams resource-specific consent permissions to that Entra app; these are not Microsoft Graph permissions in Entra. These permissions let the installed app receive every message in a team or group chat without an @mention, so describe that access to installers. Download the package and install it in the target team or group chat.")}</li>
         </ol>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">
@@ -1069,8 +991,7 @@ function ProviderConnectStep({
               href="https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade"
               target="_blank"
               rel="noreferrer"
-            >
-              Open Microsoft Entra <ExternalLink />
+            >{uiText("Open Microsoft Entra ")}<ExternalLink />
             </a>
           </Button>
           <Button asChild variant="outline">
@@ -1078,8 +999,7 @@ function ProviderConnectStep({
               href="https://portal.azure.com/#create/Microsoft.AzureBot"
               target="_blank"
               rel="noreferrer"
-            >
-              Create Azure Bot <ExternalLink />
+            >{uiText("Create Azure Bot ")}<ExternalLink />
             </a>
           </Button>
           <Button asChild variant="outline">
@@ -1087,8 +1007,7 @@ function ProviderConnectStep({
               href="https://dev.teams.microsoft.com/apps"
               target="_blank"
               rel="noreferrer"
-            >
-              Open Teams Developer Portal <ExternalLink />
+            >{uiText("Open Teams Developer Portal ")}<ExternalLink />
             </a>
           </Button>
         </div>
@@ -1101,67 +1020,40 @@ function ProviderConnectStep({
         {field("clientSecret", "Client secret value")}
         <section className="space-y-3 rounded-lg border border-border p-4">
           <div>
-            <h2 className="text-sm font-semibold">
-              Microsoft portal field map
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Use these exact portal sections and reuse the same Application ID
-              in all three places.
-            </p>
+            <h2 className="text-sm font-semibold">{uiText("Microsoft portal field map")}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{uiText("Use these exact portal sections and reuse the same Application ID in all three places.")}</p>
           </div>
           <ol className="list-decimal space-y-3 pl-5 text-sm">
             <li>
-              <strong>Microsoft Entra admin center · App registrations</strong>:
-              select <strong>New registration</strong>, choose{" "}
-              <strong>
-                Accounts in this organizational directory only (Single tenant)
-              </strong>
-              , then select <strong>Register</strong>. Copy{" "}
-              <strong>Application (client) ID</strong> and{" "}
-              <strong>Directory (tenant) ID</strong>. Under{" "}
-              <strong>Certificates &amp; secrets · Client secrets</strong>,
-              select <strong>New client secret</strong> and copy its{" "}
-              <strong>Value</strong>, not its Secret ID.
+              <strong>{uiText("Microsoft Entra admin center · App registrations")}</strong>{uiText(": select ")}<strong>{uiText("New registration")}</strong>{uiText(", choose")}{" "}
+              <strong>{uiText("Accounts in this organizational directory only (Single tenant)")}</strong>{uiText(", then select ")}<strong>{uiText("Register")}</strong>{uiText(". Copy")}{" "}
+              <strong>{uiText("Application (client) ID")}</strong>{uiText(" and")}{" "}
+              <strong>{uiText("Directory (tenant) ID")}</strong>{uiText(". Under")}{" "}
+              <strong>{uiText("Certificates & secrets · Client secrets")}</strong>{uiText(", select ")}<strong>{uiText("New client secret")}</strong>{uiText(" and copy its")}{" "}
+              <strong>{uiText("Value")}</strong>{uiText(", not its Secret ID.")}</li>
+            <li>
+              <strong>{uiText("Azure · Create Azure Bot")}</strong>{uiText(": set")}{" "}
+              <strong>{uiText("Microsoft App ID")}</strong>{uiText(" to")}{" "}
+              <strong>{uiText("Single Tenant")}</strong>{uiText(", set ")}<strong>{uiText("Creation type")}</strong>{" "}{uiText("to ")}<strong>{uiText("Use existing app registration")}</strong>{uiText(", and enter the Application ID and Tenant ID above. After creation, open")}{" "}
+              <strong>{uiText("Settings · Configuration")}</strong>{uiText(" and paste the Paperclip")}{" "}
+              <strong>{uiText("Messaging endpoint")}</strong>{uiText("; then open")}{" "}
+              <strong>{uiText("Settings · Channels")}</strong>{uiText(" and enable")}{" "}
+              <strong>{uiText("Microsoft Teams")}</strong>.
             </li>
             <li>
-              <strong>Azure · Create Azure Bot</strong>: set{" "}
-              <strong>Microsoft App ID</strong> to{" "}
-              <strong>Single Tenant</strong>, set <strong>Creation type</strong>{" "}
-              to <strong>Use existing app registration</strong>, and enter the
-              Application ID and Tenant ID above. After creation, open{" "}
-              <strong>Settings · Configuration</strong> and paste the Paperclip{" "}
-              <strong>Messaging endpoint</strong>; then open{" "}
-              <strong>Settings · Channels</strong> and enable{" "}
-              <strong>Microsoft Teams</strong>.
-            </li>
+              <strong>{uiText("Teams Developer Portal · Apps")}</strong>{uiText(": select")}{" "}
+              <strong>{uiText("New app")}</strong>{uiText(". Under")}{" "}
+              <strong>{uiText("Configure · App features · Bot")}</strong>{uiText(", add an existing bot using the same Application ID; enable")}{" "}
+              <strong>{uiText("Personal")}</strong>, <strong>{uiText("Team")}</strong>{uiText(", and")}{" "}
+              <strong>{uiText("Group chat")}</strong>{uiText(" scopes plus file support. Under")}{" "}
+              <strong>{uiText("Configure · Permissions")}</strong>{uiText(", add the two RSC")}{" "}
+              <strong>{uiText("Application")}</strong>{uiText(" permissions shown below. Complete the required app details and icons, explain that the app can receive every message in an installed team or group chat, then download the app package.")}</li>
             <li>
-              <strong>Teams Developer Portal · Apps</strong>: select{" "}
-              <strong>New app</strong>. Under{" "}
-              <strong>Configure · App features · Bot</strong>, add an existing
-              bot using the same Application ID; enable{" "}
-              <strong>Personal</strong>, <strong>Team</strong>, and{" "}
-              <strong>Group chat</strong> scopes plus file support. Under{" "}
-              <strong>Configure · Permissions</strong>, add the two RSC{" "}
-              <strong>Application</strong> permissions shown below. Complete the
-              required app details and icons, explain that the app can receive
-              every message in an installed team or group chat, then download
-              the app package.
-            </li>
-            <li>
-              <strong>Microsoft Teams · Apps · Manage your apps</strong>: select{" "}
-              <strong>Upload an app · Upload a custom app</strong>, choose the
-              downloaded package, and install it in each intended personal chat,
-              group chat, or team. One team install covers its standard
-              channels. Private and shared channels require a separate app
-              installation and are not supported by this release. If upload is
-              unavailable, a Teams administrator must enable or approve custom
-              apps.
-            </li>
+              <strong>{uiText("Microsoft Teams · Apps · Manage your apps")}</strong>{uiText(": select")}{" "}
+              <strong>{uiText("Upload an app · Upload a custom app")}</strong>{uiText(", choose the downloaded package, and install it in each intended personal chat, group chat, or team. One team install covers its standard channels. Private and shared channels require a separate app installation and are not supported by this release. If upload is unavailable, a Teams administrator must enable or approve custom apps.")}</li>
           </ol>
         </section>
-        <label className="grid gap-2 text-sm font-medium">
-          Required Teams app manifest block
-          <Textarea
+        <label className="grid gap-2 text-sm font-medium">{uiText("Required Teams app manifest block")}<Textarea
             className="min-h-80 font-mono text-xs"
             readOnly
             value={teamsManifestSettings}
@@ -1179,44 +1071,16 @@ function ProviderConnectStep({
             }}
           >
             {manifestCopied
-              ? "Manifest settings copied"
-              : "Copy manifest settings"}
+              ? uiText("Manifest settings copied")
+              : uiText("Copy manifest settings")}
           </Button>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Enter the Application / Client ID above before copying so the block
-          contains the real bot identity. This block contains the
-          Paperclip-specific fields to verify in Developer Portal or merge into
-          a complete Teams app manifest. It is not a complete app package;
-          Developer Portal supplies the remaining required metadata and packages
-          the manifest with your app icons.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Paperclip does not use Teams single sign-on in this release. The
-          copied <code>webApplicationInfo</code> entry only associates the RSC
-          permissions with the same Entra Application ID. Its nonempty resource
-          is an RSC placeholder; you do not need to register an Entra
-          Application ID URI or add delegated Microsoft Graph permissions.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          The two application RSC permissions let the bot receive every message,
-          without an @mention, in each team or group chat where it is installed.
-          Paperclip retains and acts only on messages admitted by your Paperclip
-          reach and access rules. Make this provider access clear in the app
-          description shown to installers.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          This release supports personal chats, group chats, and standard team
-          channels—not private channels. <code>supportsFiles: true</code>{" "}
-          enables native file receipt and consent-based sending in personal
-          chats; channel and group-chat files need a separate Microsoft Graph
-          connection and are not ingested here.
-        </p>
+        <p className="text-sm text-muted-foreground">{uiText("Enter the Application / Client ID above before copying so the block contains the real bot identity. This block contains the Paperclip-specific fields to verify in Developer Portal or merge into a complete Teams app manifest. It is not a complete app package; Developer Portal supplies the remaining required metadata and packages the manifest with your app icons.")}</p>
+        <p className="text-sm text-muted-foreground">{uiText("Paperclip does not use Teams single sign-on in this release. The copied ")}<code>webApplicationInfo</code>{uiText(" entry only associates the RSC permissions with the same Entra Application ID. Its nonempty resource is an RSC placeholder; you do not need to register an Entra Application ID URI or add delegated Microsoft Graph permissions.")}</p>
+        <p className="text-sm text-muted-foreground">{uiText("The two application RSC permissions let the bot receive every message, without an @mention, in each team or group chat where it is installed. Paperclip retains and acts only on messages admitted by your Paperclip reach and access rules. Make this provider access clear in the app description shown to installers.")}</p>
+        <p className="text-sm text-muted-foreground">{uiText("This release supports personal chats, group chats, and standard team channels—not private channels. ")}<code>supportsFiles: true</code>{" "}{uiText("enables native file receipt and consent-based sending in personal chats; channel and group-chat files need a separate Microsoft Graph connection and are not ingested here.")}</p>
         {!endpoint.setup?.messagingEndpoint && (
-          <p className="text-sm text-destructive">
-            Configure a public HTTPS URL for this Paperclip instance before
-            connecting Microsoft Teams.
-          </p>
+          <p className="text-sm text-destructive">{uiText("Configure a public HTTPS URL for this Paperclip instance before connecting Microsoft Teams.")}</p>
         )}
         <Button
           disabled={
@@ -1233,8 +1097,8 @@ function ProviderConnectStep({
         >
           {pending && <Loader2 className="h-4 w-4 animate-spin" />}
           {repairing
-            ? "Reconnect Microsoft app"
-            : "Verify Microsoft credentials"}
+            ? uiText("Reconnect Microsoft app")
+            : uiText("Verify Microsoft credentials")}
         </Button>
       </div>
     );
@@ -1244,47 +1108,29 @@ function ProviderConnectStep({
         <div>
           <h1 className="text-xl font-bold">
             {repairing
-              ? "Reconnect GitHub App"
-              : "Create or connect a GitHub App"}
+              ? uiText("Reconnect GitHub App")
+              : uiText("Create or connect a GitHub App")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {repairing
-              ? "Reconnect verifies this same App and installation, then updates its webhook URL, secret, and secure delivery settings. It does not reinstall the App or change repository access. Leave App ID and private key blank to reuse saved credentials. Keep Webhooks · Active enabled in GitHub; send a test conversation after reconnecting."
-              : "Configure its webhook and permissions, then verify the App with Paperclip."}
+              ? uiText("Reconnect verifies this same App and installation, then updates its webhook URL, secret, and secure delivery settings. It does not reinstall the App or change repository access. Leave App ID and private key blank to reuse saved credentials. Keep Webhooks · Active enabled in GitHub; send a test conversation after reconnecting.")
+              : uiText("Configure its webhook and permissions, then verify the App with Paperclip.")}
           </p>
         </div>
         {!repairing && (
           <ol className="list-decimal space-y-2 pl-5 text-sm">
-            <li>
-              Under the target user or organization, create a new GitHub App.
-              Give it a globally unique name (34 characters or fewer), use the
-              Paperclip homepage URL below, and leave user authorization off.
-            </li>
-            <li>
-              Keep <strong>Webhooks · Active</strong> on. Enter the Paperclip
-              webhook URL and the Paperclip-generated webhook secret below, and
-              keep <strong>Enable SSL verification</strong> selected.
-            </li>
-            <li>
-              Under Repository permissions, set <strong>Issues</strong> and{" "}
-              <strong>Pull requests</strong> to{" "}
-              <strong>Read &amp; write</strong>. Leave every other permission at
-              its default; Metadata remains read-only.
-            </li>
-            <li>
-              Subscribe to <strong>Issue comment</strong> (
+            <li>{uiText("Under the target user or organization, create a new GitHub App. Give it a globally unique name (34 characters or fewer), use the Paperclip homepage URL below, and leave user authorization off.")}</li>
+            <li>{uiText("Keep ")}<strong>{uiText("Webhooks · Active")}</strong>{uiText(" on. Enter the Paperclip webhook URL and the Paperclip-generated webhook secret below, and keep ")}<strong>{uiText("Enable SSL verification")}</strong>{uiText(" selected.")}</li>
+            <li>{uiText("Under Repository permissions, set ")}<strong>{uiText("Issues")}</strong>{uiText(" and")}{" "}
+              <strong>{uiText("Pull requests")}</strong>{uiText(" to")}{" "}
+              <strong>{uiText("Read & write")}</strong>{uiText(". Leave every other permission at its default; Metadata remains read-only.")}</li>
+            <li>{uiText("Subscribe to ")}<strong>{uiText("Issue comment")}</strong> (
               <code>issue_comment</code>),{" "}
-              <strong>Pull request review comment</strong> (
-              <code>pull_request_review_comment</code>). GitHub sends{" "}
-              <code>installation</code> and{" "}
-              <code>installation_repositories</code> to every GitHub App
-              automatically; they are not selectable here.
-            </li>
-            <li>
-              Choose <strong>Only on this account</strong>, create the App, copy
-              its App ID, generate one private key, then install it on the
-              selected repositories.
-            </li>
+              <strong>{uiText("Pull request review comment")}</strong> (
+              <code>pull_request_review_comment</code>{uiText("). GitHub sends")}{" "}
+              <code>installation</code>{uiText(" and")}{" "}
+              <code>installation_repositories</code>{uiText(" to every GitHub App automatically; they are not selectable here.")}</li>
+            <li>{uiText("Choose ")}<strong>{uiText("Only on this account")}</strong>{uiText(", create the App, copy its App ID, generate one private key, then install it on the selected repositories.")}</li>
           </ol>
         )}
         {endpointValue(
@@ -1305,12 +1151,12 @@ function ProviderConnectStep({
             )
           }
         >
-          {repairing ? "Open GitHub App settings" : "Open new GitHub App form"}{" "}
+          {repairing ? uiText("Open GitHub App settings") : uiText("Open new GitHub App form")}{" "}
           <ExternalLink />
         </Button>
         {field("appId", "GitHub App ID", "text")}
         <div className="grid gap-2 text-sm font-medium">
-          <label htmlFor="github-private-key">Private key (PEM)</label>
+          <label htmlFor="github-private-key">{uiText("Private key (PEM)")}</label>
           <div className="relative">
             {privateKeyVisible ? (
               <Textarea
@@ -1338,7 +1184,7 @@ function ProviderConnectStep({
               size="icon"
               className="absolute right-1 top-1"
               aria-label={
-                privateKeyVisible ? "Hide private key" : "Show private key"
+                privateKeyVisible ? uiText("Hide private key") : uiText("Show private key")
               }
               onClick={() => setPrivateKeyVisible((visible) => !visible)}
             >
@@ -1350,7 +1196,7 @@ function ProviderConnectStep({
             type="file"
             accept=".pem,.key,application/x-pem-file,application/pkcs8,text/plain"
             className="hidden"
-            aria-label="Choose GitHub App private key file"
+            aria-label={uiText("Choose GitHub App private key file")}
             onChange={loadPrivateKeyFile}
           />
           <div>
@@ -1358,9 +1204,7 @@ function ProviderConnectStep({
               type="button"
               variant="outline"
               onClick={() => privateKeyFileInputRef.current?.click()}
-            >
-              Choose .pem file
-            </Button>
+            >{uiText("Choose .pem file")}</Button>
           </div>
           {privateKeyFileError ? (
             <p role="alert" className="text-sm text-destructive">
@@ -1372,25 +1216,21 @@ function ProviderConnectStep({
               role="status"
               aria-live="polite"
               className="text-sm text-muted-foreground"
-            >
-              Reading private key file…
-            </p>
+            >{uiText("Reading private key file…")}</p>
           ) : privateKeyFileLoaded ? (
             <p
               role="status"
               aria-live="polite"
               className="text-sm text-muted-foreground"
-            >
-              Private key loaded. It stays in this form until you connect.
-            </p>
+            >{uiText("Private key loaded. It stays in this form until you connect.")}</p>
           ) : null}
         </div>
         <div className="grid gap-2">
-          <p className="text-sm font-medium">Webhook secret</p>
+          <p className="text-sm font-medium">{uiText("Webhook secret")}</p>
           {generatedWebhookSecret ? (
             <>
               <Input
-                aria-label="Generated webhook secret"
+                aria-label={uiText("Generated webhook secret")}
                 className="font-mono text-xs"
                 readOnly
                 value={generatedWebhookSecret}
@@ -1414,21 +1254,19 @@ function ProviderConnectStep({
                   }}
                 >
                   {webhookSecretCopy.copied
-                    ? "Webhook secret copied"
+                    ? uiText("Webhook secret copied")
                     : webhookSecretCopy.failed
-                      ? "Couldn’t copy — select it manually"
-                      : "Copy webhook secret"}
+                      ? uiText("Couldn’t copy — select it manually")
+                      : uiText("Copy webhook secret")}
                 </Button>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Copy this value now. Paperclip will not show it again.
-              </p>
+              <p className="text-sm text-muted-foreground">{uiText("Copy this value now. Paperclip will not show it again.")}</p>
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
               {endpoint.setup?.webhookSecretConfigured
-                ? "A webhook secret is configured and cannot be shown again."
-                : "Generate the secret in Paperclip, then paste it into the GitHub App."}
+                ? uiText("A webhook secret is configured and cannot be shown again.")
+                : uiText("Generate the secret in Paperclip, then paste it into the GitHub App.")}
             </p>
           )}
           <div>
@@ -1442,15 +1280,15 @@ function ProviderConnectStep({
                 <Loader2 className="h-4 w-4 animate-spin" />
               )}
               {endpoint.setup?.webhookSecretConfigured
-                ? "Regenerate webhook secret"
-                : "Generate webhook secret"}
+                ? uiText("Regenerate webhook secret")
+                : uiText("Generate webhook secret")}
             </Button>
           </div>
           {endpoint.setup?.webhookSecretConfigured && (
             <p className="text-sm text-muted-foreground">
               {endpoint.providerAccountId || endpoint.botExternalId
-                ? "Regenerating immediately invalidates GitHub webhook signatures until you replace the secret in the GitHub App settings."
-                : "Generating another secret replaces the previous value. Paste the newest value into GitHub before continuing."}
+                ? uiText("Regenerating immediately invalidates GitHub webhook signatures until you replace the secret in the GitHub App settings.")
+                : uiText("Generating another secret replaces the previous value. Paste the newest value into GitHub before continuing.")}
             </p>
           )}
           {endpoint.setup?.webhookSecretConfigured && (
@@ -1458,16 +1296,13 @@ function ProviderConnectStep({
               className={`text-sm ${endpoint.setup.webhookVerifiedAt ? "text-foreground" : "text-muted-foreground"}`}
             >
               {endpoint.setup.webhookVerifiedAt
-                ? "GitHub has verified this webhook."
-                : "Waiting for GitHub to deliver its signed webhook ping…"}
+                ? uiText("GitHub has verified this webhook.")
+                : uiText("Waiting for GitHub to deliver its signed webhook ping…")}
             </p>
           )}
         </div>
         {(!endpoint.setup?.webhookUrl || automaticSlack && !endpoint.setup?.slackOAuthCallbackUri?.startsWith("https://")) && (
-          <p className="text-sm text-destructive">
-            Configure a public HTTPS URL for this Paperclip instance before
-            connecting GitHub.
-          </p>
+          <p className="text-sm text-destructive">{uiText("Configure a public HTTPS URL for this Paperclip instance before connecting GitHub.")}</p>
         )}
         <Button
           disabled={
@@ -1484,48 +1319,45 @@ function ProviderConnectStep({
           }
         >
           {pending && <Loader2 className="h-4 w-4 animate-spin" />}
-          {repairing ? "Reconnect and verify" : "Connect and verify"}
+          {repairing ? uiText("Reconnect and verify") : uiText("Connect and verify")}
         </Button>
       </div>
     );
   const slackRequestUrlInstructions = <ol className="list-decimal space-y-2 pl-5 text-sm">
-      <li><a className="underline underline-offset-4" href={endpoint.setup?.slackRegistration?.appId ? `https://api.slack.com/apps/${encodeURIComponent(endpoint.setup.slackRegistration.appId)}/event-subscriptions` : "https://api.slack.com/apps"} target="_blank" rel="noopener noreferrer">Open Slack app Settings <ExternalLink className="inline size-3" /></a> and choose <strong>{slackApp.appName}</strong>.</li>
-      <li>Choose <strong>Event Subscriptions</strong>.</li>
-      <li>Beside the prefilled <strong>Request URL</strong>, click <strong>Retry</strong> if it isn&apos;t verified. Save changes if Slack asks.</li>
+      <li><a className="underline underline-offset-4" href={endpoint.setup?.slackRegistration?.appId ? `https://api.slack.com/apps/${encodeURIComponent(endpoint.setup.slackRegistration.appId)}/event-subscriptions` : "https://api.slack.com/apps"} target="_blank" rel="noopener noreferrer">{uiText("Open Slack app Settings ")}<ExternalLink className="inline size-3" /></a>{uiText(" and choose ")}<strong>{slackApp.appName}</strong>.</li>
+      <li>{uiText("Choose ")}<strong>{uiText("Event Subscriptions")}</strong>.</li>
+      <li>{uiText("Beside the prefilled ")}<strong>{uiText("Request URL")}</strong>{uiText(", click ")}<strong>{uiText("Retry")}</strong>{uiText(" if it isn't verified. Save changes if Slack asks.")}</li>
     </ol>;
   if (slackStage === "finish")
     return (
       <div className="space-y-5">
         <div>
-          <h1 className="text-xl font-bold">{automaticSlack ? "Send a message to your agent" : "Verify Slack connection"}</h1>
-          {!automaticSlack && <p className="mt-1 text-sm text-muted-foreground">Slack needs to confirm that it can reach your Paperclip instance.</p>}
+          <h1 className="text-xl font-bold">{automaticSlack ? uiText("Send a message to your agent") : uiText("Verify Slack connection")}</h1>
+          {!automaticSlack && <p className="mt-1 text-sm text-muted-foreground">{uiText("Slack needs to confirm that it can reach your Paperclip instance.")}</p>}
         </div>
-        {automaticSlack ? <Button asChild variant="outline"><a href={endpoint.setup?.slackAccount?.dmChannelId && endpoint.providerAccountId ? `https://app.slack.com/client/${encodeURIComponent(endpoint.providerAccountId)}/${encodeURIComponent(endpoint.setup.slackAccount.dmChannelId)}` : endpoint.setup?.providerUrl ?? "https://app.slack.com"} target="_blank" rel="noopener noreferrer">Open Slack <ExternalLink className="size-4" /></a></Button> : slackRequestUrlInstructions}
+        {automaticSlack ? <Button asChild variant="outline"><a href={endpoint.setup?.slackAccount?.dmChannelId && endpoint.providerAccountId ? `https://app.slack.com/client/${encodeURIComponent(endpoint.providerAccountId)}/${encodeURIComponent(endpoint.setup.slackAccount.dmChannelId)}` : endpoint.setup?.providerUrl ?? "https://app.slack.com"} target="_blank" rel="noopener noreferrer">{uiText("Open Slack ")}<ExternalLink className="size-4" /></a></Button> : slackRequestUrlInstructions}
         {endpoint.setup?.webhookVerifiedAt ? (
           <p role="status" className="flex items-center gap-2 text-sm">
-            <CheckCircle2 className="size-4 text-(--status-task-done)" />
-            Your Slack connection is working.{pending ? automaticSlack ? " Finishing setup…" : " Opening the message test…" : ""}
+            <CheckCircle2 className="size-4 text-(--status-task-done)" />{uiText("Your Slack connection is working.")}{pending ? automaticSlack ? uiText(" Finishing setup…") : uiText(" Opening the message test…") : ""}
           </p>
         ) : slackVerificationError ? (
-          <p role="alert" className="text-sm text-destructive">Couldn&apos;t check verification. We&apos;ll keep trying; check your connection if this continues.</p>
+          <p role="alert" className="text-sm text-destructive">{uiText("Couldn't check verification. We'll keep trying; check your connection if this continues.")}</p>
         ) : (
           <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" /> {automaticSlack ? "Waiting for your message…" : "Waiting for Slack. We’ll continue automatically."}
+            <Loader2 className="size-4 animate-spin" /> {automaticSlack ? uiText("Waiting for your message…") : uiText("Waiting for Slack. We’ll continue automatically.")}
           </p>
         )}
-        <SlackSetupAdvanced label={automaticSlack ? "Didn’t work?" : "Troubleshooting"}>
+        <SlackSetupAdvanced label={automaticSlack ? uiText("Didn’t work?") : uiText("Troubleshooting")}>
           {automaticSlack && slackRequestUrlInstructions}
-          <p className="text-muted-foreground">If the Request URL is missing or different, paste this URL into Event Subscriptions. If verification fails, check that your public HTTPS server is reachable and your Signing Secret is correct.</p>
+          <p className="text-muted-foreground">{uiText("If the Request URL is missing or different, paste this URL into Event Subscriptions. If verification fails, check that your public HTTPS server is reachable and your Signing Secret is correct.")}</p>
           {endpointValue("Paperclip webhook URL", endpoint.setup?.webhookUrl)}
         </SlackSetupAdvanced>
         <div className="flex items-center justify-between gap-3">
-          <Button variant="ghost" className="text-muted-foreground" onClick={() => navigate("/apps")}>Save &amp; exit</Button>
+          <Button variant="ghost" className="text-muted-foreground" onClick={() => navigate("/apps")}>{uiText("Save & exit")}</Button>
           {(!automaticSlack || endpoint.setup?.webhookVerifiedAt) && <Button disabled={pending || !endpoint.setup?.webhookVerifiedAt} onClick={() =>
             endpoint.setup?.step === "provider_setup" ? onAction("verify") : onSlackVerificationContinue()
           }>
-            {pending && <Loader2 className="size-4 animate-spin" />}
-            Continue
-          </Button>}
+            {pending && <Loader2 className="size-4 animate-spin" />}{uiText("Continue")}</Button>}
         </div>
       </div>
     );
@@ -1536,28 +1368,21 @@ function ProviderConnectStep({
         <div role="alert" className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4">
           <AlertTriangle className="size-5 shrink-0 text-destructive" />
           <div className="space-y-1">
-            <p className="text-sm font-semibold">Public HTTPS URL required</p>
-            <p className="text-sm">
-              Slack needs a public HTTPS URL to send messages to Paperclip.
-              Configure one for this instance before creating or connecting your Slack app.
-            </p>
+            <p className="text-sm font-semibold">{uiText("Public HTTPS URL required")}</p>
+            <p className="text-sm">{uiText("Slack needs a public HTTPS URL to send messages to Paperclip. Configure one for this instance before creating or connecting your Slack app.")}</p>
             <a
               href="https://docs.paperclip.ing/reference/deploy/https/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm underline underline-offset-4"
-            >
-              Learn how to set up HTTPS
-            </a>
+            >{uiText("Learn how to set up HTTPS")}</a>
           </div>
         </div>
       )}
       <div>
-        <h1 className="text-xl font-bold">{slackStage === "app" ? automaticSlack ? "App configuration access token" : "Create a Slack app" : automaticSlack ? "Install Slack app" : "Add Slack credentials"}</h1>
+        <h1 className="text-xl font-bold">{slackStage === "app" ? automaticSlack ? uiText("App configuration access token") : uiText("Create a Slack app") : automaticSlack ? uiText("Install Slack app") : uiText("Add Slack credentials")}</h1>
         {repairing && !automaticSlack && (
-          <p className="mt-1 text-sm text-muted-foreground">
-            Reconnect verifies or replaces credentials for this same Slack app. It does not reinstall the app or change its workspace or channel membership. Leave credentials blank to reuse the saved values.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{uiText("Reconnect verifies or replaces credentials for this same Slack app. It does not reinstall the app or change its workspace or channel membership. Leave credentials blank to reuse the saved values.")}</p>
         )}
       </div>
       <div hidden={slackStage !== "app" || automaticSlack} className="space-y-5">
@@ -1565,19 +1390,15 @@ function ProviderConnectStep({
           <div className="flex justify-end">
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="link" className="h-auto p-0 text-xs text-muted-foreground underline underline-offset-4">
-                  View Slack App Manifest
-                </Button>
+                <Button variant="link" className="h-auto p-0 text-xs text-muted-foreground underline underline-offset-4">{uiText("View Slack App Manifest")}</Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>Slack app manifest</DialogTitle>
-                  <DialogDescription>
-                    Generated from your app name, bot name, and slash command. Edit those fields to update the manifest.
-                  </DialogDescription>
+                  <DialogTitle>{uiText("Slack app manifest")}</DialogTitle>
+                  <DialogDescription>{uiText("Generated from your app name, bot name, and slash command. Edit those fields to update the manifest.")}</DialogDescription>
                 </DialogHeader>
                 <Textarea
-                  aria-label="Slack app manifest"
+                  aria-label={uiText("Slack app manifest")}
                   className="h-80 font-mono text-xs"
                   readOnly
                   value={slackManifest}
@@ -1593,7 +1414,7 @@ function ProviderConnectStep({
                       );
                     }}
                   >
-                    {manifestCopied ? "Manifest copied" : "Copy manifest"}
+                    {manifestCopied ? uiText("Manifest copied") : uiText("Copy manifest")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1601,13 +1422,9 @@ function ProviderConnectStep({
           </div>
         </div>
         {!automaticSlack && <div className="flex flex-wrap items-center justify-between gap-3 pt-3">
-          <Button variant="ghost" className="text-muted-foreground" onClick={() => void saveSlackAndExit()}>
-            Save &amp; exit
-          </Button>
+          <Button variant="ghost" className="text-muted-foreground" onClick={() => void saveSlackAndExit()}>{uiText("Save & exit")}</Button>
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-            <Button variant="outline" disabled={openingSlackApp || !endpoint.setup?.webhookUrl || !slackValidation.success} onClick={onSlackAppCreated}>
-              I already created the app
-            </Button>
+            <Button variant="outline" disabled={openingSlackApp || !endpoint.setup?.webhookUrl || !slackValidation.success} onClick={onSlackAppCreated}>{uiText("I already created the app")}</Button>
             {!repairing && (
               <Button
                 disabled={openingSlackApp || !endpoint.setup?.webhookUrl || !slackValidation.success}
@@ -1621,8 +1438,7 @@ function ProviderConnectStep({
                     onSlackAppCreated();
                   }, 1000);
                 }}
-              >
-                Create Slack app <ExternalLink />
+              >{uiText("Create Slack app ")}<ExternalLink />
               </Button>
             )}
           </div>
@@ -1640,68 +1456,59 @@ function ProviderConnectStep({
         onSaveExit={() => void saveSlackAndExit()}
       />}
       {!automaticSlack && <div hidden={slackStage !== "credentials"} className="space-y-5">
-        <p className="text-sm">
-          Now you need to find two secrets. They are in two different screens on Slack.
-        </p>
+        <p className="text-sm">{uiText("Now you need to find two secrets. They are in two different screens on Slack.")}</p>
         {slackCredentialsSaved && !repairing && (
-          <p className="text-sm text-muted-foreground">Your credentials are saved. Leave the fields blank to keep them, or enter replacements.</p>
+          <p className="text-sm text-muted-foreground">{uiText("Your credentials are saved. Leave the fields blank to keep them, or enter replacements.")}</p>
         )}
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold"><label htmlFor="slack-bot-token">Bot User OAuth Token</label></h2>
+          <h2 className="text-sm font-semibold"><label htmlFor="slack-bot-token">{uiText("Bot User OAuth Token")}</label></h2>
           <ul id="slack-bot-token-help" className="list-disc space-y-1 pl-5 text-sm">
             <li>
-              <a href="https://api.slack.com/apps" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
-                Open Slack app Settings <ExternalLink className="inline size-3" />
-              </a> and choose <strong>{slackApp.appName}</strong>.
+              <a href="https://api.slack.com/apps" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">{uiText("Open Slack app Settings ")}<ExternalLink className="inline size-3" />
+              </a>{uiText(" and choose ")}<strong>{slackApp.appName}</strong>.
             </li>
-            <li>Choose <strong>OAuth &amp; Permissions</strong></li>
-            <li>Copy and paste your <strong>Bot OAuth Token</strong></li>
+            <li>{uiText("Choose ")}<strong>{uiText("OAuth & Permissions")}</strong></li>
+            <li>{uiText("Copy and paste your ")}<strong>{uiText("Bot OAuth Token")}</strong></li>
           </ul>
           <Input
             id="slack-bot-token"
             type="password"
-            placeholder={slackCredentialsSaved ? "Saved — leave blank to keep" : undefined}
+            placeholder={slackCredentialsSaved ? uiText("Saved — leave blank to keep") : undefined}
             value={credentials.botToken ?? ""}
             aria-invalid={slackBotTokenInvalid || undefined}
             aria-describedby={`slack-bot-token-help${slackBotTokenInvalid ? " slack-bot-token-warning" : ""}`}
             onChange={(event) => setCredentials({ ...credentials, botToken: event.target.value })}
           />
           {slackBotTokenInvalid && (
-            <p id="slack-bot-token-warning" role="alert" className="text-sm text-destructive">
-              Your Bot User OAuth Token must start with <code>xoxb-</code>. Copy it from <strong>OAuth &amp; Permissions</strong>.
+            <p id="slack-bot-token-warning" role="alert" className="text-sm text-destructive">{uiText("Your Bot User OAuth Token must start with ")}<code>xoxb-</code>{uiText(". Copy it from ")}<strong>{uiText("OAuth & Permissions")}</strong>.
             </p>
           )}
         </section>
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold"><label htmlFor="slack-signing-secret">Signing Secret</label></h2>
+          <h2 className="text-sm font-semibold"><label htmlFor="slack-signing-secret">{uiText("Signing Secret")}</label></h2>
           <ul id="slack-signing-secret-help" className="list-disc space-y-1 pl-5 text-sm">
             <li>
-              <a href="https://api.slack.com/apps" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
-                Open Slack app Settings <ExternalLink className="inline size-3" />
-              </a> and choose <strong>{slackApp.appName}</strong>.
+              <a href="https://api.slack.com/apps" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">{uiText("Open Slack app Settings ")}<ExternalLink className="inline size-3" />
+              </a>{uiText(" and choose ")}<strong>{slackApp.appName}</strong>.
             </li>
-            <li>Choose <strong>Basic Information</strong></li>
-            <li>Copy and paste your <strong>Signing Secret</strong></li>
+            <li>{uiText("Choose ")}<strong>{uiText("Basic Information")}</strong></li>
+            <li>{uiText("Copy and paste your ")}<strong>{uiText("Signing Secret")}</strong></li>
           </ul>
           <Input
             id="slack-signing-secret"
             type="password"
-            placeholder={slackCredentialsSaved ? "Saved — leave blank to keep" : undefined}
+            placeholder={slackCredentialsSaved ? uiText("Saved — leave blank to keep") : undefined}
             value={credentials.signingSecret ?? ""}
             aria-invalid={slackSigningSecretHasTokenPrefix || undefined}
             aria-describedby={`slack-signing-secret-help${slackSigningSecretHasTokenPrefix ? " slack-signing-secret-warning" : ""}`}
             onChange={(event) => setCredentials({ ...credentials, signingSecret: event.target.value })}
           />
           {slackSigningSecretHasTokenPrefix && (
-            <p id="slack-signing-secret-warning" role="alert" className="text-sm text-destructive">
-              Use the <strong>Signing Secret</strong>, NOT an app or bot token. The Signing Secret has no token prefix.
-            </p>
+            <p id="slack-signing-secret-warning" role="alert" className="text-sm text-destructive">{uiText("Use the ")}<strong>{uiText("Signing Secret")}</strong>{uiText(", NOT an app or bot token. The Signing Secret has no token prefix.")}</p>
           )}
         </section>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Button variant="ghost" className="text-muted-foreground" onClick={() => navigate("/apps")}>
-            Save &amp; exit
-          </Button>
+          <Button variant="ghost" className="text-muted-foreground" onClick={() => navigate("/apps")}>{uiText("Save & exit")}</Button>
           <Button
             className="ml-auto"
             disabled={
@@ -1714,7 +1521,7 @@ function ProviderConnectStep({
               : onAction(repairing || slackCredentialsSaved ? "reconnect" : "configure", credentials)}
           >
             {pending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {continueWithSavedSlackCredentials ? "Continue" : repairing || slackCredentialsSaved ? "Reconnect Slack app" : "Connect Slack app"}
+            {continueWithSavedSlackCredentials ? uiText("Continue") : repairing || slackCredentialsSaved ? uiText("Reconnect Slack app") : uiText("Connect Slack app")}
           </Button>
         </div>
       </div>}
@@ -1751,6 +1558,7 @@ function TryStep({
   onTest: () => void;
   onSaveExit: () => void;
 }) {
+  useUiLocale();
   const [commandCopied, setCommandCopied] = useState(false);
   const [commandCopyError, setCommandCopyError] = useState(false);
   const principalsQuery = useQuery({
@@ -1861,18 +1669,13 @@ function TryStep({
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold">
-          Try {agentName} in {providerNames[provider]}
+        <h1 className="text-xl font-bold">{uiText("Try ")}{agentName}{uiText(" in ")}{providerNames[provider]}
         </h1>
-        {provider !== "slack" && <p className="mt-1 text-sm text-muted-foreground">
-          Complete this real conversation to finish setup.
-        </p>}
+        {provider !== "slack" && <p className="mt-1 text-sm text-muted-foreground">{uiText("Complete this real conversation to finish setup.")}</p>}
       </div>
       {provider !== "slack" && (!principalsQuery.isSuccess || guestIsolationState === "loading") &&
       !principalsQuery.isError ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          Checking identity and guest readiness…
-        </p>
+        <p role="status" className="text-sm text-muted-foreground">{uiText("Checking identity and guest readiness…")}</p>
       ) : null}
       {identityGuidance ? (
         <div
@@ -1890,30 +1693,28 @@ function TryStep({
             size="sm"
             variant="outline"
             onClick={onOpenAccess}
-          >
-            Review identity access
-          </Button>
+          >{uiText("Review identity access")}</Button>
         </div>
       ) : null}
-      {provider === "imessage-photon" && botUsername && <div className="space-y-2"><Button variant="outline" onClick={() => { void copyTextToClipboard(botUsername).then(() => { setNumberCopied(true); setCopyError(null); }, () => setCopyError("Could not copy the number. Select it in the instructions below.")); }}>{numberCopied ? "Number copied" : `Copy ${botUsername}`}</Button>{copyError && <p role="alert" className="text-sm text-destructive">{copyError}</p>}</div>}
+      {provider === "imessage-photon" && botUsername && <div className="space-y-2"><Button variant="outline" onClick={() => { void copyTextToClipboard(botUsername).then(() => { setNumberCopied(true); setCopyError(null); }, () => setCopyError("Could not copy the number. Select it in the instructions below.")); }}>{numberCopied ? uiText("Number copied") : uiText("Copy {{value0}}", { value0: botUsername })}</Button>{copyError && <p role="alert" className="text-sm text-destructive">{copyError}</p>}</div>}
       {provider === "slack" ? (
         <>
           <ol className="list-decimal space-y-4 pl-5 text-sm">
-            <li>{slackAccount?.status === "linked" ? <Button asChild variant="outline"><a href={providerUrl ?? "https://app.slack.com"} target="_blank" rel="noopener noreferrer">{slackAccount.dmChannelId ? "Open your Slack DM" : "Open Slack"}<ExternalLink /></a></Button> : <>Open a channel and invite {botMention} if needed.</>}</li>
+            <li>{slackAccount?.status === "linked" ? <Button asChild variant="outline"><a href={providerUrl ?? "https://app.slack.com"} target="_blank" rel="noopener noreferrer">{slackAccount.dmChannelId ? uiText("Open your Slack DM") : uiText("Open Slack")}<ExternalLink /></a></Button> : <>{uiText("Open a channel and invite ")}{botMention}{uiText(" if needed.")}</>}</li>
             <li>
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3">
                 <code>{slackTestMessage}</code>
                 <Button size="sm" variant="ghost" onClick={() => {
                   void copyTextToClipboard(slackTestMessage).then(() => { setCommandCopied(true); setCommandCopyError(false); }, () => setCommandCopyError(true));
-                }}><Copy className="size-4" />{commandCopied ? "Copied" : "Copy message"}</Button>
+                }}><Copy className="size-4" />{commandCopied ? uiText("Copied") : uiText("Copy message")}</Button>
               </div>
-              {slackAccount?.status !== "linked" && <p className="mt-2 text-muted-foreground">Select the bot from Slack’s @mention suggestions.</p>}
+              {slackAccount?.status !== "linked" && <p className="mt-2 text-muted-foreground">{uiText("Select the bot from Slack’s @mention suggestions.")}</p>}
             </li>
-            <li>Continue the conversation in the thread.</li>
+            <li>{uiText("Continue the conversation in the thread.")}</li>
           </ol>
-          {commandCopyError && <p role="alert" className="text-sm text-destructive">Couldn&apos;t copy. Select and copy the command above.</p>}
+          {commandCopyError && <p role="alert" className="text-sm text-destructive">{uiText("Couldn't copy. Select and copy the command above.")}</p>}
           <SetupWizardFooter onSaveExit={onSaveExit} disabled={pending}>
-            <Button disabled={pending} onClick={onTest}>{pending && <Loader2 className="size-4 animate-spin" />}Done</Button>
+            <Button disabled={pending} onClick={onTest}>{pending && <Loader2 className="size-4 animate-spin" />}{uiText("Done")}</Button>
           </SetupWizardFooter>
         </>
       ) : <>
@@ -1923,15 +1724,12 @@ function TryStep({
       <div className="flex flex-wrap gap-2">
         {providerUrl && (
           <Button asChild variant="outline">
-            <a href={providerUrl} target="_blank" rel="noopener noreferrer">
-              Open {providerNames[provider]} <ExternalLink />
+            <a href={providerUrl} target="_blank" rel="noopener noreferrer">{uiText("Open ")}{providerNames[provider]} <ExternalLink />
             </a>
           </Button>
         )}
         <Button disabled={pending} onClick={onTest}>
-          {pending && <Loader2 className="h-4 w-4 animate-spin" />}
-          I've sent the test message
-        </Button>
+          {pending && <Loader2 className="h-4 w-4 animate-spin" />}{uiText("I've sent the test message")}</Button>
       </div>
       </>}
     </div>

@@ -1,3 +1,4 @@
+import { getUiLocale } from "@/i18n/ui";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Building2, FolderOpen, RefreshCw, ShieldCheck } from "lucide-react";
@@ -22,6 +23,7 @@ const statuses = { measured: "Measured", partial: "Partial inventory", missing: 
 type ProjectUsage = ProjectSpaceUsage["projects"][number];
 
 export function ProjectSpaceSettings() {
+  useUiLocale();
   const { selectedCompanyId } = useCompany();
   return <ProjectSpaceContent key={selectedCompanyId} initialCompanyId={selectedCompanyId ?? ""} />;
 }
@@ -33,7 +35,7 @@ function ProjectSpaceContent({ initialCompanyId }: { initialCompanyId: string })
   const [companyId, setCompanyId] = useState(initialCompanyId);
   const [projectId, setProjectId] = useState("all");
   const [preview, setPreview] = useState<ProjectUsage | null>(null);
-  useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" }, { label: uiText("Storage"), href: "/company/settings/instance/storage" }, { label: uiText("Company and project space") }]); }, [locale, setBreadcrumbs]);
+  useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" }, { label: uiText("Storage"), href: "/company/settings/instance/storage" }, { label: uiText("Company and project space") }]); }, [locale, setBreadcrumbs, getUiLocale()]);
   const usage = useQuery({ queryKey: ["project-space", companyId, true], queryFn: () => instanceSettingsApi.getProjectSpaceUsage(companyId, true),
     enabled: !!companyId, staleTime: 30_000, refetchOnWindowFocus: false, retry: false });
   const visible = (usage.data?.projects ?? []).filter((project) => projectId === "all" || project.id === projectId);

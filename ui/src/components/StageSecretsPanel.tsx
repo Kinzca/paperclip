@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { KeyRound, Save } from "lucide-react";
 import type { CompanySecret, RoutineEnvConfig } from "@paperclipai/shared";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ export function StageSecretsPanel({
   saving,
   dirty,
 }: StageSecretsPanelProps) {
+  useUiLocale();
   // No backing automation/assignee → nothing can receive secrets at runtime.
   // Point the user at Automation instead of creating a hidden routine just
   // because the Secrets tab was opened.
@@ -71,16 +73,12 @@ export function StageSecretsPanel({
         ) : (
           <KeyRound className="h-3.5 w-3.5 mt-0.5 shrink-0" />
         )}
-        <p>
-          These env vars are injected when{" "}
-          <span className="font-medium text-foreground">{displayName}</span> runs this step. They override
-          matching project and agent env on collisions. <span className="font-mono">PAPERCLIP_*</span> names
-          are reserved.
-        </p>
+        <p>{uiText("These env vars are injected when")}{" "}
+          <span className="font-medium text-foreground">{displayName}</span>{uiText(" runs this step. They override matching project and agent env on collisions. ")}<span className="font-mono">{uiText("PAPERCLIP_*")}</span>{uiText(" names are reserved.")}</p>
       </div>
 
       {secretsLoading ? (
-        <p className="text-sm text-muted-foreground">Loading secrets…</p>
+        <p className="text-sm text-muted-foreground">{uiText("Loading secrets…")}</p>
       ) : (
         <EnvironmentVariablesEditor
           value={value}
@@ -93,9 +91,9 @@ export function StageSecretsPanel({
       <div className="flex items-center gap-3">
         <Button type="button" onClick={onSave} disabled={!dirty || saving}>
           <Save className="h-4 w-4 mr-1.5" />
-          {saving ? "Saving…" : "Save secrets"}
+          {saving ? uiText("Saving…") : uiText("Save secrets")}
         </Button>
-        {dirty && !saving ? <span className="text-xs text-muted-foreground">Unsaved changes</span> : null}
+        {dirty && !saving ? <span className="text-xs text-muted-foreground">{uiText("Unsaved changes")}</span> : null}
       </div>
     </div>
   );

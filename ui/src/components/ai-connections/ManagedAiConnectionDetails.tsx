@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { heartbeatsApi } from "@/api/heartbeats";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,14 +15,15 @@ export function ManagedAiConnectionRow({
 }: {
   connection: ToolConnection;
 }) {
+  useUiLocale();
   const metadata = connection.config?.ai as AiConnectionMetadata | undefined;
   if (!metadata) return null;
   return (
     <p className="text-xs text-muted-foreground">
-      {metadata.routing ? metadata.routing.kind === "bedrock" ? `Bedrock · ${metadata.routing.region}` : metadata.routing.kind === "openrouter" ? "OpenRouter" : metadata.routing.baseUrl : aiMethodLabel(metadata.provider, metadata.method)} ·{" "}
+      {metadata.routing ? metadata.routing.kind === "bedrock" ? uiText("Bedrock · {{value0}}", { value0: metadata.routing.region }) : metadata.routing.kind === "openrouter" ? uiText("OpenRouter") : metadata.routing.baseUrl : aiMethodLabel(metadata.provider, metadata.method)} ·{" "}
       {connection.credentialPolicy === "per_user"
-        ? "Personal"
-        : "Company shared"}
+        ? uiText("Personal")
+        : uiText("Company shared")}
     </p>
   );
 }
@@ -30,6 +32,7 @@ export function ManagedAiConnectionDetails({
 }: {
   connection: ToolConnection;
 }) {
+  useUiLocale();
   const client = useQueryClient();
   const navigate = useNavigate();
   const runs = useQuery({
@@ -79,13 +82,13 @@ export function ManagedAiConnectionDetails({
     return (
       <p role="status" className="text-sm text-muted-foreground">
         {accounts.isPending || grants.isPending
-          ? "Loading AI account…"
-          : "This account is not available to you."}
+          ? uiText("Loading AI account…")
+          : uiText("This account is not available to you.")}
       </p>
     );
   return (
     <div className="space-y-4">
-      {account.routing && <details className="rounded-lg border border-border p-4"><summary className="cursor-pointer text-sm font-medium">Provider settings</summary><dl className="mt-4 grid grid-cols-2 gap-3 text-sm"><dt className="text-muted-foreground">Destination</dt><dd className="break-all">{account.routing.baseUrl ?? (account.routing.kind === "bedrock" ? account.routing.region : "OpenRouter")}</dd><dt className="text-muted-foreground">API format</dt><dd>{account.routing.kind === "openrouter" ? "Selected by harness" : account.routing.protocol}</dd><dt className="text-muted-foreground">Authentication</dt><dd>{account.routing.auth}</dd><dt className="text-muted-foreground">Models</dt><dd>{account.routing.models.map(m => m.label ?? m.id).join(", ") || "Enter a model ID on the agent"}</dd></dl></details>}
+      {account.routing && <details className="rounded-lg border border-border p-4"><summary className="cursor-pointer text-sm font-medium">{uiText("Provider settings")}</summary><dl className="mt-4 grid grid-cols-2 gap-3 text-sm"><dt className="text-muted-foreground">{uiText("Destination")}</dt><dd className="break-all">{account.routing.baseUrl ?? (account.routing.kind === "bedrock" ? account.routing.region : uiText("OpenRouter"))}</dd><dt className="text-muted-foreground">{uiText("API format")}</dt><dd>{account.routing.kind === "openrouter" ? uiText("Selected by harness") : account.routing.protocol}</dd><dt className="text-muted-foreground">{uiText("Authentication")}</dt><dd>{account.routing.auth}</dd><dt className="text-muted-foreground">{uiText("Models")}</dt><dd>{account.routing.models.map(m => m.label ?? m.id).join(", ") || uiText("Enter a model ID on the agent")}</dd></dl></details>}
       <AiConnectionAccountControls
         account={account}
         grant={grant}
@@ -95,9 +98,7 @@ export function ManagedAiConnectionDetails({
         revocationDetails={
           <div className="space-y-2">
             {runs.error && (
-              <p role="alert">
-                Could not load active runs. Retry before revoking.
-              </p>
+              <p role="alert">{uiText("Could not load active runs. Retry before revoking.")}</p>
             )}
             {runs.data?.map((run) => (
               <div
@@ -112,9 +113,7 @@ export function ManagedAiConnectionDetails({
                   size="sm"
                   disabled={stop.isPending}
                   onClick={() => stop.mutate(run.id)}
-                >
-                  Stop run
-                </Button>
+                >{uiText("Stop run")}</Button>
               </div>
             ))}
           </div>

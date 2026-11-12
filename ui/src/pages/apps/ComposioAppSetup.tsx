@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { SelectField } from "@/components/ui/select-field";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -15,6 +16,7 @@ export function ComposioAppSetup({ name, toolkit, connections, onClose, onBack, 
   name: string; toolkit: string; connections: ToolConnection[]; onClose: () => void;
   onBack?: () => void; onConnectNew: () => void;
 }) {
+  useUiLocale();
   const queries = useQueryClient();
   const { userId, settled } = useAccountIdentity();
   const { pushToast } = useToast();
@@ -46,28 +48,28 @@ export function ComposioAppSetup({ name, toolkit, connections, onClose, onBack, 
 
   return <div className="space-y-4">
     <div className="space-y-2">
-      <Label htmlFor="composio-app-account">Composio account</Label>
+      <Label htmlFor="composio-app-account">{uiText("Composio account")}</Label>
       <SelectField id="composio-app-account" value={connectionId} disabled={busy} onValueChange={optionValue => {
         setConnectionId(optionValue); setResult(null); setError(null);
       }} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         {connections.map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.name}</option>)}
-        <option value="__new__">Connect a new account…</option>
+        <option value="__new__">{uiText("Connect a new account…")}</option>
       </SelectField>
     </div>
     {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
-    {result ? <p role="status" className="text-sm text-muted-foreground">Finish connecting {name} in Composio, then return here.</p> : null}
+    {result ? <p role="status" className="text-sm text-muted-foreground">{uiText("Finish connecting ")}{name}{uiText(" in Composio, then return here.")}</p> : null}
     {result?.authorizationUrl ? <Button asChild variant="outline" className="w-full">
-      <a href={result.authorizationUrl} target="_blank" rel="noopener noreferrer">Connect {name} in Composio<ExternalLink className="size-4" /></a>
+      <a href={result.authorizationUrl} target="_blank" rel="noopener noreferrer">{uiText("Connect ")}{name}{uiText(" in Composio")}<ExternalLink className="size-4" /></a>
     </Button> : null}
     <div className="flex items-center justify-between gap-2">
-      <Button variant="ghost" disabled={busy} onClick={onBack ?? onClose}>{onBack ? "Back" : "Cancel"}</Button>
+      <Button variant="ghost" disabled={busy} onClick={onBack ?? onClose}>{onBack ? uiText("Back") : uiText("Cancel")}</Button>
       <div className="flex items-center gap-2">
-      {result && result.status !== "connected" ? <Button variant="ghost" disabled={busy} onClick={() => void submit({ action: "start" })}>Get a new link</Button> : null}
+      {result && result.status !== "connected" ? <Button variant="ghost" disabled={busy} onClick={() => void submit({ action: "start" })}>{uiText("Get a new link")}</Button> : null}
       <Button disabled={!settled || busy || (!connection && connectionId !== "__new__")} onClick={() => {
         if (connectionId === "__new__") onConnectNew();
         else void submit(result ? { action: "complete" } : { action: "start" });
       }}>
-        {busy ? "Checking…" : connectionId === "__new__" ? "Connect new account" : result ? "I’ve connected it" : "Continue"}
+        {busy ? uiText("Checking…") : connectionId === "__new__" ? uiText("Connect new account") : result ? uiText("I’ve connected it") : uiText("Continue")}
       </Button>
       </div>
     </div>

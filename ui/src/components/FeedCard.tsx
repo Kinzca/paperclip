@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { Link } from "@/lib/router";
 import { timeAgo } from "../lib/timeAgo";
@@ -245,6 +246,7 @@ function getIconSpec(
 }
 
 function StatusCircle({ status }: { status: string }) {
+  useUiLocale();
   const colorClass = issueStatusIcon[status] ?? issueStatusIconDefault;
   const isFilled = status === "done";
   return (
@@ -255,6 +257,7 @@ function StatusCircle({ status }: { status: string }) {
 }
 
 function EntityIcon({ spec }: { spec: IconSpec }) {
+  useUiLocale();
   if (spec.kind === "status-circle") {
     return <StatusCircle status={spec.status} />;
   }
@@ -380,6 +383,7 @@ function resolveContent(
 }
 
 function ActorGlyph({ content }: { content: CardContent }) {
+  useUiLocale();
   if (content.actorType === "agent") {
     return (
       <AgentAvatar agent={content.actor} size={16}
@@ -425,6 +429,7 @@ export function FeedCard({
   isPinned = false,
   className,
 }: FeedCardProps) {
+  useUiLocale();
   const details = event.details as Record<string, unknown> | null;
   const content = resolveContent(event, agentMap, entityNameMap, entityTitleMap);
   const verb = formatVerb(event.action, details, isPinned ? "pinned" : "chronological");
@@ -468,7 +473,7 @@ export function FeedCard({
         )}
       </span>
       {isPinned && (
-        <span className="shrink-0 text-xs text-muted-foreground">Review →</span>
+        <span className="shrink-0 text-xs text-muted-foreground">{uiText("Review →")}</span>
       )}
       <span data-fc="time" className="shrink-0 text-muted-foreground">
         {timeAgo(event.createdAt)}

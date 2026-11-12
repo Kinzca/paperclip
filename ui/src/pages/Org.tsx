@@ -1,3 +1,5 @@
+import { getUiLocale } from "@/i18n/ui";
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useEffect, useState } from "react";
 import { Link } from "@/lib/router";
 import { useQuery } from "@tanstack/react-query";
@@ -21,6 +23,7 @@ function OrgTree({
   depth?: number;
   hrefFn: (id: string) => string;
 }) {
+  useUiLocale();
   return (
     <div>
       {nodes.map((node) => (
@@ -39,6 +42,7 @@ function OrgTreeNode({
   depth: number;
   hrefFn: (id: string) => string;
 }) {
+  useUiLocale();
   const [expanded, setExpanded] = useState(true);
   const hasChildren = node.reports.length > 0;
 
@@ -85,12 +89,13 @@ function OrgTreeNode({
 }
 
 export function Org() {
+  useUiLocale();
   const { selectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
 
   useEffect(() => {
-    setBreadcrumbs([{ label: "Org Chart" }]);
-  }, [setBreadcrumbs]);
+    setBreadcrumbs([{ label: uiText("Org Chart") }]);
+  }, [setBreadcrumbs, getUiLocale()]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.org(selectedCompanyId!),

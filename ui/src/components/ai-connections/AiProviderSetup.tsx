@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Network, Monitor } from "lucide-react";
@@ -90,6 +91,7 @@ export function AiProviderSetup({
     binding: Exclude<AiConnectionBinding, { mode: "responsible_user" }>,
   ) => void;
 }) {
+  useUiLocale();
   const [provider, setProvider] = useState<ProviderChoice | undefined>(
     reconnect
       ? reconnect.routing?.kind === "gateway" ||
@@ -236,18 +238,13 @@ export function AiProviderSetup({
     />
   );
   const modelSettings = (
-    <label className="block space-y-2 text-xs text-muted-foreground">
-      Model IDs (comma separated)
-      <Input
-        aria-label="Model IDs"
+    <label className="block space-y-2 text-xs text-muted-foreground">{uiText("Model IDs (comma separated)")}<Input
+        aria-label={uiText("Model IDs")}
         value={models}
         onChange={(e) => setModels(e.target.value)}
         disabled={Boolean(reconnect)}
       />
-      <span className="block">
-        Use the provider’s model ID or your gateway’s alias. You can
-        also enter one on the agent.
-      </span>
+      <span className="block">{uiText("Use the provider’s model ID or your gateway’s alias. You can also enter one on the agent.")}</span>
     </label>
   );
   const accessDefaults = !reconnect ? (
@@ -270,32 +267,28 @@ export function AiProviderSetup({
     />
   ) : undefined;
   const cancel = () => reconnect || initialProvider ? onCancel() : setStep("provider");
-  if (!reconnect && accounts.isPending) return <p role="status">Loading connection permissions…</p>;
-  if (!reconnect && accounts.isError) return <p role="alert">Could not load connection permissions. <Button type="button" variant="ghost" onClick={() => void accounts.refetch()}>Retry</Button></p>;
+  if (!reconnect && accounts.isPending) return <p role="status">{uiText("Loading connection permissions…")}</p>;
+  if (!reconnect && accounts.isError) return <p role="alert">{uiText("Could not load connection permissions. ")}<Button type="button" variant="ghost" onClick={() => void accounts.refetch()}>{uiText("Retry")}</Button></p>;
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6" onSubmit={(event) => event.stopPropagation()}>
       <div className="space-y-2">
         <h2 className="text-xl font-semibold">
           {step === "provider"
-            ? "Connect a model provider"
+            ? uiText("Connect a model provider")
             : `${reconnect ? "Reconnect" : "Connect"} ${label}`}
         </h2>
       </div>
-      {agents.isError && <p role="alert" className="text-sm text-destructive">Could not load agents. <Button type="button" variant="ghost" onClick={() => void agents.refetch()}>Retry</Button></p>}
+      {agents.isError && <p role="alert" className="text-sm text-destructive">{uiText("Could not load agents. ")}<Button type="button" variant="ghost" onClick={() => void agents.refetch()}>{uiText("Retry")}</Button></p>}
       {step === "provider" ? (
         <>
           {advancedOnly ? choices(true) : <>
           {choices(false)}
           <details>
-            <summary className="cursor-pointer text-sm text-muted-foreground">
-              Advanced providers
-            </summary>
+            <summary className="cursor-pointer text-sm text-muted-foreground">{uiText("Advanced providers")}</summary>
             <div className="pt-4">{choices(true)}</div>
           </details>
           </>}
-          <Button type="button" variant="ghost" onClick={onCancel}>
-            Cancel
-          </Button>
+          <Button type="button" variant="ghost" onClick={onCancel}>{uiText("Cancel")}</Button>
         </>
       ) : !advanced ? (
         <AiConnectionCredentialStep
@@ -325,10 +318,8 @@ export function AiProviderSetup({
         >
           {(provider === "gateway" || provider === "local") && (
             <>
-              <label className="block space-y-2 text-xs text-muted-foreground">
-                Provider URL
-                <Input
-                  aria-label="Provider URL"
+              <label className="block space-y-2 text-xs text-muted-foreground">{uiText("Provider URL")}<Input
+                  aria-label={uiText("Provider URL")}
                   placeholder={
                     provider === "local"
                       ? "http://localhost:11434/v1"
@@ -339,9 +330,7 @@ export function AiProviderSetup({
                   disabled={Boolean(reconnect)}
                 />
               </label>
-              <label className="block space-y-2 text-xs text-muted-foreground">
-                API format
-                <Select
+              <label className="block space-y-2 text-xs text-muted-foreground">{uiText("API format")}<Select
                   value={protocol}
                   onValueChange={(v) => {
                     setProtocol(v as typeof protocol);
@@ -350,29 +339,21 @@ export function AiProviderSetup({
                   }}
                   disabled={Boolean(reconnect) || Boolean(initialProtocol)}
                 >
-                  <SelectTrigger aria-label="API format" className="w-full">
+                  <SelectTrigger aria-label={uiText("API format")} className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="responses">
-                      OpenAI Responses · Codex
-                    </SelectItem>
-                    <SelectItem value="messages">
-                      Anthropic Messages · Claude
-                    </SelectItem>
-                    <SelectItem value="chat">
-                      Chat Completions · OpenCode, Hermes
-                    </SelectItem>
+                    <SelectItem value="responses">{uiText("OpenAI Responses · Codex")}</SelectItem>
+                    <SelectItem value="messages">{uiText("Anthropic Messages · Claude")}</SelectItem>
+                    <SelectItem value="chat">{uiText("Chat Completions · OpenCode, Hermes")}</SelectItem>
                   </SelectContent>
                 </Select>
               </label>
             </>
           )}
           {provider === "bedrock" && (
-            <label className="block space-y-2 text-xs text-muted-foreground">
-              AWS region
-              <Input
-                aria-label="AWS region"
+            <label className="block space-y-2 text-xs text-muted-foreground">{uiText("AWS region")}<Input
+                aria-label={uiText("AWS region")}
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
                 disabled={Boolean(reconnect)}
@@ -380,30 +361,26 @@ export function AiProviderSetup({
             </label>
           )}
           {provider !== "openrouter" && (
-            <label className="block space-y-2 text-xs text-muted-foreground">
-              Authentication
-              <Select
+            <label className="block space-y-2 text-xs text-muted-foreground">{uiText("Authentication")}<Select
                 value={auth}
                 onValueChange={(v) => setAuth(v as typeof auth)}
                 disabled={Boolean(reconnect)}
               >
-                <SelectTrigger aria-label="Authentication" className="w-full">
+                <SelectTrigger aria-label={uiText("Authentication")} className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="bearer">
                     {provider === "bedrock"
-                      ? "Bedrock API key"
-                      : "Bearer token"}
+                      ? uiText("Bedrock API key")
+                      : uiText("Bearer token")}
                   </SelectItem>
                   {provider !== "bedrock" && (
                     <>
                       {protocol === "messages" && (
-                        <SelectItem value="api_key">
-                          API key · x-api-key
-                        </SelectItem>
+                        <SelectItem value="api_key">{uiText("API key · x-api-key")}</SelectItem>
                       )}
-                      <SelectItem value="none">No authentication</SelectItem>
+                      <SelectItem value="none">{uiText("No authentication")}</SelectItem>
                     </>
                   )}
                 </SelectContent>
@@ -412,10 +389,8 @@ export function AiProviderSetup({
           )}
           {
             auth !== "none" && (
-              <label className="block space-y-2 text-xs text-muted-foreground">
-                API key
-                <Input
-                  aria-label="API key"
+              <label className="block space-y-2 text-xs text-muted-foreground">{uiText("API key")}<Input
+                  aria-label={uiText("API key")}
                   type="password"
                   autoComplete="new-password"
                   value={apiKey}
@@ -424,15 +399,12 @@ export function AiProviderSetup({
               </label>
             )
           }
-          {reconnect && <details><summary className="cursor-pointer text-sm text-muted-foreground">Model settings</summary>{modelSettings}</details>}
-          <p className="text-xs text-muted-foreground">
-            Test the connection with your chosen model in the agent’s execution
-            environment after connecting.
-          </p>
+          {reconnect && <details><summary className="cursor-pointer text-sm text-muted-foreground">{uiText("Model settings")}</summary>{modelSettings}</details>}
+          <p className="text-xs text-muted-foreground">{uiText("Test the connection with your chosen model in the agent’s execution environment after connecting.")}</p>
           {save.error && (
             <p role="alert" className="text-sm text-destructive">
               {save.error instanceof Error && save.error.name === "ZodError"
-                ? "Check the URL, API format, and authentication fields."
+                ? uiText("Check the URL, API format, and authentication fields.")
                 : save.error.message}
             </p>
           )}
@@ -443,9 +415,7 @@ export function AiProviderSetup({
               variant="ghost"
               onClick={cancel}
               disabled={save.isPending}
-            >
-              Back
-            </Button>
+            >{uiText("Back")}</Button>
             <Button
               type="submit"
               disabled={
@@ -455,10 +425,10 @@ export function AiProviderSetup({
               }
             >
               {save.isPending
-                ? "Connecting…"
+                ? uiText("Connecting…")
                 : reconnect
-                  ? "Reconnect"
-                  : "Connect"}
+                  ? uiText("Reconnect")
+                  : uiText("Connect")}
             </Button>
           </div>
         </form>

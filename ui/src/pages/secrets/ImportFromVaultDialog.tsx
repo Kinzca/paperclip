@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -129,6 +130,7 @@ function StatusBadge({
 }: {
   status: RemoteSecretImportCandidate["status"];
 }) {
+  useUiLocale();
   const Icon =
     status === "conflict"
       ? AlertTriangle
@@ -144,6 +146,7 @@ function StatusBadge({
 }
 
 function RowResultBadge({ status }: { status: RemoteSecretImportRowResult["status"] }) {
+  useUiLocale();
   switch (status) {
     case "imported":
       return (
@@ -151,8 +154,7 @@ function RowResultBadge({ status }: { status: RemoteSecretImportRowResult["statu
           variant="outline"
           className="gap-1 px-1.5 py-0 font-normal text-emerald-600 border-emerald-500/40 dark:text-emerald-400"
         >
-          <CheckCircle2 className="h-3 w-3" /> Created
-        </Badge>
+          <CheckCircle2 className="h-3 w-3" />{uiText(" Created")}</Badge>
       );
     case "skipped":
       return (
@@ -160,8 +162,7 @@ function RowResultBadge({ status }: { status: RemoteSecretImportRowResult["statu
           variant="outline"
           className="gap-1 px-1.5 py-0 font-normal text-muted-foreground border-border/60"
         >
-          <Link2 className="h-3 w-3" /> Skipped
-        </Badge>
+          <Link2 className="h-3 w-3" />{uiText(" Skipped")}</Badge>
       );
     case "error":
     default:
@@ -170,8 +171,7 @@ function RowResultBadge({ status }: { status: RemoteSecretImportRowResult["statu
           variant="outline"
           className="gap-1 px-1.5 py-0 font-normal text-destructive border-destructive/40"
         >
-          <XCircle className="h-3 w-3" /> Failed
-        </Badge>
+          <XCircle className="h-3 w-3" />{uiText(" Failed")}</Badge>
       );
   }
 }
@@ -338,6 +338,7 @@ export function ImportFromVaultDialog({
   onImportComplete,
   onManageVaults,
 }: ImportFromVaultDialogProps) {
+  useUiLocale();
   const queryClient = useQueryClient();
   const toast = useToastActions();
   const awsVaults = useMemo(() => awsVaultOptions(providerConfigs), [providerConfigs]);
@@ -654,12 +655,8 @@ export function ImportFromVaultDialog({
       >
         <header className="flex items-start justify-between gap-3 border-b border-border/60 px-5 py-4">
           <div className="flex flex-col gap-1">
-            <DialogTitle className="text-base font-semibold">
-              Import from AWS Secrets Manager
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              Bring AWS-managed secrets into Paperclip as external references.
-            </DialogDescription>
+            <DialogTitle className="text-base font-semibold">{uiText("Import from AWS Secrets Manager")}</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">{uiText("Bring AWS-managed secrets into Paperclip as external references.")}</DialogDescription>
             <Stepper step={step} />
           </div>
           <button
@@ -729,9 +726,7 @@ export function ImportFromVaultDialog({
           />
           <div className="flex items-center gap-2">
             {step !== "result" && (
-              <Button variant="ghost" size="sm" onClick={() => handleClose()}>
-                Cancel
-              </Button>
+              <Button variant="ghost" size="sm" onClick={() => handleClose()}>{uiText("Cancel")}</Button>
             )}
             {step === "review" && (
               <Button
@@ -739,18 +734,14 @@ export function ImportFromVaultDialog({
                 size="sm"
                 onClick={() => setStep("select")}
                 disabled={importMutation.isPending}
-              >
-                Back
-              </Button>
+              >{uiText("Back")}</Button>
             )}
             {step === "select" && (
               <Button
                 size="sm"
                 onClick={() => setStep("review")}
                 disabled={totalSelected === 0}
-              >
-                Continue → Review
-              </Button>
+              >{uiText("Continue → Review")}</Button>
             )}
             {step === "review" && (
               <Button
@@ -764,17 +755,14 @@ export function ImportFromVaultDialog({
               >
                 {importMutation.isPending ? (
                   <>
-                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Importing…
-                  </>
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />{uiText(" Importing…")}</>
                 ) : (
-                  `Import ${draftList.length}`
+                  uiText("Import {{value0}}", { value0: draftList.length })
                 )}
               </Button>
             )}
             {step === "result" && (
-              <Button size="sm" onClick={() => handleClose(true)}>
-                Done
-              </Button>
+              <Button size="sm" onClick={() => handleClose(true)}>{uiText("Done")}</Button>
             )}
           </div>
         </footer>
@@ -784,6 +772,7 @@ export function ImportFromVaultDialog({
 }
 
 function Stepper({ step }: { step: Step }) {
+  useUiLocale();
   const steps: { id: Step; label: string }[] = [
     { id: "select", label: "Select" },
     { id: "review", label: "Review" },
@@ -851,6 +840,7 @@ interface SelectStepProps {
 }
 
 function SelectStep(props: SelectStepProps) {
+  useUiLocale();
   const {
     awsVaults,
     eligible,
@@ -897,7 +887,7 @@ function SelectStep(props: SelectStepProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b border-border/60 px-5 py-3">
-        <label className="text-xs uppercase tracking-wide text-muted-foreground">Vault</label>
+        <label className="text-xs uppercase tracking-wide text-muted-foreground">{uiText("Vault")}</label>
         {awsVaults.length === 1 && eligible.length === 1 ? (
           <span className="text-xs font-medium" data-testid="vault-static-label">
             {eligible[0].displayName}
@@ -907,8 +897,8 @@ function SelectStep(props: SelectStepProps) {
             value={vaultId ?? undefined}
             onValueChange={onVaultChange}
           >
-            <SelectTrigger size="sm" className="text-xs" aria-label="Select AWS vault">
-              <SelectValue placeholder="Select an AWS vault" />
+            <SelectTrigger size="sm" className="text-xs" aria-label={uiText("Select AWS vault")}>
+              <SelectValue placeholder={uiText("Select an AWS vault")} />
             </SelectTrigger>
             <SelectContent>
               {awsVaults.map((vault) => {
@@ -923,14 +913,14 @@ function SelectStep(props: SelectStepProps) {
                     <span className="flex items-center gap-2">
                       <span>{vault.displayName}</span>
                       {vault.isDefault && (
-                        <Badge variant="outline" className="px-1 py-0 text-(length:--text-nano)">default</Badge>
+                        <Badge variant="outline" className="px-1 py-0 text-(length:--text-nano)">{uiText("default")}</Badge>
                       )}
                       {vault.status === "warning" && (
-                        <Badge variant="outline" className="px-1 py-0 text-(length:--text-nano) text-amber-500 border-amber-500/40">warning</Badge>
+                        <Badge variant="outline" className="px-1 py-0 text-(length:--text-nano) text-amber-500 border-amber-500/40">{uiText("warning")}</Badge>
                       )}
                       {blocked && (
                         <Badge variant="outline" className="px-1 py-0 text-(length:--text-nano) text-muted-foreground">
-                          {vault.status === "coming_soon" ? "coming soon" : vault.status}
+                          {vault.status === "coming_soon" ? uiText("coming soon") : vault.status}
                         </Badge>
                       )}
                     </span>
@@ -946,9 +936,9 @@ function SelectStep(props: SelectStepProps) {
           <Input
             value={searchInput}
             onChange={(event) => onSearchInput(event.target.value)}
-            placeholder="Search by name, ARN, tag"
+            placeholder={uiText("Search by name, ARN, tag")}
             className="pl-7 pr-7 text-xs"
-            aria-label="Search remote secrets"
+            aria-label={uiText("Search remote secrets")}
             data-testid="vault-search"
           />
           {showSearchSpinner && (
@@ -961,7 +951,7 @@ function SelectStep(props: SelectStepProps) {
           size="sm"
           onClick={onRefresh}
           disabled={previewLoading || !vaultId}
-          aria-label="Refresh remote secrets"
+          aria-label={uiText("Refresh remote secrets")}
         >
           <RefreshCw className={cn("h-3.5 w-3.5", previewLoading && "animate-spin")} />
         </Button>
@@ -970,15 +960,14 @@ function SelectStep(props: SelectStepProps) {
       {selectedNotVisible > 0 && (
         <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-5 py-1.5 text-xs text-muted-foreground">
           <span>
-            {selection.size} selected · {selectedNotVisible} not visible with current search
-          </span>
+            {selection.size}{uiText(" selected · ")}{selectedNotVisible}{uiText(" not visible with current search")}</span>
           <Button
             variant="ghost"
             size="sm"
             className="h-6 px-2 text-xs"
             onClick={() => onShowOnlySelectedChange(!showOnlySelected)}
           >
-            {showOnlySelected ? "Show all" : "Show selected"}
+            {showOnlySelected ? uiText("Show all") : uiText("Show selected")}
           </Button>
         </div>
       )}
@@ -998,15 +987,15 @@ function SelectStep(props: SelectStepProps) {
                   <Checkbox
                     checked={headerCheckboxState}
                     onCheckedChange={() => toggleAllLoaded()}
-                    aria-label={`Select all loaded (${selectableInLoaded.length})`}
+                    aria-label={uiText("Select all loaded ({{value0}})", { value0: selectableInLoaded.length })}
                     disabled={selectableInLoaded.length === 0}
                   />
                 </th>
-                <th className="px-2 py-2 text-left font-medium">Remote name</th>
-                <th className="px-2 py-2 text-left font-medium">Reference</th>
-                <th className="px-2 py-2 text-left font-medium">Last changed</th>
-                <th className="px-2 py-2 text-left font-medium">Suggested name</th>
-                <th className="px-2 py-2 text-left font-medium">State</th>
+                <th className="px-2 py-2 text-left font-medium">{uiText("Remote name")}</th>
+                <th className="px-2 py-2 text-left font-medium">{uiText("Reference")}</th>
+                <th className="px-2 py-2 text-left font-medium">{uiText("Last changed")}</th>
+                <th className="px-2 py-2 text-left font-medium">{uiText("Suggested name")}</th>
+                <th className="px-2 py-2 text-left font-medium">{uiText("State")}</th>
               </tr>
             </thead>
             <tbody data-testid="vault-table-body">
@@ -1038,7 +1027,7 @@ function SelectStep(props: SelectStepProps) {
                         checked={isSelected}
                         onCheckedChange={() => toggleRow(candidate)}
                         disabled={!candidate.importable}
-                        aria-label={`Select ${candidate.remoteName}`}
+                        aria-label={uiText("Select {{value0}}", { value0: candidate.remoteName })}
                       />
                     </td>
                     <td className="px-2 py-2.5">
@@ -1061,9 +1050,7 @@ function SelectStep(props: SelectStepProps) {
                         <StatusBadge status={candidate.status} />
                         {candidate.status === "duplicate" &&
                           candidate.conflicts.find((c) => c.type === "exact_reference")?.existingSecretId && (
-                            <span className="text-(length:--text-micro) text-muted-foreground">
-                              Already imported
-                            </span>
+                            <span className="text-(length:--text-micro) text-muted-foreground">{uiText("Already imported")}</span>
                           )}
                       </div>
                       {candidate.status === "conflict" && candidate.conflicts.length > 0 && (
@@ -1089,9 +1076,8 @@ function SelectStep(props: SelectStepProps) {
         {hasNextPage && !previewError && (
           <div className="flex items-center justify-between border-t border-border/60 px-5 py-2 text-xs text-muted-foreground">
             <span>
-              {candidates.length} loaded
-              {selectableInLoaded.length > 0 && (
-                <span> · {selectableInLoaded.length} selectable</span>
+              {candidates.length}{uiText(" loaded")}{selectableInLoaded.length > 0 && (
+                <span> · {selectableInLoaded.length}{uiText(" selectable")}</span>
               )}
             </span>
             <Button
@@ -1103,10 +1089,9 @@ function SelectStep(props: SelectStepProps) {
             >
               {pageLoading ? (
                 <>
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Loading…
-                </>
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />{uiText(" Loading…")}</>
               ) : (
-                `Load ${PAGE_SIZE} more`
+                uiText("Load {{value0}} more", { value0: PAGE_SIZE })
               )}
             </Button>
           </div>
@@ -1117,6 +1102,7 @@ function SelectStep(props: SelectStepProps) {
 }
 
 function PreviewErrorBanner({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+  useUiLocale();
   const isPermission = isPermissionError(error);
   const isThrottling = isThrottlingError(error);
   const message = readableErrorMessage(error);
@@ -1130,28 +1116,26 @@ function PreviewErrorBanner({ error, onRetry }: { error: unknown; onRetry: () =>
       <div className="flex-1">
         <div className="font-medium">
           {isPermission
-            ? "AWS denied list access"
+            ? uiText("AWS denied list access")
             : isThrottling
-              ? "AWS throttled the listing request"
-              : "Could not load remote secrets"}
+              ? uiText("AWS throttled the listing request")
+              : uiText("Could not load remote secrets")}
         </div>
         <div className="mt-1 text-xs leading-relaxed text-destructive/80">
           {isPermission
-            ? "The AWS principal behind this vault is missing secretsmanager:ListSecrets. Update IAM and try again."
+            ? uiText("The AWS principal behind this vault is missing secretsmanager:ListSecrets. Update IAM and try again.")
             : message}
         </div>
         <div className="mt-2 flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={onRetry}>
-            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Retry
-          </Button>
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" />{uiText(" Retry")}</Button>
           {isPermission && (
             <a
               href="https://docs.aws.amazon.com/service-authorization/latest/reference/list_awssecretsmanager.html"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1 text-xs font-medium underline"
-            >
-              IAM reference <ExternalLink className="h-3 w-3" />
+            >{uiText("IAM reference ")}<ExternalLink className="h-3 w-3" />
             </a>
           )}
         </div>
@@ -1161,6 +1145,7 @@ function PreviewErrorBanner({ error, onRetry }: { error: unknown; onRetry: () =>
 }
 
 function SkeletonRows({ rows }: { rows: number }) {
+  useUiLocale();
   return (
     <div className="flex flex-col gap-1.5 p-3">
       {Array.from({ length: rows }).map((_, idx) => (
@@ -1171,6 +1156,7 @@ function SkeletonRows({ rows }: { rows: number }) {
 }
 
 function EmptyCandidates({ query }: { query: string }) {
+  useUiLocale();
   if (query) {
     return (
       <EmptyState
@@ -1196,6 +1182,7 @@ interface ReviewStepProps {
 }
 
 function ReviewStep({ drafts, reviewErrors, updateDraft, removeDraft, importing }: ReviewStepProps) {
+  useUiLocale();
   if (drafts.length === 0) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center p-6">
@@ -1213,11 +1200,10 @@ function ReviewStep({ drafts, reviewErrors, updateDraft, removeDraft, importing 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-wrap items-center gap-3 border-b border-border/60 bg-muted/20 px-5 py-3 text-xs">
-        <span className="font-medium">{ready} secrets ready to import</span>
+        <span className="font-medium">{ready}{uiText(" secrets ready to import")}</span>
         {blocked > 0 && (
           <span className="text-amber-600 dark:text-amber-400">
-            {blocked} need attention before import
-          </span>
+            {blocked}{uiText(" need attention before import")}</span>
         )}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto" data-testid="review-list">
@@ -1245,7 +1231,7 @@ function ReviewStep({ drafts, reviewErrors, updateDraft, removeDraft, importing 
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <label className="flex flex-col gap-1 text-xs">
-                      <span className="text-muted-foreground">Paperclip name</span>
+                      <span className="text-muted-foreground">{uiText("Paperclip name")}</span>
                       <Input
                         value={draft.name}
                         onChange={(e) =>
@@ -1258,7 +1244,7 @@ function ReviewStep({ drafts, reviewErrors, updateDraft, removeDraft, importing 
                       />
                     </label>
                     <label className="flex flex-col gap-1 text-xs">
-                      <span className="text-muted-foreground">Key</span>
+                      <span className="text-muted-foreground">{uiText("Key")}</span>
                       <Input
                         value={draft.key}
                         onChange={(e) =>
@@ -1276,7 +1262,7 @@ function ReviewStep({ drafts, reviewErrors, updateDraft, removeDraft, importing 
                       />
                     </label>
                     <label className="flex flex-col gap-1 text-xs">
-                      <span className="text-muted-foreground">Description (optional)</span>
+                      <span className="text-muted-foreground">{uiText("Description (optional)")}</span>
                       <Input
                         value={draft.description}
                         onChange={(e) =>
@@ -1305,7 +1291,7 @@ function ReviewStep({ drafts, reviewErrors, updateDraft, removeDraft, importing 
                   variant="ghost"
                   size="icon"
                   onClick={() => removeDraft(draft.candidate.externalRef)}
-                  aria-label={`Remove ${draft.candidate.remoteName}`}
+                  aria-label={uiText("Remove {{value0}}", { value0: draft.candidate.remoteName })}
                   className="h-7 w-7"
                   disabled={importing}
                 >
@@ -1326,6 +1312,7 @@ interface ResultStepProps {
 }
 
 function ResultStep({ result, draftList }: ResultStepProps) {
+  useUiLocale();
   const grouped = useMemo(() => {
     const created: RemoteSecretImportRowResult[] = [];
     const skipped: RemoteSecretImportRowResult[] = [];
@@ -1356,20 +1343,20 @@ function ResultStep({ result, draftList }: ResultStepProps) {
       <div className="border-b border-border/60 px-5 py-3" data-testid="result-summary">
         <h3 className="text-sm font-semibold">{heading}</h3>
         <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          <span className="text-emerald-600 dark:text-emerald-400">✓ {result.importedCount} created</span>
-          <span>⊘ {result.skippedCount} skipped</span>
-          <span className="text-destructive">⨯ {result.errorCount} failed</span>
+          <span className="text-emerald-600 dark:text-emerald-400">✓ {result.importedCount}{uiText(" created")}</span>
+          <span>⊘ {result.skippedCount}{uiText(" skipped")}</span>
+          <span className="text-destructive">⨯ {result.errorCount}{uiText(" failed")}</span>
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {grouped.created.length > 0 && (
-          <ResultGroup label="Created" rows={grouped.created} draftLookup={draftLookup} />
+          <ResultGroup label={uiText("Created")} rows={grouped.created} draftLookup={draftLookup} />
         )}
         {grouped.skipped.length > 0 && (
-          <ResultGroup label="Skipped" rows={grouped.skipped} draftLookup={draftLookup} />
+          <ResultGroup label={uiText("Skipped")} rows={grouped.skipped} draftLookup={draftLookup} />
         )}
         {grouped.failed.length > 0 && (
-          <ResultGroup label="Failed" rows={grouped.failed} draftLookup={draftLookup} />
+          <ResultGroup label={uiText("Failed")} rows={grouped.failed} draftLookup={draftLookup} />
         )}
       </div>
     </div>
@@ -1385,6 +1372,7 @@ function ResultGroup({
   rows: RemoteSecretImportRowResult[];
   draftLookup: Map<string, DraftSelection>;
 }) {
+  useUiLocale();
   return (
     <section>
       <header className="bg-muted/30 px-5 py-1.5 text-xs uppercase tracking-wide text-muted-foreground">
@@ -1451,23 +1439,22 @@ function FooterStatus({
   blockedReviewCount,
   result,
 }: FooterStatusProps) {
+  useUiLocale();
   if (step === "select") {
     return (
       <div className="text-xs text-muted-foreground">
         {totalSelected === 0
-          ? "Select remote secrets to import"
-          : `${totalSelected} selected`}
+          ? uiText("Select remote secrets to import")
+          : uiText("{{value0}} selected", { value0: totalSelected })}
       </div>
     );
   }
   if (step === "review") {
     return (
       <div className="text-xs text-muted-foreground">
-        {readyReviewCount} ready
-        {blockedReviewCount > 0 && (
+        {readyReviewCount}{uiText(" ready")}{blockedReviewCount > 0 && (
           <span className="ml-2 text-amber-600 dark:text-amber-400">
-            · {blockedReviewCount} blocked
-          </span>
+            · {blockedReviewCount}{uiText(" blocked")}</span>
         )}
       </div>
     );
@@ -1475,9 +1462,9 @@ function FooterStatus({
   if (result) {
     return (
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        <span>{result.importedCount} created</span>
-        <span>{result.skippedCount} skipped</span>
-        <span>{result.errorCount} failed</span>
+        <span>{result.importedCount}{uiText(" created")}</span>
+        <span>{result.skippedCount}{uiText(" skipped")}</span>
+        <span>{result.errorCount}{uiText(" failed")}</span>
       </div>
     );
   }

@@ -1,3 +1,4 @@
+import { getUiLocale } from "@/i18n/ui";
 import { CleanupFeedbackDialog, type CleanupFeedbackState } from "@/components/CleanupFeedbackDialog";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -15,6 +16,7 @@ import { formatDateTime } from "@/lib/utils";
 import { storageCategories as categories, storageSize } from "@/lib/storage";
 
 export function StorageCleanupSettings({ kind }: { kind: StorageCleanupKind }) {
+  useUiLocale();
   return <StorageCleanupContent key={kind} kind={kind} />;
 }
 
@@ -28,7 +30,7 @@ function StorageCleanupContent({ kind }: { kind: StorageCleanupKind }) {
   const [result, setResult] = useState<StorageCleanupResult | null>(null);
   useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" },
     { label: uiText("Storage"), href: "/company/settings/instance/storage" },
-    { label: uiText(categories[kind][0]) }]); }, [setBreadcrumbs, locale, kind]);
+    { label: uiText(categories[kind][0]) }]); }, [setBreadcrumbs, locale, kind, getUiLocale()]);
   const inventory = useQuery({ queryKey: ["storage-cleanup"], queryFn: instanceSettingsApi.getStorageCleanup,
     staleTime: 30_000, refetchOnWindowFocus: false, retry: false });
   const prepare = useMutation({ mutationFn: () => instanceSettingsApi.previewStorageCleanup([...selected]),

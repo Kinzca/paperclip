@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Issue } from "@paperclipai/shared";
 import type { IssueSiblingNavigation as IssueSiblingNavigationState } from "@/lib/issue-detail-subissues";
@@ -12,11 +13,12 @@ type IssueSiblingNavigationProps = {
 };
 
 export function IssueSiblingNavigation({ navigation, linkState }: IssueSiblingNavigationProps) {
+  useUiLocale();
   if (!navigation) return null;
 
   return (
     <nav
-      aria-label="Sub-task navigation"
+      aria-label={uiText("Sub-task navigation")}
       className="mt-4 flex flex-col gap-3 sm:mt-6 sm:grid sm:grid-cols-2"
     >
       {navigation.previous ? (
@@ -45,6 +47,7 @@ function SiblingLink({
   linkState?: unknown;
   className?: string;
 }) {
+  useUiLocale();
   const issuePathId = issue.identifier ?? issue.id;
   const label = direction === "previous" ? "Previous" : "Next";
   const ariaDirection = direction === "previous" ? "Previous sub-task" : "Next sub-task";

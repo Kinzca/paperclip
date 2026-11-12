@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +32,7 @@ export interface AiConnectionAuthProps {
 
 /** No provider calls or polling here: live hosts keep the existing login controllers. */
 export function AiConnectionAuth(props: AiConnectionAuthProps) {
+  useUiLocale();
   // Remount private input state when the provider, method, or attempt changes phase.
   return (
     <AuthAttempt
@@ -49,6 +51,7 @@ function AuthAttempt({
   onCancel,
   onDone,
 }: AiConnectionAuthProps) {
+  useUiLocale();
   const [value, setValue] = useState("");
   const info = AI_PROVIDERS[provider];
   const busy = state.phase === "starting" || state.phase === "submitting";
@@ -63,21 +66,19 @@ function AuthAttempt({
   };
   return (
     <section
-      aria-label={`Connect ${info.name}`}
+      aria-label={uiText("Connect {{value0}}", { value0: info.name })}
       className="flex flex-col gap-4"
     >
       <div className="flex flex-col gap-1">
-        <h3 className="text-sm font-semibold">Connect {info.name}</h3>
+        <h3 className="text-sm font-semibold">{uiText("Connect ")}{info.name}</h3>
         <p className="text-xs text-muted-foreground">
           {aiMethodLabel(provider, method)}
         </p>
       </div>
       {state.phase === "connected" ? (
         <>
-          <p role="status" className="text-sm">
-            Connected. This account is saved in Connections and can be reused.
-          </p>
-          <Button onClick={onDone}>Use connection</Button>
+          <p role="status" className="text-sm">{uiText("Connected. This account is saved in Connections and can be reused.")}</p>
+          <Button onClick={onDone}>{uiText("Use connection")}</Button>
         </>
       ) : (
         <>
@@ -85,7 +86,7 @@ function AuthAttempt({
             <p role="status" className="text-sm text-muted-foreground">
               {state.phase === "unsupported"
                 ? state.message
-                : "This provider does not offer a subscription connection."}
+                : uiText("This provider does not offer a subscription connection.")}
             </p>
           ) : (
             <>
@@ -95,9 +96,7 @@ function AuthAttempt({
                 </p>
               )}
               {state.phase === "cancelled" && (
-                <p role="status" className="text-sm text-muted-foreground">
-                  Sign-in cancelled. No connection was created.
-                </p>
+                <p role="status" className="text-sm text-muted-foreground">{uiText("Sign-in cancelled. No connection was created.")}</p>
               )}
               {method === "api_key" ? (
                 <ProviderApiKeyCard
@@ -105,7 +104,7 @@ function AuthAttempt({
                   value={value}
                   onChange={setValue}
                   onSubmit={submit}
-                  placeholder="Enter API key here"
+                  placeholder={uiText("Enter API key here")}
                   disabled={busy}
                   autoFocus
                 />
@@ -142,8 +141,7 @@ function AuthAttempt({
                   )}
                 </ProviderSubscriptionCard>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  Sign in with your {info.subscriptionName}.
+                <p className="text-sm text-muted-foreground">{uiText("Sign in with your ")}{info.subscriptionName}.
                 </p>
               )}
             </>
@@ -155,31 +153,25 @@ function AuthAttempt({
                 setValue("");
                 onCancel();
               }}
-            >
-              Cancel
-            </Button>
+            >{uiText("Cancel")}</Button>
             {!unsupported &&
               (method === "api_key" ? (
                 <Button disabled={busy || !value.trim()} onClick={submit}>
-                  {busy ? "Connecting…" : "Connect"}
+                  {busy ? uiText("Connecting…") : uiText("Connect")}
                 </Button>
               ) : state.phase === "waiting" ? (
                 provider === "anthropic" ? (
-                  <Button disabled={!value.trim()} onClick={submit}>
-                    Submit code
-                  </Button>
+                  <Button disabled={!value.trim()} onClick={submit}>{uiText("Submit code")}</Button>
                 ) : (
-                  <span role="status" className="text-sm text-muted-foreground">
-                    Waiting for sign-in…
-                  </span>
+                  <span role="status" className="text-sm text-muted-foreground">{uiText("Waiting for sign-in…")}</span>
                 )
               ) : (
                 <Button disabled={busy} onClick={onStart}>
                   {busy
-                    ? "Preparing sign-in…"
+                    ? uiText("Preparing sign-in…")
                     : state.phase === "idle"
-                      ? "Sign in"
-                      : "Try again"}
+                      ? uiText("Sign in")
+                      : uiText("Try again")}
                 </Button>
               ))}
           </div>

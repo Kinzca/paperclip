@@ -1,3 +1,5 @@
+import { getUiLocale } from "@/i18n/ui";
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams, useSearchParams } from "@/lib/router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -122,6 +124,7 @@ function buildRoutineMutationPayload(input: RoutineEditDraft) {
 }
 
 export function RoutineDetail() {
+  useUiLocale();
   const { routineId, section: sectionParam } = useParams<{ routineId: string; section?: string }>();
   const [searchParams] = useSearchParams();
   const triggerSetup = sectionParam === "triggers" && searchParams.has("triggerSetup");
@@ -329,14 +332,14 @@ export function RoutineDetail() {
 
   useEffect(() => {
     if (!routine) return;
-    if (!triggerSetup) setBreadcrumbs([{ label: "Routines", href: "/routines" }, { label: routine.title }]);
+    if (!triggerSetup) setBreadcrumbs([{ label: uiText("Routines"), href: "/routines" }, { label: routine.title }]);
     if (!routineDefaults) return;
     const changedRoutine = hydratedRoutineIdRef.current !== routine.id;
     if (changedRoutine || !isEditDirty) {
       setEditDraft(routineDefaults);
       hydratedRoutineIdRef.current = routine.id;
     }
-  }, [routine, routineDefaults, isEditDirty, setBreadcrumbs, triggerSetup]);
+  }, [routine, routineDefaults, isEditDirty, setBreadcrumbs, triggerSetup, getUiLocale()]);
 
   useEffect(() => {
     autoResizeTextarea(titleInputRef.current);
@@ -775,9 +778,7 @@ export function RoutineDetail() {
       <a
         href="#routine-section"
         className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-20 focus:rounded focus:bg-background focus:px-3 focus:py-1.5 focus:text-sm"
-      >
-        Skip to section
-      </a>
+      >{uiText("Skip to section")}</a>
 
       {/* The global shell owns routine navigation. This surface keeps one
           content scroll owner and a compact action header. */}
@@ -808,7 +809,7 @@ export function RoutineDetail() {
                 ref={titleInputRef}
                 data-autosize-title
                 className="min-w-0 flex-1 resize-none overflow-hidden bg-transparent text-base font-semibold leading-7 outline-none placeholder:text-muted-foreground/50"
-                placeholder="Routine title"
+                placeholder={uiText("Routine title")}
                 rows={1}
                 value={editDraft.title}
                 onChange={(event) => {
@@ -839,18 +840,14 @@ export function RoutineDetail() {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate(routineDetailHref(routine.id))}
-              >
-                Back to overview
-              </Button>
+              >{uiText("Back to overview")}</Button>
             ) : (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate(routineDetailHref(routine.id, "history"))}
               >
-                <History className="h-3.5 w-3.5" />
-                History
-              </Button>
+                <History className="h-3.5 w-3.5" />{uiText("History")}</Button>
             )}
             {section === "overview" ? (
               overviewEditing ? (
@@ -862,14 +859,10 @@ export function RoutineDetail() {
                     setOverviewEditing(false);
                   }}
                 >
-                  <X className="h-3.5 w-3.5" />
-                  Cancel editing
-                </Button>
+                  <X className="h-3.5 w-3.5" />{uiText("Cancel editing")}</Button>
               ) : (
                 <Button variant="outline" size="sm" onClick={() => setOverviewEditing(true)}>
-                  <Pencil className="h-3.5 w-3.5" />
-                  Edit routine
-                </Button>
+                  <Pencil className="h-3.5 w-3.5" />{uiText("Edit routine")}</Button>
               )
             ) : null}
             <RunButton onClick={() => setRunVariablesOpen(true)} disabled={runRoutine.isPending} />
@@ -879,7 +872,7 @@ export function RoutineDetail() {
                 checked={automationEnabled}
                 onCheckedChange={contextValue.onToggleAutomation}
                 disabled={automationToggleDisabled}
-                aria-label={automationEnabled ? "Pause automatic triggers" : "Enable automatic triggers"}
+                aria-label={automationEnabled ? uiText("Pause automatic triggers") : uiText("Enable automatic triggers")}
               />
               <span className={`text-sm font-medium ${automationLabelClassName}`}>{automationLabel}</span>
             </div>

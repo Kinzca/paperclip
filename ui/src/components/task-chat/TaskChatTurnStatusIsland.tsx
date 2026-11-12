@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useEffect, useRef, useState } from "react";
 import {
   CheckCircle2,
@@ -119,6 +120,7 @@ function fileCountLabel(files: number): string {
 }
 
 function IslandBody({ model }: { model: TaskChatTurnStatusModel }) {
+  useUiLocale();
   const plan = model.segments.find(
     (segment): segment is Extract<TaskChatTurnStatusSegment, { kind: "plan" }> => segment.kind === "plan",
   );
@@ -130,8 +132,7 @@ function IslandBody({ model }: { model: TaskChatTurnStatusModel }) {
       {plan ? (
         <span className="flex shrink-0 items-center gap-2">
           {planIcon(plan)}
-          <span className="font-mono text-sm tabular-nums" aria-live="polite" aria-atomic="true">
-            Step {plan.currentStepIndex + 1} / {plan.steps.length}
+          <span className="font-mono text-sm tabular-nums" aria-live="polite" aria-atomic="true">{uiText("Step ")}{plan.currentStepIndex + 1} / {plan.steps.length}
             <span className="sr-only">: {plan.steps[plan.currentStepIndex]?.label}</span>
           </span>
         </span>
@@ -178,6 +179,7 @@ const ISLAND_CLASS_NAME = "mx-auto flex min-h-10 max-w-(--sz-turn-status-island)
 const HOVER_CLOSE_GRACE_MS = 100;
 
 export function TaskChatTurnStatusIsland({ model }: { model: TaskChatTurnStatusModel }) {
+  useUiLocale();
   const plan = model.segments.find(
     (segment): segment is Extract<TaskChatTurnStatusSegment, { kind: "plan" }> => segment.kind === "plan",
   );
@@ -248,7 +250,7 @@ export function TaskChatTurnStatusIsland({ model }: { model: TaskChatTurnStatusM
         align="center"
         sideOffset={8}
         className="w-(--sz-turn-status-popover) p-2"
-        aria-label="Turn plan"
+        aria-label={uiText("Turn plan")}
         onPointerEnter={(event) => {
           if (event.pointerType === "mouse") cancelClose();
         }}
@@ -258,7 +260,7 @@ export function TaskChatTurnStatusIsland({ model }: { model: TaskChatTurnStatusM
         onEscapeKeyDown={() => setPinned(false)}
         onInteractOutside={() => setPinned(false)}
       >
-        <ol className="flex flex-col gap-1" aria-label="Within-turn checklist">
+        <ol className="flex flex-col gap-1" aria-label={uiText("Within-turn checklist")}>
           {plan.steps.map((step, index) => (
             <li
               key={step.id}
