@@ -26,6 +26,7 @@ function StorageCleanupContent({ kind }: { kind: StorageCleanupKind }) {
   const [preview, setPreview] = useState<StorageCleanupPreview | null>(null);
   const [result, setResult] = useState<StorageCleanupResult | null>(null);
   useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" },
+    { label: uiText("Storage"), href: "/company/settings/instance/storage" },
     { label: uiText(categories[kind][0]) }]); }, [setBreadcrumbs, locale, kind]);
   const inventory = useQuery({ queryKey: ["storage-cleanup"], queryFn: instanceSettingsApi.getStorageCleanup,
     staleTime: 30_000, refetchOnWindowFocus: false, retry: false });

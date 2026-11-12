@@ -60,13 +60,14 @@ export function normalizeRememberedInstanceSettingsPath(rawPath: string | null):
   const suffix = instanceSettingsSuffix(pathname);
   if (!suffix) return DEFAULT_INSTANCE_SETTINGS_PATH;
 
+  const storageSections = ["database-backups", "program-releases", "upgrade-checkpoints", "project-space", "archived-chats", "workspaces"];
+  if (storageSections.some(section => suffix === `/${section}` || suffix === `/storage/${section}`)) {
+    const section = suffix.split("/").pop();
+    return `${INSTANCE_SETTINGS_PATH_PREFIX}/storage/${section}${search}${hash}`;
+  }
+
   if (
     suffix === "/storage" ||
-    suffix === "/database-backups" ||
-    suffix === "/program-releases" ||
-    suffix === "/upgrade-checkpoints" ||
-    suffix === "/project-space" ||
-    suffix === "/archived-chats" ||
     suffix === "/profile" ||
     suffix === "/general" ||
     suffix === "/environments" ||

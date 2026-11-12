@@ -10,12 +10,12 @@ import { formatDateTime } from "@/lib/utils";
 import { storageCategories, storageSize } from "@/lib/storage";
 
 const managementLinks = [
-  { title: "Database backups", description: "Review restore points and clean up old database backups.", path: "/company/settings/instance/database-backups", icon: Database },
-  { title: "Program releases", description: "Review installed versions and remove unused historical releases.", path: "/company/settings/instance/program-releases", icon: Layers },
-  { title: "Upgrade checkpoints", description: "Review pre-upgrade recovery files and choose which checkpoints to retain.", path: "/company/settings/instance/upgrade-checkpoints", icon: History },
-  { title: "Company and project space", description: "Inspect local directories by company and project, with cleanup protection levels.", path: "/company/settings/instance/project-space", icon: Building2 },
-  { title: "Archived chats", description: "Review, restore or permanently delete individual archived conversations.", path: "/company/settings/instance/archived-chats", icon: Archive },
-  { title: "Managed workspaces", description: "Inspect workspaces and their tasks before deciding what to retain.", path: "/workspaces", icon: FolderOpen },
+  { title: "Database backups", description: "Review restore points and clean up old database backups.", path: "/company/settings/instance/storage/database-backups", icon: Database },
+  { title: "Program releases", description: "Review installed versions and remove unused historical releases.", path: "/company/settings/instance/storage/program-releases", icon: Layers },
+  { title: "Upgrade checkpoints", description: "Review pre-upgrade recovery files and choose which checkpoints to retain.", path: "/company/settings/instance/storage/upgrade-checkpoints", icon: History },
+  { title: "Company and project space", description: "Inspect local directories by company and project, with cleanup protection levels.", path: "/company/settings/instance/storage/project-space", icon: Building2 },
+  { title: "Archived chats", description: "Review, restore or permanently delete individual archived conversations.", path: "/company/settings/instance/storage/archived-chats", icon: Archive },
+  { title: "Managed workspaces", description: "Inspect workspaces and their tasks before deciding what to retain.", path: "/company/settings/instance/storage/workspaces", icon: FolderOpen },
 ];
 
 export function StorageSettings() {

@@ -1,3 +1,4 @@
+import { uiText, useUiLocale } from "@/i18n/ui";
 import { useEffect, useMemo } from "react";
 import { Link, Navigate } from "@/lib/router";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
@@ -76,7 +77,8 @@ function buildProjectWorkspaceGroups(items: WorkspaceOverviewItem[]): ProjectWor
   });
 }
 
-export function Workspaces() {
+export function Workspaces({ storageContext = false }: { storageContext?: boolean }) {
+  const locale = useUiLocale();
   const { selectedCompanyId } = useCompany();
   const { setBreadcrumbs } = useBreadcrumbs();
   const experimentalSettingsQuery = useQuery({
@@ -96,8 +98,12 @@ export function Workspaces() {
   });
 
   useEffect(() => {
-    setBreadcrumbs([{ label: "Workspaces" }]);
-  }, [setBreadcrumbs]);
+    setBreadcrumbs(storageContext ? [
+      { label: uiText("Settings"), href: "/company/settings" },
+      { label: uiText("Storage"), href: "/company/settings/instance/storage" },
+      { label: uiText("Managed workspaces") },
+    ] : [{ label: "Workspaces" }]);
+  }, [setBreadcrumbs, storageContext, locale]);
 
   const overviewPages = overviewQuery.data?.pages ?? [];
   const overviewItems = useMemo(
@@ -116,9 +122,9 @@ export function Workspaces() {
   if (error) return <p className="text-sm text-destructive">{error.message}</p>;
 
   return (
-    <div className="space-y-6">
+    <div className={storageContext ? "mx-auto flex w-full max-w-5xl flex-col gap-6" : "space-y-6"}>
       <div>
-        <h2 className="text-xl font-bold">Workspaces</h2>
+        <h2 className={storageContext ? "text-lg font-semibold" : "text-xl font-bold"}>{storageContext ? uiText("Managed workspaces") : "Workspaces"}</h2>
       </div>
 
       <SummarySlotCard

@@ -249,12 +249,20 @@ function boardRoutes(streamlinedUiEnabled: boolean, combinedInboxTasksEnabled: b
       <Route path="apps/:connectionId" element={<Navigate to="permissions" replace />} />
       <Route path="apps/:connectionId/:tab" element={<AppDetail />} />
       <Route path="company/settings/instance" element={<Navigate to="/company/settings" replace />} />
-      <Route path="company/settings/instance/archived-chats" element={<ArchivedChats />} />
+      <Route path="company/settings/instance/storage/archived-chats" element={<ArchivedChats />} />
+      <Route path="company/settings/instance/archived-chats" element={<Navigate to="/company/settings/instance/storage/archived-chats" replace />} />
       <Route path="company/settings/instance/storage" element={<StorageSettings />} />
-      <Route path="company/settings/instance/database-backups" element={<StorageCleanupSettings kind="backups" />} />
-      <Route path="company/settings/instance/program-releases" element={<StorageCleanupSettings kind="releases" />} />
-      <Route path="company/settings/instance/upgrade-checkpoints" element={<StorageCleanupSettings kind="checkpoints" />} />
-      <Route path="company/settings/instance/project-space" element={<ProjectSpaceSettings />} />
+      <Route element={<IsolatedWorkspacesRouteGate />}>
+        <Route path="company/settings/instance/storage/workspaces" element={<Workspaces storageContext />} />
+      </Route>
+      <Route path="company/settings/instance/storage/database-backups" element={<StorageCleanupSettings kind="backups" />} />
+      <Route path="company/settings/instance/database-backups" element={<Navigate to="/company/settings/instance/storage/database-backups" replace />} />
+      <Route path="company/settings/instance/storage/program-releases" element={<StorageCleanupSettings kind="releases" />} />
+      <Route path="company/settings/instance/program-releases" element={<Navigate to="/company/settings/instance/storage/program-releases" replace />} />
+      <Route path="company/settings/instance/storage/upgrade-checkpoints" element={<StorageCleanupSettings kind="checkpoints" />} />
+      <Route path="company/settings/instance/upgrade-checkpoints" element={<Navigate to="/company/settings/instance/storage/upgrade-checkpoints" replace />} />
+      <Route path="company/settings/instance/storage/project-space" element={<ProjectSpaceSettings />} />
+      <Route path="company/settings/instance/project-space" element={<Navigate to="/company/settings/instance/storage/project-space" replace />} />
       <Route element={<HiddenSettingsPageGate pageKey="instance.profile" />}>
         <Route path="company/settings/instance/profile" element={<ProfileSettings />} />
       </Route>

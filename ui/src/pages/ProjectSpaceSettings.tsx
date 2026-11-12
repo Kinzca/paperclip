@@ -33,7 +33,7 @@ function ProjectSpaceContent({ initialCompanyId }: { initialCompanyId: string })
   const [companyId, setCompanyId] = useState(initialCompanyId);
   const [projectId, setProjectId] = useState("all");
   const [preview, setPreview] = useState<ProjectUsage | null>(null);
-  useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" }, { label: uiText("Company and project space") }]); }, [locale, setBreadcrumbs]);
+  useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" }, { label: uiText("Storage"), href: "/company/settings/instance/storage" }, { label: uiText("Company and project space") }]); }, [locale, setBreadcrumbs]);
   const usage = useQuery({ queryKey: ["project-space", companyId, true], queryFn: () => instanceSettingsApi.getProjectSpaceUsage(companyId, true),
     enabled: !!companyId, staleTime: 30_000, refetchOnWindowFocus: false, retry: false });
   const visible = (usage.data?.projects ?? []).filter((project) => projectId === "all" || project.id === projectId);

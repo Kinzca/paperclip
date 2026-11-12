@@ -1,12 +1,7 @@
 import { uiText, useUiLocale } from "@/i18n/ui";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Archive,
-  Building2,
   HardDrive,
-  Database,
-  Layers,
-  History,
   ArrowLeft,
   Cpu,
   Download,
@@ -114,12 +109,7 @@ export function CompanySettingsSidebar() {
       >
         <div data-slot="contextual-sidebar-group" className={primarySidebarStyles.group}>
           <SidebarNavItem to="/company/settings" label={uiText("General")} icon={SlidersHorizontal} end />
-          <SidebarNavItem to={`${INSTANCE_SETTINGS_PATH_PREFIX}/project-space`} label={uiText("Company and project space")} icon={Building2} end />
-          <SidebarNavItem to={`${INSTANCE_SETTINGS_PATH_PREFIX}/archived-chats`} label={uiText("Archived chats")} icon={Archive} end />
-          <SidebarNavItem to={`${INSTANCE_SETTINGS_PATH_PREFIX}/storage`} label={uiText("Storage")} icon={HardDrive} end />
-          <SidebarNavItem to={`${INSTANCE_SETTINGS_PATH_PREFIX}/database-backups`} label={uiText("Database backups")} icon={Database} end />
-          <SidebarNavItem to={`${INSTANCE_SETTINGS_PATH_PREFIX}/program-releases`} label={uiText("Program releases")} icon={Layers} end />
-          <SidebarNavItem to={`${INSTANCE_SETTINGS_PATH_PREFIX}/upgrade-checkpoints`} label={uiText("Upgrade checkpoints")} icon={History} end />
+          <SidebarNavItem to={`${INSTANCE_SETTINGS_PATH_PREFIX}/storage`} label={uiText("Storage")} icon={HardDrive} />
           {showPage("instance.profile") && (
             <SidebarNavItem
               to={`${INSTANCE_SETTINGS_PATH_PREFIX}/profile`}

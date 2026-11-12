@@ -90,7 +90,7 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
   });
   useEffect(() => { setSelected(new Set()); setPreview(null); }, [query, projectId]);
   useEffect(() => { setPreview(null); setBatchResult(null); }, [skipRelated]);
-  useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" }, { label: uiText("Archived chats") }]); }, [setBreadcrumbs, locale]);
+  useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" }, { label: uiText("Storage"), href: "/company/settings/instance/storage" }, { label: uiText("Archived chats") }]); }, [setBreadcrumbs, locale]);
   const chats = useInfiniteQuery({
     queryKey: ["archived-chats", companyId, userId, query, projectId],
     queryFn: ({ pageParam }) => issuesApi.listArchivedChats(companyId, {
