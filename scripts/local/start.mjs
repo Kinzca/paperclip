@@ -124,6 +124,10 @@ try {
         pluginsPendingSync,
         lastStartedAt: new Date().toISOString(),
       });
+      // Startup and plugin synchronization are complete. Upgrade/setup still
+      // require an unbound HTTP port; idle historical-resource cleanup may now
+      // acquire the same deployment lock while this selected release serves.
+      unlock();
       console.log(
         `Paperclip ${state.release} 已启动：http://127.0.0.1:${port}。功能验收待用户进行。`,
       );
