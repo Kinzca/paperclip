@@ -96,6 +96,7 @@ import { InstanceAccess } from "./pages/InstanceAccess";
 import { ProfileSettings } from "./pages/ProfileSettings";
 import { ArchivedChats } from "./pages/ArchivedChats";
 import { StorageSettings } from "./pages/StorageSettings";
+import { StorageCleanupSettings } from "./pages/StorageCleanupSettings";
 import { ProjectSpaceSettings } from "./pages/ProjectSpaceSettings";
 import { PluginManager } from "./pages/PluginManager";
 import { PluginSettings } from "./pages/PluginSettings";
@@ -250,6 +251,9 @@ function boardRoutes(streamlinedUiEnabled: boolean, combinedInboxTasksEnabled: b
       <Route path="company/settings/instance" element={<Navigate to="/company/settings" replace />} />
       <Route path="company/settings/instance/archived-chats" element={<ArchivedChats />} />
       <Route path="company/settings/instance/storage" element={<StorageSettings />} />
+      <Route path="company/settings/instance/database-backups" element={<StorageCleanupSettings kind="backups" />} />
+      <Route path="company/settings/instance/program-releases" element={<StorageCleanupSettings kind="releases" />} />
+      <Route path="company/settings/instance/upgrade-checkpoints" element={<StorageCleanupSettings kind="checkpoints" />} />
       <Route path="company/settings/instance/project-space" element={<ProjectSpaceSettings />} />
       <Route element={<HiddenSettingsPageGate pageKey="instance.profile" />}>
         <Route path="company/settings/instance/profile" element={<ProfileSettings />} />

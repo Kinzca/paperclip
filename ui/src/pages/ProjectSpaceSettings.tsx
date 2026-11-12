@@ -10,7 +10,7 @@ import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescript
 import { useCompany } from "@/context/CompanyContext";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
 import { uiText, useUiLocale } from "@/i18n/ui";
-import { formatBytes } from "@/lib/issue-output";
+import { storageSize as formatBytes } from "@/lib/storage";
 import { Link } from "@/lib/router";
 import { formatDateTime } from "@/lib/utils";
 
@@ -32,10 +32,9 @@ function ProjectSpaceContent({ initialCompanyId }: { initialCompanyId: string })
   const { setBreadcrumbs } = useBreadcrumbs();
   const [companyId, setCompanyId] = useState(initialCompanyId);
   const [projectId, setProjectId] = useState("all");
-  const [expanded, setExpanded] = useState(false);
   const [preview, setPreview] = useState<ProjectUsage | null>(null);
   useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" }, { label: uiText("Company and project space") }]); }, [locale, setBreadcrumbs]);
-  const usage = useQuery({ queryKey: ["project-space", companyId, expanded], queryFn: () => instanceSettingsApi.getProjectSpaceUsage(companyId, expanded),
+  const usage = useQuery({ queryKey: ["project-space", companyId, true], queryFn: () => instanceSettingsApi.getProjectSpaceUsage(companyId, true),
     enabled: !!companyId, staleTime: 30_000, refetchOnWindowFocus: false, retry: false });
   const visible = (usage.data?.projects ?? []).filter((project) => projectId === "all" || project.id === projectId);
   return <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -45,7 +44,7 @@ function ProjectSpaceContent({ initialCompanyId }: { initialCompanyId: string })
     </header>
     <div className="flex flex-wrap items-center gap-3">
       <SelectField className="w-full sm:w-auto" value={companyId} aria-label={uiText("Company")}
-        onValueChange={(value) => { setCompanyId(value); setProjectId("all"); setExpanded(false); setPreview(null); }}
+        onValueChange={(value) => { setCompanyId(value); setProjectId("all"); setPreview(null); }}
         options={(companies ?? []).map((company) => ({ value: company.id, label: company.name }))} />
       <SelectField className="w-full sm:w-auto" value={projectId} onValueChange={setProjectId} aria-label={uiText("Project")}
         options={[{ value: "all", label: uiText("All projects") }, ...(usage.data?.projects ?? []).map((project) => ({ value: project.id, label: project.name }))]} />
@@ -70,8 +69,7 @@ function ProjectSpaceContent({ initialCompanyId }: { initialCompanyId: string })
       </div>
       {!usage.data.complete && <div className="flex flex-wrap items-center gap-3">
         <p role="status" className="text-sm text-muted-foreground">{uiText("Partial scan or unavailable paths. Displayed file sizes are a lower bound, not zero usage for missing directories.")}</p>
-        {!expanded && <Button size="sm" variant="outline" disabled={usage.isFetching} onClick={() => setExpanded(true)}>{uiText("Expand inventory (read-only)")}</Button>}
-        <p className="w-full text-xs text-muted-foreground">{uiText("Expanded inventory is optional and bounded to 20 seconds per company. Missing or very large paths may remain partial.")}</p>
+        <p className="w-full text-xs text-muted-foreground">{uiText("Full inventory is enabled by default. Missing, unreadable or very large directories may still produce a partial result.")}</p>
       </div>}
       <p className="text-xs text-muted-foreground">{uiText("Measured {{value0}}", { value0: formatDateTime(usage.data.measuredAt) })}</p>
       {visible.length === 0 && <p className="text-sm text-muted-foreground">{uiText("No registered projects match this selection.")}</p>}

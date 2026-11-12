@@ -61,6 +61,12 @@ export function normalizeRememberedInstanceSettingsPath(rawPath: string | null):
   if (!suffix) return DEFAULT_INSTANCE_SETTINGS_PATH;
 
   if (
+    suffix === "/storage" ||
+    suffix === "/database-backups" ||
+    suffix === "/program-releases" ||
+    suffix === "/upgrade-checkpoints" ||
+    suffix === "/project-space" ||
+    suffix === "/archived-chats" ||
     suffix === "/profile" ||
     suffix === "/general" ||
     suffix === "/environments" ||

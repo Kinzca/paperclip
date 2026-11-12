@@ -2246,5 +2246,11 @@
   "Retained / failed": "失败（可能部分删除）",
   "Cleaning...": "正在清理…",
   "Permanently delete selected items": "永久删除所选项目",
-  "Up to 200 items per cleanup. Retention selection does not change future backup settings.": "每批最多清理 200 项。此处的保留选择不修改后续自动备份设置。"
+  "Up to 200 items per cleanup. Retention selection does not change future backup settings.": "每批最多清理 200 项。此处的保留选择不修改后续自动备份设置。",
+  "This device": "此设备",
+  "Review restore points and clean up old database backups.": "查看数据库恢复点，清理不再需要的旧备份。",
+  "Review installed versions and remove unused historical releases.": "查看已安装版本，清理未使用的历史运行包。",
+  "Review pre-upgrade recovery files and choose which checkpoints to retain.": "查看升级前恢复资料，选择需要保留的检查点。",
+  "Select items to remove, then review the exact deletion list before cleaning.": "选择要移除的内容，预览具体删除名单后确认清理。",
+  "Full inventory is enabled by default. Missing, unreadable or very large directories may still produce a partial result.": "默认进行完整统计。缺失、不可读或过大的目录仍可能显示部分结果。"
 }

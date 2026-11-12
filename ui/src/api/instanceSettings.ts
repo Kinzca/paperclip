@@ -15,7 +15,7 @@ export const instanceSettingsApi = {
   previewStorageCleanup: (ids: string[]) => api.post<StorageCleanupPreview>("/instance/storage/cleanup-preview", { ids }),
   executeStorageCleanup: (token: string) => api.post<StorageCleanupResult>("/instance/storage/cleanup", { token, confirm: true }),
   getStorageUsage: (expanded = false) => api.get<StorageUsage>(`/instance/storage${expanded ? "?scan=expanded" : ""}`),
-  getProjectSpaceUsage: (companyId: string, expanded = false) => api.get<ProjectSpaceUsage>(`/companies/${companyId}/project-space${expanded ? "?scan=expanded" : ""}`),
+  getProjectSpaceUsage: (companyId: string, expanded = true) => api.get<ProjectSpaceUsage>(`/companies/${companyId}/project-space?scan=${expanded ? "expanded" : "standard"}`),
   get: () =>
     api.get<InstanceSettings>("/instance/settings"),
   update: (patch: PatchInstanceSettings) =>

@@ -2245,5 +2245,11 @@
   "Retained / failed": "Retained / failed",
   "Cleaning...": "Cleaning...",
   "Permanently delete selected items": "Permanently delete selected items",
-  "Up to 200 items per cleanup. Retention selection does not change future backup settings.": "Up to 200 items per cleanup. Retention selection does not change future backup settings."
+  "Up to 200 items per cleanup. Retention selection does not change future backup settings.": "Up to 200 items per cleanup. Retention selection does not change future backup settings.",
+  "This device": "This device",
+  "Review restore points and clean up old database backups.": "Review restore points and clean up old database backups.",
+  "Review installed versions and remove unused historical releases.": "Review installed versions and remove unused historical releases.",
+  "Review pre-upgrade recovery files and choose which checkpoints to retain.": "Review pre-upgrade recovery files and choose which checkpoints to retain.",
+  "Select items to remove, then review the exact deletion list before cleaning.": "Select items to remove, then review the exact deletion list before cleaning.",
+  "Full inventory is enabled by default. Missing, unreadable or very large directories may still produce a partial result.": "Full inventory is enabled by default. Missing, unreadable or very large directories may still produce a partial result."
 }

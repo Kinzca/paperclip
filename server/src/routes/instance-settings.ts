@@ -169,7 +169,7 @@ export function instanceSettingsRoutes(db: Db, pluginWorkers?: PluginWorkerManag
     const parsed = z.string().uuid().safeParse(req.params.companyId);
     if (!parsed.success) { res.status(400).json({ error: "Invalid company ID" }); return; }
     assertCompanyAccess(req, parsed.data);
-    const scan = z.object({ scan: z.enum(["standard", "expanded"]).default("standard") }).safeParse(req.query);
+    const scan = z.object({ scan: z.enum(["standard", "expanded"]).default("expanded") }).safeParse(req.query);
     if (!scan.success) { res.status(400).json({ error: "Invalid inventory mode" }); return; }
     res.json(await companyProjectSpaceUsage(db, parsed.data, await projectReadSqlCondition(db, req.actor), { expanded: scan.data.scan === "expanded" }));
   });
