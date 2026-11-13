@@ -24,7 +24,7 @@ import { PriorityIcon } from "./PriorityIcon";
 import { SHOW_TASK_PRIORITY_UI } from "../lib/ui-flags";
 import { Identity } from "./Identity";
 import type { Issue, IssueStatus } from "@paperclipai/shared";
-import { AlertTriangle } from "lucide-react";
+import { Archive, AlertTriangle } from "lucide-react";
 import { isSuccessfulRunHandoffRequired } from "../lib/successful-run-handoff";
 import { collectSubtreeLiveCounts } from "../lib/liveIssueIds";
 import { cn } from "../lib/utils";
@@ -157,6 +157,8 @@ interface KanbanBoardProps {
   initialVisibleCount?: number;
   revealIncrement?: number;
   onUpdateIssue: (id: string, data: Record<string, unknown>) => void;
+  onArchive?: (issue: Issue) => void;
+  archiveDisabled?: boolean;
 }
 
 /* ── Droppable Column ── */
@@ -172,6 +174,8 @@ function KanbanColumn({
   visibleCount,
   revealIncrement,
   onShowMore,
+  onArchive,
+  archiveDisabled,
 }: {
   status: IssueStatus;
   issues: Issue[];
@@ -183,6 +187,8 @@ function KanbanColumn({
   visibleCount: number;
   revealIncrement: number;
   onShowMore: () => void;
+  onArchive?: (issue: Issue) => void;
+  archiveDisabled?: boolean;
 }) {
   useUiLocale();
   const { setNodeRef, isOver } = useDroppable({ id: status });
@@ -246,6 +252,8 @@ function KanbanColumn({
               isLive={liveIssueIds?.has(issue.id)}
               subtreeLiveCount={subtreeLiveCounts?.get(issue.id) ?? 0}
               compact={compactCards}
+              onArchive={onArchive}
+              archiveDisabled={archiveDisabled}
               className={tone.card}
             />
           ))}
@@ -276,6 +284,8 @@ function KanbanCard({
   isOverlay,
   compact = false,
   className,
+  onArchive,
+  archiveDisabled,
 }: {
   issue: Issue;
   agents?: Agent[];
@@ -284,6 +294,8 @@ function KanbanCard({
   isOverlay?: boolean;
   compact?: boolean;
   className?: string;
+  onArchive?: (issue: Issue) => void;
+  archiveDisabled?: boolean;
 }) {
   useUiLocale();
   const {
@@ -374,6 +386,12 @@ function KanbanCard({
           })()}
         </div>
       </Link>
+      {onArchive && !isOverlay ? <button type="button" disabled={archiveDisabled}
+        className="mt-2 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+        onPointerDown={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}
+        onClick={event => { event.preventDefault(); event.stopPropagation(); onArchive(issue); }}>
+        <Archive className="size-3.5" />{uiText("Archive")}
+      </button> : null}
     </Card>
   );
 }
@@ -389,6 +407,8 @@ export function KanbanBoard({
   initialVisibleCount = KANBAN_COLUMN_INITIAL_VISIBLE_LIMIT,
   revealIncrement = KANBAN_COLUMN_REVEAL_INCREMENT,
   onUpdateIssue,
+  onArchive,
+  archiveDisabled,
 }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const paginationKey = `${initialVisibleCount}:${revealIncrement}`;
@@ -469,6 +489,8 @@ export function KanbanBoard({
             liveIssueIds={liveIssueIds}
             subtreeLiveCounts={subtreeLiveCounts}
             compactCards={compactCards}
+            onArchive={onArchive}
+            archiveDisabled={archiveDisabled}
             // Compact mode (any lane explicitly collapsed) also collapses
             // empty lanes to the same labeled rail, so an empty In Progress
             // reads like the other rails instead of a lone expanded column.

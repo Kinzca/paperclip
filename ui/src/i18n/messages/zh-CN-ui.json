@@ -8970,5 +8970,7 @@
   "This task has an invalid subtask cycle.": "此任务的子任务关系存在循环，无法删除。",
   "This task has a parent, subtask, dependency or task reference.": "此任务存在父任务、子任务、依赖或任务引用。",
   "Select all subtasks and finish or cancel them before deleting this task.": "请先选中全部子任务，并完成或取消相关工作，再删除此任务。",
-  "Deselect all chats": "取消全选"
+  "Deselect all chats": "取消全选",
+  "Archived from your inbox. The task remains in the task list and execution is unchanged.": "已从你的收件箱归档。任务仍保留在任务列表中，执行状态不变。",
+  "View archived chats": "查看已归档对话"
 }

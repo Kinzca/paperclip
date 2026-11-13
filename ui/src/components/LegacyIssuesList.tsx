@@ -1,3 +1,4 @@
+import { useTaskArchive } from "@/hooks/useTaskArchive";
 import { uiText, useUiLocale } from "@/i18n/ui";
 import { AgentIdentity } from "@/components/AgentIdentity";
 import { startTransition, useDeferredValue, useEffect, useMemo, useState, useCallback, useRef } from "react";
@@ -707,6 +708,7 @@ export function IssuesList({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const archiveTask = useTaskArchive();
   // Keyboard selection for the list view (mirrors the inbox). Hover moves the
   // selection only after real pointer movement, so keyboard-driven scrolling
   // doesn't hand the selection to whatever row lands under the cursor.
@@ -1640,6 +1642,11 @@ export function IssuesList({
 
   return (
     <div ref={rootRef} className="space-y-4">
+      {archiveTask.isError && <p role="alert" className="text-sm text-destructive">{uiText(archiveTask.error.message)}</p>}
+      {archiveTask.isSuccess && <p role="status" className="text-sm text-muted-foreground">
+        {uiText("Archived from your inbox. The task remains in the task list and execution is unchanged.")}{" "}
+        <Link className="text-foreground underline" to="/company/settings/instance/storage/archived-chats">{uiText("View archived chats")}</Link>
+      </p>}
       {progressSummary ? (
         <SubIssueProgressSummaryStrip
           summary={progressSummary}
@@ -1916,6 +1923,8 @@ export function IssuesList({
           initialVisibleCount={viewState.boardColumnPageSize}
           revealIncrement={viewState.boardColumnPageSize}
           onUpdateIssue={onUpdateIssue}
+          onArchive={issue => archiveTask.mutate({ id: issue.id, companyId: issue.companyId })}
+          archiveDisabled={archiveTask.isPending}
         />
       ) : (
         <>
@@ -2078,6 +2087,9 @@ export function IssuesList({
                         : undefined}
                     >
                       <IssueRow
+                        onArchive={() => archiveTask.mutate({ id: issue.id, companyId: issue.companyId })}
+                        archiveDisabled={archiveTask.isPending}
+                        archiveVisible
                         issue={issue}
                         issueLinkState={issueLinkState}
                         selected={selectedNavKey === `issue:${issue.id}`}
