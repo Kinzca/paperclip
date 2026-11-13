@@ -2089,7 +2089,6 @@ export function IssuesList({
                       <IssueRow
                         onArchive={() => archiveTask.mutate({ id: issue.id, companyId: issue.companyId })}
                         archiveDisabled={archiveTask.isPending}
-                        archiveVisible
                         issue={issue}
                         issueLinkState={issueLinkState}
                         selected={selectedNavKey === `issue:${issue.id}`}

@@ -1,3 +1,4 @@
+import { InboxArchiveButton } from "./IssueRow";
 import { uiText, useUiLocale } from "@/i18n/ui";
 import { AgentIdentity } from "@/components/AgentIdentity";
 import { useMemo, useState } from "react";
@@ -24,7 +25,7 @@ import { PriorityIcon } from "./PriorityIcon";
 import { SHOW_TASK_PRIORITY_UI } from "../lib/ui-flags";
 import { Identity } from "./Identity";
 import type { Issue, IssueStatus } from "@paperclipai/shared";
-import { Archive, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { isSuccessfulRunHandoffRequired } from "../lib/successful-run-handoff";
 import { collectSubtreeLiveCounts } from "../lib/liveIssueIds";
 import { cn } from "../lib/utils";
@@ -324,7 +325,7 @@ function KanbanCard({
       {...attributes}
       {...listeners}
       className={cn(
-        "block cursor-grab active:cursor-grabbing transition-shadow",
+        "group block cursor-grab active:cursor-grabbing transition-shadow",
         isDragging && !isOverlay ? "opacity-30" : "",
         isOverlay ? "shadow-lg ring-1 ring-primary/20" : "hover:shadow-sm",
         compact ? "p-2" : "p-2.5",
@@ -386,12 +387,10 @@ function KanbanCard({
           })()}
         </div>
       </Link>
-      {onArchive && !isOverlay ? <button type="button" disabled={archiveDisabled}
-        className="mt-2 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-        onPointerDown={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}
-        onClick={event => { event.preventDefault(); event.stopPropagation(); onArchive(issue); }}>
-        <Archive className="size-3.5" />{uiText("Archive")}
-      </button> : null}
+      {onArchive && !isOverlay ? <div className="mt-2 flex justify-end"
+        onPointerDown={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>
+        <InboxArchiveButton onArchive={() => onArchive(issue)} disabled={archiveDisabled} compact />
+      </div> : null}
     </Card>
   );
 }

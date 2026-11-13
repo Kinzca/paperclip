@@ -67,7 +67,6 @@ export interface IssueRowProps {
   onMarkRead?: () => void;
   onArchive?: () => void;
   archiveDisabled?: boolean;
-  archiveVisible?: boolean;
   className?: string;
   /** Pointer entered the row (used by list keyboard nav to track hover). */
   onMouseEnter?: () => void;
@@ -86,12 +85,10 @@ export function InboxArchiveButton({
   onArchive,
   disabled,
   compact = false,
-  visible = false,
 }: {
   onArchive: () => void;
   disabled?: boolean;
   compact?: boolean;
-  visible?: boolean;
 }) {
   useUiLocale();
   return (
@@ -111,8 +108,7 @@ export function InboxArchiveButton({
       }}
       disabled={disabled}
       className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 disabled:pointer-events-none disabled:opacity-30",
-        !visible && "opacity-0",
+        "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 disabled:pointer-events-none disabled:opacity-30",
         compact ? "h-5 py-0" : "py-1",
       )}
       aria-label={uiText("Archive")}
@@ -149,7 +145,6 @@ export function IssueRow({
   onMarkRead,
   onArchive,
   archiveDisabled,
-  archiveVisible = false,
   className,
   onMouseEnter,
   treeGuides = 0,
@@ -325,9 +320,6 @@ export function IssueRow({
           ) : null}
         </span>
 
-        {onArchive && archiveVisible ? <span className="relative z-10 ml-auto shrink-0 sm:hidden">
-          <InboxArchiveButton visible onArchive={onArchive} disabled={archiveDisabled} compact />
-        </span> : null}
         <span
           data-slot="task-row-trailing"
           className="ml-auto hidden min-w-0 shrink-0 items-center gap-2 sm:flex"
@@ -338,7 +330,7 @@ export function IssueRow({
           {metadata ? <span data-slot="task-row-metadata" className="min-w-0">{metadata}</span> : null}
           {desktopTrailing}
           {actions ? <span data-slot="task-row-actions" className="flex shrink-0 items-center gap-1">{actions}</span> : null}
-          {onArchive ? <InboxArchiveButton visible={archiveVisible} onArchive={onArchive} disabled={archiveDisabled} compact /> : null}
+          {onArchive ? <InboxArchiveButton onArchive={onArchive} disabled={archiveDisabled} compact /> : null}
           {showIdentifier ? (
             <span data-slot="task-row-identifier" className="w-20 shrink-0 text-right font-mono text-xs text-muted-foreground">
               {identifier}
@@ -487,7 +479,7 @@ export function IssueRow({
       {(onArchive || desktopTrailing || trailingMeta || externalObjectSummary) ? (
         <span className="ml-auto hidden shrink-0 items-center gap-2 sm:order-3 sm:flex sm:gap-3">
           {onArchive ? (
-            <InboxArchiveButton visible={archiveVisible} onArchive={onArchive} disabled={archiveDisabled} />
+            <InboxArchiveButton onArchive={onArchive} disabled={archiveDisabled} />
           ) : null}
           {externalObjectSummary ? (
             <ExternalObjectStatusSummary summary={externalObjectSummary} compact />

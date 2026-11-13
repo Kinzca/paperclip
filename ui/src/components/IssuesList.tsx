@@ -2197,7 +2197,6 @@ function StreamlinedIssuesList({
                       <IssueRow
                         onArchive={() => archiveTask.mutate({ id: issue.id, companyId: issue.companyId })}
                         archiveDisabled={archiveTask.isPending}
-                        archiveVisible
                         issue={issue}
                         presentation={rowPresentation}
                         issueLinkState={issueLinkState}
