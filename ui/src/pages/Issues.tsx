@@ -257,11 +257,13 @@ function OrganizationIssues({
       workspaceIdFilter ?? "__all__",
       "compact",
       "with-routine-executions",
+      "inbox-visible",
       "infinite",
       issuePageSize,
     ],
     queryFn: ({ pageParam, signal }) => issuesApi.listCompact(selectedCompanyId!, {
       participantAgentId,
+      inboxArchivedByUserId: "me",
       workspaceId: workspaceIdFilter,
       includeRoutineExecutions: true,
       limit: issuePageSize,

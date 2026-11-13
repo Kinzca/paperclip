@@ -25,8 +25,8 @@ export function MyIssues() {
   }, [setBreadcrumbs, getUiLocale()]);
 
   const { data: issues, isLoading, error } = useQuery({
-    queryKey: queryKeys.issues.list(selectedCompanyId!),
-    queryFn: () => issuesApi.list(selectedCompanyId!),
+    queryKey: [...queryKeys.issues.list(selectedCompanyId!), "inbox-visible"],
+    queryFn: () => issuesApi.list(selectedCompanyId!, { inboxArchivedByUserId: "me" }),
     enabled: !!selectedCompanyId,
   });
 

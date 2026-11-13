@@ -824,6 +824,7 @@ export function IssuesList({
     queryKey: [
       ...queryKeys.issues.search(selectedCompanyId!, normalizedIssueSearch, projectId),
       searchFilters ?? {},
+      "inbox-visible",
       "compact",
       ISSUE_SEARCH_RESULT_LIMIT,
       enableRoutineVisibilityFilter ? "with-routine-executions" : "without-routine-executions",
@@ -834,6 +835,7 @@ export function IssuesList({
         projectId,
         limit: ISSUE_SEARCH_RESULT_LIMIT,
         ...searchFilters,
+        inboxArchivedByUserId: "me",
         ...(enableRoutineVisibilityFilter ? { includeRoutineExecutions: true } : {}),
       }, { signal }).then((rows) => rows as Issue[]),
     enabled: !!selectedCompanyId && normalizedIssueSearch.length > 0 && !searchWithinLoadedIssues,
@@ -848,6 +850,7 @@ export function IssuesList({
         normalizedIssueSearch,
         projectId ?? "__all-projects__",
         searchFilters ?? {},
+        "inbox-visible",
         "compact",
         ISSUE_BOARD_COLUMN_RESULT_LIMIT,
         enableRoutineVisibilityFilter ? "with-routine-executions" : "without-routine-executions",
@@ -855,6 +858,7 @@ export function IssuesList({
       queryFn: ({ signal }: { signal: AbortSignal }) =>
         issuesApi.listCompact(selectedCompanyId!, {
           ...searchFilters,
+          inboxArchivedByUserId: "me",
           ...(normalizedIssueSearch.length > 0 ? { q: normalizedIssueSearch } : {}),
           projectId,
           status,
@@ -1644,7 +1648,7 @@ export function IssuesList({
     <div ref={rootRef} className="space-y-4">
       {archiveTask.isError && <p role="alert" className="text-sm text-destructive">{uiText(archiveTask.error.message)}</p>}
       {archiveTask.isSuccess && <p role="status" className="text-sm text-muted-foreground">
-        {uiText("Archived from your inbox. The task remains in the task list and execution is unchanged.")}{" "}
+        {uiText("Archived. Hidden from task lists and boards; execution is unchanged.")}{" "}
         <Link className="text-foreground underline" to="/company/settings/instance/storage/archived-chats">{uiText("View archived chats")}</Link>
       </p>}
       {progressSummary ? (

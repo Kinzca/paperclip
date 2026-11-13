@@ -229,9 +229,7 @@ export function restoreIssueToInboxCaches(
 
 export function invalidateInboxIssueQueries(queryClient: QueryClient, companyId: string) {
   return Promise.all([
-    ...inboxIssueQueryPrefixes(companyId).map((queryKey) =>
-      queryClient.invalidateQueries({ queryKey }),
-    ),
+    queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(companyId) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.sidebarBadges(companyId) }),
   ]);
 }

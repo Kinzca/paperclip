@@ -8972,5 +8972,6 @@
   "Select all subtasks and finish or cancel them before deleting this task.": "请先选中全部子任务，并完成或取消相关工作，再删除此任务。",
   "Deselect all chats": "取消全选",
   "Archived from your inbox. The task remains in the task list and execution is unchanged.": "已从你的收件箱归档。任务仍保留在任务列表中，执行状态不变。",
-  "View archived chats": "查看已归档对话"
+  "View archived chats": "查看已归档对话",
+  "Archived. Hidden from task lists and boards; execution is unchanged.": "已归档，已从任务列表和看板隐藏，执行状态不变。"
 }

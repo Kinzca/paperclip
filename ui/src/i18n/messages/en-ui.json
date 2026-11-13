@@ -8971,5 +8971,6 @@
   "Select all subtasks and finish or cancel them before deleting this task.": "Select all subtasks and finish or cancel them before deleting this task.",
   "Deselect all chats": "Deselect all chats",
   "Archived from your inbox. The task remains in the task list and execution is unchanged.": "Archived from your inbox. The task remains in the task list and execution is unchanged.",
-  "View archived chats": "View archived chats"
+  "View archived chats": "View archived chats",
+  "Archived. Hidden from task lists and boards; execution is unchanged.": "Archived. Hidden from task lists and boards; execution is unchanged."
 }

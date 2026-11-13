@@ -222,8 +222,8 @@ function ProjectIssuesList({ projectId, companyId }: { projectId: string; compan
   });
 
   const { data: issues, isLoading, error } = useQuery({
-    queryKey: queryKeys.issues.listByProject(companyId, projectId),
-    queryFn: () => issuesApi.list(companyId, { projectId }),
+    queryKey: [...queryKeys.issues.listByProject(companyId, projectId), "inbox-visible"],
+    queryFn: () => issuesApi.list(companyId, { projectId, inboxArchivedByUserId: "me" }),
     enabled: !!companyId,
   });
   const liveIssueIds = useMemo(() => collectLiveIssueIds(liveRuns, issues), [issues, liveRuns]);
@@ -293,8 +293,8 @@ function ProjectPluginOperationsList({
   });
   usePublishSharedQueryData(sharedLiveRuns, liveRuns, liveRunsUpdatedAt);
   const { data: issues, isLoading, error } = useQuery({
-    queryKey: queryKeys.issues.listPluginOperationsByProject(companyId, projectId, originKindPrefix),
-    queryFn: () => issuesApi.list(companyId, { projectId, originKindPrefix }),
+    queryKey: [...queryKeys.issues.listPluginOperationsByProject(companyId, projectId, originKindPrefix), "inbox-visible"],
+    queryFn: () => issuesApi.list(companyId, { projectId, originKindPrefix, inboxArchivedByUserId: "me" }),
     enabled: !!companyId && !!projectId,
   });
   const liveIssueIds = useMemo(() => collectLiveIssueIds(liveRuns, issues), [issues, liveRuns]);
