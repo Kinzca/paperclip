@@ -148,16 +148,15 @@ export function InboxArchiveButton({
       onClick={event => { event.preventDefault(); event.stopPropagation(); void activate(); }}
       onKeyDown={event => { if (event.key === "Enter" || event.key === " ") event.stopPropagation(); }}
       disabled={disabled || phase === "stopping" || phase === "archiving"} aria-busy={busy}
-      className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-opacity hover:bg-accent focus-visible:opacity-100 disabled:pointer-events-none",
-        phase !== "idle" || error ? "opacity-100 text-primary" : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground",
+      className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-opacity focus-visible:opacity-100 disabled:pointer-events-none",
+        preparation ? "bg-destructive text-destructive-foreground opacity-100 hover:bg-destructive/90"
+          : phase !== "idle" || error ? "opacity-100 text-primary hover:bg-accent"
+          : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-accent hover:text-foreground",
         compact ? "h-5 py-0" : "py-1")}
       aria-label={uiText(preparation ? "Confirm archive" : "Archive")}>
       <Icon className={cn("h-3.5 w-3.5", busy && "animate-spin")} />
       {uiText(phase === "checking" ? "Checking..." : phase === "stopping" ? "Stopping..." : phase === "archiving" ? "Archiving..." : preparation ? "Confirm archive" : "Archive")}
     </button>
-    {preparation && !busy && <span className="text-xs text-muted-foreground" role="status">
-      {uiText("Stop work and archive · {{count}} tasks", { count: preparation.tree.issues.length })}
-    </span>}
     {error && <span role="alert" className="max-w-xs text-xs text-destructive">{error}</span>}
   </span>;
 }
