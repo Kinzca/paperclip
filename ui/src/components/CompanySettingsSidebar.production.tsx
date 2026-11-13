@@ -8,7 +8,7 @@ import {
   Download,
   FlaskConical,
   KeyRound,
-  Link2,
+  Bot,
   MailPlus,
   MonitorCog,
   Puzzle,
@@ -22,7 +22,7 @@ import type { PluginRecord } from "@paperclipai/shared";
 import { sidebarBadgesApi } from "@/api/sidebarBadges";
 import { pluginsApi } from "@/api/plugins";
 import { ApiError } from "@/api/client";
-import { Link, NavLink } from "@/lib/router";
+import { Link, NavLink, useLocation } from "@/lib/router";
 import { INSTANCE_SETTINGS_PATH_PREFIX } from "@/lib/instance-settings";
 import { SIDEBAR_SCROLL_RESET_STATE } from "@/lib/navigation-scroll";
 import { queryKeys } from "@/lib/queryKeys";
@@ -30,7 +30,6 @@ import { useCompany } from "@/context/CompanyContext";
 import { useSidebar } from "@/context/SidebarContext";
 import { useCloudInstance } from "@/hooks/useCloudInstance";
 import { useHiddenSettings } from "@/hooks/useHiddenSettings";
-import { useFastResponsesEnabled } from "@/hooks/useFastResponsesEnabled";
 import { usePluginSlots } from "@/plugins/slots";
 import { SidebarNavItem } from "./SidebarNavItem.production";
 
@@ -51,7 +50,7 @@ export function CompanySettingsSidebar() {
   const { selectedCompany, selectedCompanyId } = useCompany();
   const { isMobile, setSidebarOpen } = useSidebar();
   const { hidden: hiddenSettings } = useHiddenSettings();
-  const { enabled: fastResponsesEnabled } = useFastResponsesEnabled();
+  const { pathname } = useLocation();
   const showPage = (pageKey: string) => !hiddenSettings.has(pageKey);
   const showPlugins = showPage("instance.plugins");
   // Import is floored server-side on cloud-managed instances (403 cloud_managed), so the
@@ -106,7 +105,9 @@ export function CompanySettingsSidebar() {
 
       <nav className="flex-1 min-h-0 overflow-y-auto scrollbar-auto-hide px-3 py-2">
         <div className="flex flex-col gap-0.5">
-          <SidebarNavItem to="/company/settings" label={uiText("General")} icon={SlidersHorizontal} end />
+          <SidebarNavItem to="/company/settings" label={uiText("General")} icon={SlidersHorizontal} end
+            active={pathname.endsWith("/company/settings") || pathname.includes("/company/settings/general/")} />
+          <SidebarNavItem to="/company/settings/agent-rules" label={uiText("Agent rules")} icon={Bot} />
           <SidebarNavItem to={`${INSTANCE_SETTINGS_PATH_PREFIX}/storage`} label={uiText("Storage")} icon={HardDrive} />
           {showPage("instance.profile") && (
             <SidebarNavItem
@@ -119,10 +120,9 @@ export function CompanySettingsSidebar() {
           {showPage("company.members") && (
             <SidebarNavItem
               to="/company/settings/members"
-              label={uiText("Members")}
+              label={uiText("Members and permissions")}
               icon={Users}
               badge={badges?.joinRequests ?? 0}
-              end
             />
           )}
           {companySettingsPluginSlots
@@ -149,9 +149,6 @@ export function CompanySettingsSidebar() {
               icon={MonitorCog}
               end
             />
-          )}
-          {fastResponsesEnabled && (
-            <SidebarNavItem to="/company/settings/connections" label={uiText("Connections")} icon={Link2} end />
           )}
           {showPage("instance.access") && (
             <SidebarNavItem

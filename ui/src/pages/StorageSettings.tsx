@@ -1,23 +1,16 @@
 import { getUiLocale } from "@/i18n/ui";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Archive, Building2, Database, FolderOpen, History, Layers, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { instanceSettingsApi } from "@/api/instanceSettings";
 import { Button } from "@/components/ui/button";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
 import { uiText, useUiLocale } from "@/i18n/ui";
-import { Link } from "@/lib/router";
+import { SettingsNavigation, storageSettingsLinks } from "@/components/SettingsNavigation";
 import { formatDateTime } from "@/lib/utils";
 import { storageCategories, storageSize } from "@/lib/storage";
 
-const managementLinks = [
-  { title: "Database backups", description: "Review restore points and clean up old database backups.", path: "/company/settings/instance/storage/database-backups", icon: Database },
-  { title: "Program releases", description: "Review installed versions and remove unused historical releases.", path: "/company/settings/instance/storage/program-releases", icon: Layers },
-  { title: "Upgrade checkpoints", description: "Review pre-upgrade recovery files and choose which checkpoints to retain.", path: "/company/settings/instance/storage/upgrade-checkpoints", icon: History },
-  { title: "Company and project space", description: "Inspect local directories by company and project, with cleanup protection levels.", path: "/company/settings/instance/storage/project-space", icon: Building2 },
-  { title: "Archived chats", description: "Review, restore or permanently delete individual archived conversations.", path: "/company/settings/instance/storage/archived-chats", icon: Archive },
-  { title: "Managed workspaces", description: "Inspect workspaces and their tasks before deciding what to retain.", path: "/company/settings/instance/storage/workspaces", icon: FolderOpen },
-];
+
 
 export function StorageSettings() {
   const locale = useUiLocale();
@@ -25,8 +18,8 @@ export function StorageSettings() {
   useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" }, { label: uiText("Storage") }]); }, [setBreadcrumbs, locale, getUiLocale()]);
   const usage = useQuery({ queryKey: ["instance-storage", true], queryFn: () => instanceSettingsApi.getStorageUsage(true),
     staleTime: 30_000, refetchOnWindowFocus: false, retry: false });
-  return <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
-    <h1 className="text-lg font-semibold">{uiText("Storage")}</h1>
+  return <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
+    <h1 className="text-xl font-semibold">{uiText("Storage")}</h1>
     <section className="flex flex-col gap-4" aria-busy={usage.isFetching}>
       <div className="flex flex-col gap-1"><h2 className="font-medium">{uiText("This device")}</h2>
         <p className="text-sm text-muted-foreground">{uiText("Paperclip installation, instance data and registered projects, across all organizations.")}</p></div>
@@ -50,14 +43,7 @@ export function StorageSettings() {
         {!usage.data.complete && <p role="status" className="text-sm text-muted-foreground">{uiText("Some paths were unreadable or the scan reached its limit. Refresh to retry; values are a lower bound.")}</p>}
       </>}
     </section>
-    <section className="divide-y rounded-lg border bg-card">
-      {managementLinks.map(item => <div key={item.path} className="flex items-center gap-4 p-4">
-        <item.icon className="size-5 shrink-0 text-muted-foreground" />
-        <div className="flex min-w-0 flex-1 flex-col gap-1"><h2 className="text-sm font-medium">{uiText(item.title)}</h2>
-          <p className="text-sm text-muted-foreground">{uiText(item.description)}</p></div>
-        <Button size="sm" variant="secondary" asChild><Link to={item.path}>{uiText("Manage")}</Link></Button>
-      </div>)}
-    </section>
+    <SettingsNavigation items={storageSettingsLinks} />
     {usage.data && <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{uiText("Inventory scope and measurement")}</summary>
       <div className="flex flex-col gap-2 py-3"><p>{uiText("Logical file sizes, 1 GB = 1,000,000,000 bytes. Overlapping paths count once. Symlink targets and remote storage are excluded; file size is not reclaimable disk space.")}</p>
         <p>{uiText("Measured {{value0}}. Results are cached for 30 seconds.", { value0: formatDateTime(usage.data.measuredAt) })}</p>

@@ -29,14 +29,11 @@ import {
   Field,
   ToggleField,
 } from "../components/agent-config-primitives";
-import { InstanceGeneralSettings } from "./InstanceGeneralSettings";
-import { SharedAgentInstructionsSettings } from "../components/SharedAgentInstructionsSettings";
+import { SettingsNavigation, generalSettingsLinks } from "@/components/SettingsNavigation";
 import { useSettingsDraft } from "../hooks/useSettingsDraft";
 import { useAccountIdentity } from "../api/companies-query";
-import { DecisionModelSettingsSection } from "../components/decision-models/DecisionModelSettings";
-import { useFastResponsesEnabled } from "../hooks/useFastResponsesEnabled";
 
-export function CompanySettings() {
+export function CompanySettings({ section = "general" }: { section?: "general" | "policies" | "organization" }) {
   useUiLocale();
   const {
     companies,
@@ -49,7 +46,6 @@ export function CompanySettings() {
   const navigate = useNavigate();
   const toastActions = useOptionalToastActions();
   const cloud = useCloudInstance();
-  const fastResponses = useFastResponsesEnabled();
   // Managed instances derive the task ID prefix from the company name, so a
   // rename here also renumbers the existing task IDs.
   const isCloudManaged = Boolean(cloud);
@@ -202,12 +198,15 @@ export function CompanySettings() {
     }
   });
 
+  const title = section === "policies" ? "Hiring and interaction policies" : section === "organization" ? "Organization management" : "General";
   useEffect(() => {
     setBreadcrumbs([
-      { label: selectedCompany?.name ?? "Company", href: "/dashboard" },
-      { label: uiText("Settings") }
+      { label: uiText("Settings"), href: "/company/settings" },
+      ...(section === "policies" ? [{ label: uiText("Members and permissions"), href: "/company/settings/members" }]
+        : section === "organization" ? [{ label: uiText("General"), href: "/company/settings" }] : []),
+      { label: uiText(title) },
     ]);
-  }, [setBreadcrumbs, selectedCompany?.name, getUiLocale()]);
+  }, [setBreadcrumbs, section, title, getUiLocale()]);
 
   if (!selectedCompany) {
     return (
@@ -224,15 +223,17 @@ export function CompanySettings() {
   }
 
   return (
-    <div className="max-w-6xl space-y-8">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
       <div className="flex items-center gap-2">
         <SlidersHorizontal className="h-5 w-5 text-muted-foreground" />
-        <h1 className="text-lg font-semibold">{uiText("General")}</h1>
+        <h1 className="text-xl font-semibold">{uiText(title)}</h1>
       </div>
 
+      {section === "general" && <SettingsNavigation items={generalSettingsLinks}>
+      <div className="flex flex-col gap-6">
       {/* General */}
       <div className="max-w-2xl space-y-4">
-        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{uiText("General")}</div>
+        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{uiText("Organization information")}</div>
         <div className="space-y-3">
           <Field label={uiText("Organization name")} hint={uiText("The display name for your organization.")}>
             <input
@@ -262,7 +263,6 @@ export function CompanySettings() {
 
       {/* Appearance */}
       <div className="max-w-2xl space-y-4">
-        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{uiText("Appearance")}</div>
         <div className="space-y-3">
           <div className="flex items-start gap-4">
             <div className="shrink-0">
@@ -319,30 +319,23 @@ export function CompanySettings() {
         </div>
       </div>
 
-      {/* Save button for General + Appearance */}
-      {generalDirty && (
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            onClick={handleSaveGeneral}
-            disabled={generalMutation.isPending || !companyName.trim()}
-          >
-            {generalMutation.isPending ? uiText("Saving...") : uiText("Save changes")}
+      {(generalDirty || generalMutation.isSuccess || generalMutation.isError) && <div className="flex flex-col gap-2">
+        {generalDirty && <div className="flex items-center justify-between gap-3">
+          <Button size="sm" variant="ghost" disabled={generalMutation.isPending} onClick={() => {
+            nameDraft.change(selectedCompany.name); descriptionDraft.change(selectedCompany.description ?? ""); generalMutation.reset();
+          }}>{uiText("Cancel")}</Button>
+          <Button size="sm" onClick={handleSaveGeneral} disabled={generalMutation.isPending || !companyName.trim()}>
+            {uiText(generalMutation.isPending ? "Saving..." : "Save changes")}
           </Button>
-          {generalMutation.isSuccess && (
-            <span className="text-xs text-muted-foreground">{uiText("Saved")}</span>
-          )}
-          {generalMutation.isError && (
-            <span className="text-xs text-destructive">
-              {generalMutation.error instanceof Error
-                  ? generalMutation.error.message
-                  : uiText("Failed to save")}
-            </span>
-          )}
-        </div>
-      )}
+        </div>}
+        {generalMutation.isSuccess && !generalDirty && <p role="status" className="text-sm text-muted-foreground">{uiText("Saved")}</p>}
+        {generalMutation.isError && <p role="alert" className="text-sm text-destructive">{generalMutation.error instanceof Error ? generalMutation.error.message : uiText("Failed to save")}</p>}
+      </div>}
 
-      <SharedAgentInstructionsSettings company={selectedCompany} />
+      </div>
+      </SettingsNavigation>}
+
+      {section === "policies" && <>
 
       {/* Hiring */}
       <div className="max-w-2xl space-y-4" data-testid="company-settings-team-section">
@@ -372,12 +365,9 @@ export function CompanySettings() {
         }
       />
 
-      {fastResponses.loaded && !fastResponses.enabled && (
-        <DecisionModelSettingsSection key={selectedCompanyId} companyId={selectedCompanyId!} />
-      )}
+      </>}
 
-      <InstanceGeneralSettings embedded showAgentInstructions={false} />
-
+      {section === "organization" && <>
       {/* Danger Zone */}
       <div className="space-y-4">
         <div className="text-xs font-medium text-destructive uppercase tracking-wide">{uiText("Danger Zone")}</div>
@@ -416,6 +406,7 @@ export function CompanySettings() {
           </div>
         </div>
       </div>
+      </>}
     </div>
   );
 }

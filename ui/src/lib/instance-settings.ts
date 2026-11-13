@@ -57,6 +57,10 @@ export function normalizeRememberedInstanceSettingsPath(rawPath: string | null):
   if (!rawPath) return DEFAULT_INSTANCE_SETTINGS_PATH;
 
   const { pathname, search, hash } = normalizePathForMatching(rawPath);
+  if (["/company/settings/agent-rules", "/company/settings/agent-rules/instructions", "/company/settings/agent-rules/ai",
+    "/company/settings/general/privacy", "/company/settings/general/deployment", "/company/settings/general/organization", "/company/settings/members/policies"].includes(pathname)) {
+    return `${pathname}${search}${hash}`;
+  }
   const suffix = instanceSettingsSuffix(pathname);
   if (!suffix) return DEFAULT_INSTANCE_SETTINGS_PATH;
 
@@ -64,6 +68,10 @@ export function normalizeRememberedInstanceSettingsPath(rawPath: string | null):
   if (storageSections.some(section => suffix === `/${section}` || suffix === `/storage/${section}`)) {
     const section = suffix.split("/").pop();
     return `${INSTANCE_SETTINGS_PATH_PREFIX}/storage/${section}${search}${hash}`;
+  }
+
+  if (suffix === "/storage/database-backups/retention") {
+    return `${INSTANCE_SETTINGS_PATH_PREFIX}${suffix}${search}${hash}`;
   }
 
   if (

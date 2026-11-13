@@ -1,378 +1,108 @@
-import { uiText, useUiLocale, getUiLocale } from "@/i18n/ui";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { PatchInstanceGeneralSettings, BackupRetentionPolicy } from "@paperclipai/shared";
-import {
-  DAILY_RETENTION_PRESETS,
-  WEEKLY_RETENTION_PRESETS,
-  MONTHLY_RETENTION_PRESETS,
-  DEFAULT_BACKUP_RETENTION,
-} from "@paperclipai/shared";
-import { LogOut, SlidersHorizontal } from "lucide-react";
+import type { BackupRetentionPolicy } from "@paperclipai/shared";
+import { DAILY_RETENTION_PRESETS, WEEKLY_RETENTION_PRESETS, MONTHLY_RETENTION_PRESETS, DEFAULT_BACKUP_RETENTION } from "@paperclipai/shared";
 import { healthApi } from "@/api/health";
 import { instanceSettingsApi } from "@/api/instanceSettings";
 import { ModeBadge } from "@/components/access/ModeBadge";
-import { Button } from "../components/ui/button";
-import { useBreadcrumbs } from "../context/BreadcrumbContext";
-import { queryKeys } from "../lib/queryKeys";
+import { Button } from "@/components/ui/button";
+import { SelectField } from "@/components/ui/select-field";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
-import { cn } from "../lib/utils";
-import { useSignOut } from "@/hooks/useSignOut";
-import { SharedAgentInstructionsSettings } from "@/components/SharedAgentInstructionsSettings";
+import { useBreadcrumbs } from "@/context/BreadcrumbContext";
+import { queryKeys } from "@/lib/queryKeys";
+import { uiText, useUiLocale } from "@/i18n/ui";
 
 const FEEDBACK_TERMS_URL = import.meta.env.VITE_FEEDBACK_TERMS_URL?.trim() || "https://paperclip.ing/tos";
+const retentionFields = [
+  { key: "dailyDays", label: "Daily", values: DAILY_RETENTION_PRESETS, unit: "{{count}} days", singular: "{{count}} day" },
+  { key: "weeklyWeeks", label: "Weekly", values: WEEKLY_RETENTION_PRESETS, unit: "{{count}} weeks", singular: "{{count}} week" },
+  { key: "monthlyMonths", label: "Monthly", values: MONTHLY_RETENTION_PRESETS, unit: "{{count}} months", singular: "{{count}} month" },
+] as const;
 
-export function InstanceGeneralSettings({ embedded = false, showAgentInstructions = true }: { embedded?: boolean; showAgentInstructions?: boolean }) {
-  useUiLocale();
+type GeneralSection = "privacy" | "deployment" | "backups";
+export function InstanceGeneralSettings({ section = "privacy" }: { section?: GeneralSection }) {
+  const locale = useUiLocale();
   const { setBreadcrumbs } = useBreadcrumbs();
   const queryClient = useQueryClient();
-  const [actionError, setActionError] = useState<string | null>(null);
-
-  const signOutMutation = useSignOut();
-
+  const [saved, setSaved] = useState(false);
+  const title = section === "backups" ? "Backup retention" : section === "deployment" ? "Deployment and auth" : "Privacy and data";
   useEffect(() => {
-    if (embedded) return;
-    setBreadcrumbs([
-      { label: uiText("Settings"), href: "/company/settings" },
-      { label: uiText("General") },
-    ]);
-  }, [embedded, setBreadcrumbs, getUiLocale()]);
-
-  const generalQuery = useQuery({
-    queryKey: queryKeys.instance.generalSettings,
-    queryFn: () => instanceSettingsApi.getGeneral(),
-  });
-  const healthQuery = useQuery({
-    queryKey: queryKeys.health,
-    queryFn: () => healthApi.get(),
-    retry: false,
-  });
-
-  const updateGeneralMutation = useMutation({
-    mutationFn: instanceSettingsApi.updateGeneral,
-    onMutate: () => {
-      setActionError(null);
-      signOutMutation.reset();
-    },
+    setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" },
+      ...(section === "backups" ? [
+        { label: uiText("Storage"), href: "/company/settings/instance/storage" },
+        { label: uiText("Database backups"), href: "/company/settings/instance/storage/database-backups" },
+      ] : [{ label: uiText("General"), href: "/company/settings" }]),
+      { label: uiText(title) }]);
+  }, [setBreadcrumbs, section, title, locale]);
+  const general = useQuery({ queryKey: queryKeys.instance.generalSettings, queryFn: instanceSettingsApi.getGeneral });
+  const health = useQuery({ queryKey: queryKeys.health, queryFn: healthApi.get, retry: false });
+  const update = useMutation({ mutationFn: instanceSettingsApi.updateGeneral,
+    onMutate: () => setSaved(false),
     onSuccess: async () => {
-      setActionError(null);
-      signOutMutation.reset();
       await queryClient.invalidateQueries({ queryKey: queryKeys.instance.generalSettings });
-    },
-    onError: (error) => {
-      setActionError(error instanceof Error ? error.message : "Failed to update general settings.");
-    },
-  });
-
-  if (generalQuery.isLoading || healthQuery.isLoading) {
-    return <div className="text-sm text-muted-foreground">{uiText("Loading general settings...")}</div>;
-  }
-
-  if (generalQuery.error) {
-    return (
-      <div className="text-sm text-destructive">
-        {generalQuery.error instanceof Error
-          ? generalQuery.error.message
-          : uiText("Failed to load general settings.")}
-      </div>
-    );
-  }
-
-  const censorUsernameInLogs = generalQuery.data?.censorUsernameInLogs === true;
-  const feedbackDataSharingPreference = generalQuery.data?.feedbackDataSharingPreference ?? "prompt";
-  const backupRetention: BackupRetentionPolicy = generalQuery.data?.backupRetention ?? DEFAULT_BACKUP_RETENTION;
-  const hiddenSettings = new Set(healthQuery.data?.hiddenSettings ?? []);
-  const showDeploymentStatus = !hiddenSettings.has("instance.general.deploymentStatus");
-  const showCensorUsernameInLogs = !hiddenSettings.has("instance.general.censorUsernameInLogs");
-  const showBackupRetention = !hiddenSettings.has("instance.general.backupRetention");
-  const showFeedbackDataSharing = !hiddenSettings.has("instance.general.feedbackDataSharingPreference");
-  const showSignOut = !hiddenSettings.has("instance.general.signOut");
-  const visibleTopics = [
-    ...(showCensorUsernameInLogs ? ["log display"] : []),
-    ...(showBackupRetention ? ["backup retention"] : []),
-    ...(showFeedbackDataSharing ? ["data sharing"] : []),
-  ];
-  const topicSummary = visibleTopics.length > 2
-    ? `${visibleTopics.slice(0, -1).join(", ")}, and ${visibleTopics[visibleTopics.length - 1]}`
-    : visibleTopics.join(" and ");
-  const visibleActionError = signOutMutation.error instanceof Error
-    ? signOutMutation.error.message
-    : signOutMutation.error
-      ? "Failed to sign out."
-      : actionError;
-
-  return (
-    <div className={embedded ? "space-y-8" : "max-w-4xl space-y-8"}>
-      {!embedded ? (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal className="h-5 w-5 text-muted-foreground" />
-            <h1 className="text-lg font-semibold">{uiText("General")}</h1>
-          </div>
-          <p className="text-sm text-muted-foreground">{uiText("Configure instance-wide preferences")}{visibleTopics.length > 0 ? <>{uiText(" including ")}{topicSummary}</> : null}.
-          </p>
+      setSaved(true);
+    } });
+  if (general.isPending || health.isPending) return <p role="status" className="text-sm text-muted-foreground">{uiText("Loading general settings...")}</p>;
+  if (general.isError || health.isError) return <div role="alert" className="flex flex-col items-start gap-3">
+    <p className="text-sm text-destructive">{uiText("Could not load settings. Retry before making changes.")}</p>
+    <Button variant="outline" onClick={() => { void general.refetch(); void health.refetch(); }}>{uiText("Retry")}</Button>
+  </div>;
+  const hidden = new Set(health.data?.hiddenSettings ?? []);
+  const policy: BackupRetentionPolicy = general.data?.backupRetention ?? DEFAULT_BACKUP_RETENTION;
+  const sharing = general.data?.feedbackDataSharingPreference ?? "prompt";
+  return <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
+    <header className="flex flex-col gap-2"><h1 className="text-xl font-semibold">{uiText(title)}</h1>
+      <p className="text-sm text-muted-foreground">{uiText(section === "backups" ? "Choose how long automatic backups are kept. Changes save immediately."
+        : section === "privacy" ? "Control log privacy and feedback sharing for this instance. Changes save immediately."
+        : "Inspect how this instance is deployed and authenticated.")}</p></header>
+    {update.isError && <p role="alert" className="text-sm text-destructive">{update.error.message}</p>}
+    {(update.isPending || saved) && <p role="status" className="text-sm text-muted-foreground">{uiText(update.isPending ? "Saving..." : "Saved")}</p>}
+    {section === "backups" && !hidden.has("instance.general.backupRetention") && <section className="flex flex-col gap-6">
+      <div className="divide-y rounded-xl border border-border">{retentionFields.map(field => <div key={field.key} className="flex flex-wrap items-center justify-between gap-4 px-4 py-4">
+        <div className="flex flex-col gap-1"><label htmlFor={`retention-${field.key}`} className="text-sm font-medium">{uiText(field.label)}</label>
+          <p className="text-sm text-muted-foreground">{uiText(field.key === "dailyDays" ? "Keep every backup within this window." : field.key === "weeklyWeeks" ? "Then keep one backup per week." : "Then keep one backup per month.")}</p></div>
+        <SelectField id={`retention-${field.key}`} className="w-40" value={policy[field.key]} disabled={update.isPending}
+          onValueChange={value => update.mutate({ backupRetention: { ...policy, [field.key]: Number(value) } })}>
+          {field.values.map(value => <option key={value} value={value}>{uiText(value === 1 ? field.singular : field.unit, { count: value })}</option>)}
+        </SelectField>
+      </div>)}</div>
+      <details className="text-sm text-muted-foreground"><summary className="cursor-pointer">{uiText("How backup retention works")}</summary>
+        <p className="pt-3">{uiText("Backups run roughly every hour. Retention changes apply to future automatic pruning; this does not run a cleanup now.")}</p>
+      </details>
+    </section>}
+    {section === "privacy" && <section className="divide-y rounded-xl border border-border">
+      {!hidden.has("instance.general.censorUsernameInLogs") && <div className="flex items-center justify-between gap-4 px-4 py-4">
+        <div className="flex flex-col gap-1"><h2 className="text-sm font-medium">{uiText("Censor username in logs")}</h2>
+          <p className="text-sm text-muted-foreground">{uiText("Hide usernames in home-directory paths shown in logs.")}</p></div>
+        <ToggleSwitch checked={general.data?.censorUsernameInLogs === true} disabled={update.isPending}
+          aria-label={uiText("Toggle username log censoring")} onCheckedChange={() => update.mutate({ censorUsernameInLogs: !general.data?.censorUsernameInLogs })} />
+      </div>}
+      {!hidden.has("instance.general.feedbackDataSharingPreference") && <div className="flex flex-col gap-4 px-4 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-4"><div className="flex flex-col gap-1"><h2 className="text-sm font-medium">{uiText("AI feedback sharing")}</h2>
+          <p className="text-sm text-muted-foreground">{uiText("Choose whether voted AI outputs may be shared with Paperclip Labs.")}</p></div>
+          <SelectField value={sharing} className="w-40" disabled={update.isPending} aria-label={uiText("AI feedback sharing")}
+            onValueChange={value => update.mutate({ feedbackDataSharingPreference: value as "allowed" | "not_allowed" })}>
+            {sharing === "prompt" && <option value="prompt" disabled>{uiText("Not chosen yet")}</option>}
+            <option value="not_allowed">{uiText("Don't allow")}</option><option value="allowed">{uiText("Always allow")}</option>
+          </SelectField>
         </div>
-      ) : null}
-
-      {visibleActionError && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-          {visibleActionError}
-        </div>
-      )}
-
-      {showDeploymentStatus && (
-      <section>
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold">{uiText("Deployment and auth")}</h2>
-            <ModeBadge
-              deploymentMode={healthQuery.data?.deploymentMode}
-              deploymentExposure={healthQuery.data?.deploymentExposure}
-            />
-          </div>
-          <div className="text-sm text-muted-foreground">
-            {healthQuery.data?.deploymentMode === "local_trusted"
-              ? uiText("Local trusted mode is optimized for a local operator. Browser requests run as local board context and no sign-in is required.")
-              : healthQuery.data?.deploymentExposure === "public"
-                ? uiText("Authenticated public mode requires sign-in for board access and is intended for public URLs.")
-                : uiText("Authenticated private mode requires sign-in and is intended for LAN, VPN, or other private-network deployments.")}
-          </div>
-          <div className="grid gap-3 md:grid-cols-3">
-            <StatusBox
-              label={uiText("Auth readiness")}
-              value={healthQuery.data?.authReady ? "Ready" : "Not ready"}
-            />
-            <StatusBox
-              label={uiText("Bootstrap status")}
-              value={healthQuery.data?.bootstrapStatus === "bootstrap_pending" ? "Setup required" : "Ready"}
-            />
-            <StatusBox
-              label={uiText("Bootstrap invite")}
-              value={healthQuery.data?.bootstrapInviteActive ? "Active" : "None"}
-            />
-          </div>
-        </div>
-      </section>
-      )}
-
-      {showAgentInstructions && !hiddenSettings.has("instance.general.agentInstructions") ? <SharedAgentInstructionsSettings /> : null}
-
-      {showCensorUsernameInLogs && (
-      <section>
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1.5">
-            <h2 className="text-sm font-semibold">{uiText("Censor username in logs")}</h2>
-            <p className="max-w-2xl text-sm text-muted-foreground">{uiText("Hide the username segment in home-directory paths and similar operator-visible log output. Standalone username mentions outside of paths are not yet masked in the live transcript view. This is off by default.")}</p>
-          </div>
-          <ToggleSwitch
-            checked={censorUsernameInLogs}
-            onCheckedChange={() => updateGeneralMutation.mutate({ censorUsernameInLogs: !censorUsernameInLogs })}
-            disabled={updateGeneralMutation.isPending || signOutMutation.isPending}
-            aria-label={uiText("Toggle username log censoring")}
-          />
-        </div>
-      </section>
-      )}
-
-      {showBackupRetention && (
-      <section>
-        <div className="space-y-5">
-          <div className="space-y-1.5">
-            <h2 className="text-sm font-semibold">{uiText("Backup retention")}</h2>
-            <p className="max-w-2xl text-sm text-muted-foreground">{uiText("Configure how long automatic database backups are retained. Backups run roughly every hour and are compressed with gzip. Within the daily window all backups are kept; beyond that, one backup per week and one per month are preserved.")}</p>
-          </div>
-
-          <div className="space-y-1.5">
-            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{uiText("Daily")}</h3>
-            <div className="flex flex-wrap gap-2">
-              {DAILY_RETENTION_PRESETS.map((days) => {
-                const active = backupRetention.dailyDays === days;
-                return (
-                  <button
-                    key={days}
-                    type="button"
-                    disabled={updateGeneralMutation.isPending || signOutMutation.isPending}
-                    className={cn(
-                      "rounded-lg border px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60",
-                      active
-                        ? "border-foreground bg-accent text-foreground"
-                        : "border-border bg-background hover:bg-accent/50",
-                    )}
-                    onClick={() =>
-                      updateGeneralMutation.mutate({
-                        backupRetention: { ...backupRetention, dailyDays: days },
-                      })
-                    }
-                  >
-                    <div className="text-sm font-medium">{days}{uiText(" days")}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{uiText("Weekly")}</h3>
-            <div className="flex flex-wrap gap-2">
-              {WEEKLY_RETENTION_PRESETS.map((weeks) => {
-                const active = backupRetention.weeklyWeeks === weeks;
-                const label = weeks === 1 ? "1 week" : `${weeks} weeks`;
-                return (
-                  <button
-                    key={weeks}
-                    type="button"
-                    disabled={updateGeneralMutation.isPending || signOutMutation.isPending}
-                    className={cn(
-                      "rounded-lg border px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60",
-                      active
-                        ? "border-foreground bg-accent text-foreground"
-                        : "border-border bg-background hover:bg-accent/50",
-                    )}
-                    onClick={() =>
-                      updateGeneralMutation.mutate({
-                        backupRetention: { ...backupRetention, weeklyWeeks: weeks },
-                      })
-                    }
-                  >
-                    <div className="text-sm font-medium">{label}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{uiText("Monthly")}</h3>
-            <div className="flex flex-wrap gap-2">
-              {MONTHLY_RETENTION_PRESETS.map((months) => {
-                const active = backupRetention.monthlyMonths === months;
-                const label = months === 1 ? "1 month" : `${months} months`;
-                return (
-                  <button
-                    key={months}
-                    type="button"
-                    disabled={updateGeneralMutation.isPending || signOutMutation.isPending}
-                    className={cn(
-                      "rounded-lg border px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60",
-                      active
-                        ? "border-foreground bg-accent text-foreground"
-                        : "border-border bg-background hover:bg-accent/50",
-                    )}
-                    onClick={() =>
-                      updateGeneralMutation.mutate({
-                        backupRetention: { ...backupRetention, monthlyMonths: months },
-                      })
-                    }
-                  >
-                    <div className="text-sm font-medium">{label}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
-      )}
-
-      {showFeedbackDataSharing && (
-      <section>
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <h2 className="text-sm font-semibold">{uiText("AI feedback sharing")}</h2>
-            <p className="max-w-2xl text-sm text-muted-foreground">{uiText("Control whether thumbs up and thumbs down votes can send the voted AI output to Paperclip Labs. Votes are always saved locally.")}</p>
-            {FEEDBACK_TERMS_URL ? (
-              <a
-                href={FEEDBACK_TERMS_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
-              >{uiText("Read our terms of service")}</a>
-            ) : null}
-          </div>
-          {feedbackDataSharingPreference === "prompt" ? (
-            <div className="rounded-lg bg-accent/20 px-3 py-2 text-sm text-muted-foreground">{uiText("No default is saved yet. The next thumbs up or thumbs down choice will ask once and then save the answer here.")}</div>
-          ) : null}
-          <div className="flex flex-wrap gap-2">
-            {[
-              {
-                value: "allowed",
-                get label() { return uiText("Always allow"); },
-                description: "Share voted AI outputs automatically.",
-              },
-              {
-                value: "not_allowed",
-                get label() { return uiText("Don't allow"); },
-                description: "Keep voted AI outputs local only.",
-              },
-            ].map((option) => {
-              const active = feedbackDataSharingPreference === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  disabled={updateGeneralMutation.isPending || signOutMutation.isPending}
-                  className={cn(
-                    "rounded-lg border px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60",
-                    active
-                      ? "border-foreground bg-accent text-foreground"
-                      : "border-border bg-background hover:bg-accent/50",
-                  )}
-                  onClick={() =>
-                    updateGeneralMutation.mutate({
-                      feedbackDataSharingPreference: option.value as
-                        | "allowed"
-                        | "not_allowed",
-                    })
-                  }
-                >
-                  <div className="text-sm font-medium">{option.label}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {option.description}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-xs text-muted-foreground">{uiText("To retest the first-use prompt in local dev, remove the")}{" "}
-            <code>feedbackDataSharingPreference</code>{uiText(" key from the")}{" "}
-            <code>instance_settings.general</code>{uiText(" JSON row for this instance, or set it back to")}{" "}
-            <code>"prompt"</code>{uiText(". Unset and ")}<code>"prompt"</code>{uiText(" both mean no default has been chosen yet.")}</p>
-        </div>
-      </section>
-
-      )}
-
-      {showSignOut && (
-      <section>
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1.5">
-            <h2 className="text-sm font-semibold">{uiText("Sign out")}</h2>
-            <p className="max-w-2xl text-sm text-muted-foreground">{uiText("Sign out of this Paperclip instance. You will be redirected to the login page.")}</p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={signOutMutation.isPending || updateGeneralMutation.isPending}
-            onClick={() => {
-              setActionError(null);
-              signOutMutation.mutate();
-            }}
-          >
-            <LogOut className="size-4" />
-            {signOutMutation.isPending ? uiText("Signing out...") : uiText("Sign out")}
-          </Button>
-        </div>
-      </section>
-      )}
-    </div>
-  );
-}
-
-function StatusBox({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="space-y-1">
-      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="text-sm font-medium">{value}</div>
-    </div>
-  );
+        <details className="text-sm text-muted-foreground"><summary className="cursor-pointer">{uiText("What gets shared?")}</summary>
+          <div className="flex flex-col gap-2 pt-3"><p>{uiText("Votes are always saved locally. Sharing allows the voted AI output to be sent to Paperclip Labs.")}</p>
+            <a href={FEEDBACK_TERMS_URL} target="_blank" rel="noreferrer" className="underline underline-offset-4">{uiText("Read our terms of service")}</a></div>
+        </details>
+      </div>}
+    </section>}
+    {section === "deployment" && !hidden.has("instance.general.deploymentStatus") && <section className="flex flex-col gap-4">
+      <ModeBadge deploymentMode={health.data?.deploymentMode} deploymentExposure={health.data?.deploymentExposure} />
+      <p className="text-sm text-muted-foreground">{uiText(health.data?.deploymentMode === "local_trusted"
+        ? "Local trusted mode is optimized for a local operator. Browser requests run as local board context and no sign-in is required."
+        : health.data?.deploymentExposure === "public" ? "Authenticated public mode requires sign-in for board access and is intended for public URLs."
+        : "Authenticated private mode requires sign-in and is intended for LAN, VPN, or other private-network deployments.")}</p>
+      <dl className="divide-y rounded-xl border border-border">{[
+        ["Auth readiness", health.data?.authReady ? "Ready" : "Not ready"],
+        ["Bootstrap status", health.data?.bootstrapStatus === "bootstrap_pending" ? "Setup required" : "Ready"],
+        ["Bootstrap invite", health.data?.bootstrapInviteActive ? "Active" : "None"],
+      ].map(([label, value]) => <div key={label} className="flex justify-between gap-4 px-4 py-4"><dt className="text-sm text-muted-foreground">{uiText(label)}</dt><dd className="text-sm font-medium">{uiText(value)}</dd></div>)}</dl>
+    </section>}
+  </div>;
 }

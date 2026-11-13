@@ -10,7 +10,7 @@ import { uiText, useUiLocale } from "@/i18n/ui";
 import { Button } from "./ui/button";
 import { SharedAgentInstructionsEditor } from "./SharedAgentInstructionsEditor";
 
-export function SharedAgentInstructionsSettings({ company }: { company?: Company }) {
+export function SharedAgentInstructionsSettings({ company, showHeading = true }: { company?: Company; showHeading?: boolean }) {
   useUiLocale();
   const client = useQueryClient();
   const identity = useAccountIdentity();
@@ -37,10 +37,10 @@ export function SharedAgentInstructionsSettings({ company }: { company?: Company
   const globalRules = general.data?.agentInstructions ?? "";
 
   return <section className="max-w-2xl space-y-6" aria-label={uiText("Agent run rules")}>
-    <div className="space-y-2">
+    {showHeading && <div className="space-y-2">
       <h2 className="text-base font-semibold">{uiText("Agent run rules")}</h2>
       <p className="text-sm text-muted-foreground">{uiText("Global rules apply to every organization. Organization additions supplement them. Saved changes apply to the next run without interrupting current work.")}</p>
-    </div>
+    </div>}
     {access.error ? <div className="space-y-2">
       <p role="alert" className="text-sm text-destructive">{uiText("Editing permissions could not be checked. Saved rules remain available to read.")}</p>
       <Button variant="outline" onClick={() => void access.refetch()}>{uiText("Retry")}</Button>

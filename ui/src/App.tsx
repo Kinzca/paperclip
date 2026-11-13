@@ -61,7 +61,8 @@ import { WhatNeedsMe } from "./pages/WhatNeedsMe";
 import { DecisionQueuePage } from "./pages/DecisionQueuePage";
 import { BoardChat } from "./pages/BoardChat";
 import { CompanySettings } from "./pages/CompanySettings";
-import { CompanyConnections } from "./pages/CompanyConnections";
+import { AgentRulesSettings } from "./pages/AgentRulesSettings";
+import { InstanceGeneralSettings } from "./pages/InstanceGeneralSettings";
 import { CompanyEnvironments } from "./pages/CompanyEnvironments";
 import { BootstrapSetupUxLab } from "./pages/BootstrapSetupUxLab";
 import { ResponsibleUserDenialUxLab } from "./pages/ResponsibleUserDenialUxLab";
@@ -168,12 +169,19 @@ function boardRoutes(streamlinedUiEnabled: boolean, combinedInboxTasksEnabled: b
       <Route path="onboarding" element={<OnboardingRoutePage />} />
       <Route path="companies" element={<Companies />} />
       <Route path="company/settings" element={<CompanySettings />} />
+      <Route path="company/settings/general/privacy" element={<InstanceGeneralSettings section="privacy" />} />
+      <Route path="company/settings/general/deployment" element={<InstanceGeneralSettings section="deployment" />} />
+      <Route path="company/settings/general/organization" element={<CompanySettings section="organization" />} />
+      <Route path="company/settings/agent-rules" element={<AgentRulesSettings />} />
+      <Route path="company/settings/agent-rules/instructions" element={<AgentRulesSettings section="instructions" />} />
+      <Route path="company/settings/agent-rules/ai" element={<AgentRulesSettings section="ai" />} />
       <Route path="workflows" element={<Workflows />} />
-      <Route path="company/settings/connections" element={<CompanyConnections />} />
+      <Route path="company/settings/connections" element={<Navigate to="/company/settings/agent-rules/ai" replace />} />
       <Route path="company/settings/environments" element={<Navigate to="/company/settings/instance/environments" replace />} />
       <Route path="company/settings/cloud-upstream" element={<Navigate to="/company/export" replace />} />
       <Route element={<HiddenSettingsPageGate pageKey="company.members" />}>
         <Route path="company/settings/members" element={<CompanyAccess />} />
+        <Route path="company/settings/members/policies" element={<CompanySettings section="policies" />} />
         <Route path="company/settings/access" element={<CompanyAccessLegacyRoute />} />
       </Route>
       {/* Invites moved into the Members page; the old URL redirects (and stays
@@ -255,6 +263,7 @@ function boardRoutes(streamlinedUiEnabled: boolean, combinedInboxTasksEnabled: b
       <Route element={<IsolatedWorkspacesRouteGate />}>
         <Route path="company/settings/instance/storage/workspaces" element={<Workspaces storageContext />} />
       </Route>
+      <Route path="company/settings/instance/storage/database-backups/retention" element={<InstanceGeneralSettings section="backups" />} />
       <Route path="company/settings/instance/storage/database-backups" element={<StorageCleanupSettings kind="backups" />} />
       <Route path="company/settings/instance/database-backups" element={<Navigate to="/company/settings/instance/storage/database-backups" replace />} />
       <Route path="company/settings/instance/storage/program-releases" element={<StorageCleanupSettings kind="releases" />} />

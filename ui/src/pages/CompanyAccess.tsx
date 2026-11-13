@@ -296,6 +296,8 @@ export function CompanyAccess() {
         )}
       </div>
 
+      <Button variant="outline" asChild><Link to="/company/settings/members/policies">{uiText("Hiring and interaction policies")}</Link></Button>
+
       <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col gap-4">
         {!hideInvitesTab && (
           <PageTabBar
