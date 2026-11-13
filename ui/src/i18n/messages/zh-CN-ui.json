@@ -8954,5 +8954,6 @@
   "Manage execution environments.": "管理执行环境。",
   "Manage instance access.": "管理实例访问权限。",
   "Manage installed plugins.": "管理已安装的插件。",
-  "Manage experimental features.": "管理实验性功能。"
+  "Manage experimental features.": "管理实验性功能。",
+  "Retention policy": "保留策略"
 }

@@ -59,15 +59,17 @@ function StorageCleanupContent({ kind }: { kind: StorageCleanupKind }) {
   const visible = (inventory.data?.items ?? []).filter(item => item.kind === kind);
   const selectedBytes = visible.filter(item => selected.has(item.id)).reduce((sum, item) => sum + item.bytes, 0);
   return <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
-    <header className="flex items-center justify-between gap-4">
+    <header className="flex flex-wrap items-center justify-between gap-3">
       <h1 className="text-xl font-semibold">{uiText(categories[kind][0])}</h1>
-      <Button size="sm" variant="secondary" disabled={busy || inventory.isFetching} onClick={() => {
-        setSelected(new Set()); setPreview(null); void inventory.refetch();
-      }}><RefreshCw className={inventory.isFetching ? "size-4 animate-spin" : "size-4"} />{uiText("Refresh")}</Button>
+      <div className="flex shrink-0 items-center gap-2">
+        {kind === "backups" && !hidden.has("instance.general.backupRetention") && <Button size="sm" variant="ghost" className="text-muted-foreground" asChild>
+          <Link to="/company/settings/instance/storage/database-backups/retention" aria-label={uiText("Backup retention")}>{uiText("Retention policy")}</Link>
+        </Button>}
+        <Button size="sm" variant="secondary" disabled={busy || inventory.isFetching} onClick={() => {
+          setSelected(new Set()); setPreview(null); void inventory.refetch();
+        }}><RefreshCw className={inventory.isFetching ? "size-4 animate-spin" : "size-4"} />{uiText("Refresh")}</Button>
+      </div>
     </header>
-    {kind === "backups" && !hidden.has("instance.general.backupRetention") && <Button variant="outline" className="self-start" asChild>
-      <Link to="/company/settings/instance/storage/database-backups/retention">{uiText("Backup retention")}</Link>
-    </Button>}
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3"><div className="flex flex-col gap-1"><h2 className="flex items-center gap-2 font-semibold"><Trash2 className="size-4" />{uiText("Clean up space")}</h2>
         <p className="text-sm text-muted-foreground">{uiText("Select items to remove, then review the exact deletion list before cleaning.")}</p></div>

@@ -8953,5 +8953,6 @@
   "Manage execution environments.": "Manage execution environments.",
   "Manage instance access.": "Manage instance access.",
   "Manage installed plugins.": "Manage installed plugins.",
-  "Manage experimental features.": "Manage experimental features."
+  "Manage experimental features.": "Manage experimental features.",
+  "Retention policy": "Retention policy"
 }
