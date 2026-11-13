@@ -8294,7 +8294,7 @@ export function issueRoutes(
       : "issueIds" in input.data ? [...new Set(input.data.issueIds)] : [];
     const items = [];
     for (const item of await svc.previewArchivedChatCleanup(companyId, req.actor.userId, ids, readCondition, input.data.skipRelated)) {
-      const filePlan = input.data.includeFiles && item.protection === "candidate"
+      const filePlan = input.data.includeFiles && !item.ownProtectionReason && !(input.data.skipRelated && item.linked)
         ? await buildArchiveCleanupPlan(db, companyId, item.id) : { files: [], retained: [], localBytes: 0 };
       items.push({ ...item, filePlan });
     }

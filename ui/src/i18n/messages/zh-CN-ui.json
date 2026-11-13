@@ -8955,5 +8955,20 @@
   "Manage instance access.": "管理实例访问权限。",
   "Manage installed plugins.": "管理已安装的插件。",
   "Manage experimental features.": "管理实验性功能。",
-  "Retention policy": "保留策略"
+  "Retention policy": "保留策略",
+  "Select all chats": "选择全部对话",
+  "Selecting all chats...": "正在选择全部对话…",
+  "Processing {{value0}} of {{value1}} selected chats.": "正在处理所选对话：{{value0}} / {{value1}}。",
+  "Cleanup stopped because a batch result could not be confirmed. Refresh before retrying.": "有一批清理结果无法确认，已停止后续处理。请刷新列表后再重试。",
+  "Deletion result unavailable. Refresh before retrying.": "删除结果无法确认，请刷新列表后再重试。",
+  "Not processed because cleanup stopped.": "清理已停止，此项尚未处理。",
+  "Select all chats matching the current search and project filters. Deletion eligibility is checked in the preview; active work must be stopped first.": "全选当前搜索和项目筛选下的全部归档对话。预览时检查删除条件；执行中的任务需要先停止。",
+  "Only the listed tasks are included. Selected subtasks are deleted before their parents. Unselected subtasks and active execution keep a task protected.": "仅删除本次列出的任务，按子任务到父任务的顺序处理。存在未选子任务或未停止的执行时，任务仍受保护。",
+  "Unselected subtasks, unfinished work, or active or paused execution prevent deletion. Finish or cancel the affected tasks first.": "存在未选子任务、未完成工作或运行及暂停中的执行时，无法删除。请先完成或取消相关任务。",
+  "Include archived subtasks and update preview": "纳入已归档子任务并更新预览",
+  "Unarchived or inaccessible subtasks are never added automatically. Cancel active work from its task page before retrying deletion.": "不会自动纳入未归档或无权访问的子任务。请在任务页面取消执行中的工作后，再重试删除。",
+  "This task has an invalid subtask cycle.": "此任务的子任务关系存在循环，无法删除。",
+  "This task has a parent, subtask, dependency or task reference.": "此任务存在父任务、子任务、依赖或任务引用。",
+  "Select all subtasks and finish or cancel them before deleting this task.": "请先选中全部子任务，并完成或取消相关工作，再删除此任务。",
+  "Deselect all chats": "取消全选"
 }

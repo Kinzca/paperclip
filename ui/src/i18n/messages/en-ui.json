@@ -8954,5 +8954,20 @@
   "Manage instance access.": "Manage instance access.",
   "Manage installed plugins.": "Manage installed plugins.",
   "Manage experimental features.": "Manage experimental features.",
-  "Retention policy": "Retention policy"
+  "Retention policy": "Retention policy",
+  "Select all chats": "Select all chats",
+  "Selecting all chats...": "Selecting all chats...",
+  "Processing {{value0}} of {{value1}} selected chats.": "Processing {{value0}} of {{value1}} selected chats.",
+  "Cleanup stopped because a batch result could not be confirmed. Refresh before retrying.": "Cleanup stopped because a batch result could not be confirmed. Refresh before retrying.",
+  "Deletion result unavailable. Refresh before retrying.": "Deletion result unavailable. Refresh before retrying.",
+  "Not processed because cleanup stopped.": "Not processed because cleanup stopped.",
+  "Select all chats matching the current search and project filters. Deletion eligibility is checked in the preview; active work must be stopped first.": "Select all chats matching the current search and project filters. Deletion eligibility is checked in the preview; active work must be stopped first.",
+  "Only the listed tasks are included. Selected subtasks are deleted before their parents. Unselected subtasks and active execution keep a task protected.": "Only the listed tasks are included. Selected subtasks are deleted before their parents. Unselected subtasks and active execution keep a task protected.",
+  "Unselected subtasks, unfinished work, or active or paused execution prevent deletion. Finish or cancel the affected tasks first.": "Unselected subtasks, unfinished work, or active or paused execution prevent deletion. Finish or cancel the affected tasks first.",
+  "Include archived subtasks and update preview": "Include archived subtasks and update preview",
+  "Unarchived or inaccessible subtasks are never added automatically. Cancel active work from its task page before retrying deletion.": "Unarchived or inaccessible subtasks are never added automatically. Cancel active work from its task page before retrying deletion.",
+  "This task has an invalid subtask cycle.": "This task has an invalid subtask cycle.",
+  "This task has a parent, subtask, dependency or task reference.": "This task has a parent, subtask, dependency or task reference.",
+  "Select all subtasks and finish or cancel them before deleting this task.": "Select all subtasks and finish or cancel them before deleting this task.",
+  "Deselect all chats": "Deselect all chats"
 }

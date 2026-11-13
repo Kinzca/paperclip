@@ -1,3 +1,4 @@
+import { resolveArchivedChatCleanupSelection } from "@paperclipai/shared";
 import type { SetIssueTitle } from "@paperclipai/shared";
 import type { InboxArchiveResult, InboxArchiveUndo } from "@paperclipai/shared";
 import type { ArchivedChatCleanupPreview, ArchivedChatCleanupResult, ArchivedChatCleanupJob } from "@paperclipai/shared";
@@ -266,6 +267,14 @@ export const issuesApi = {
     }
     return api.get<Issue[]>(`/companies/${companyId}/archived-chats?${params}`);
   },
+  listAllArchivedChats: async (companyId: string, filters: { q?: string; projectId?: string }): Promise<Issue[]> => {
+    const records = new Map<string, Issue>();
+    for (let offset = 0; ; offset += 100) {
+      const page = await issuesApi.listArchivedChats(companyId, { ...filters, offset, limit: 100 });
+      for (const item of page) records.set(item.id, item);
+      if (page.length < 100) return [...records.values()];
+    }
+  },
   deleteArchivedChat: (id: string) => api.delete<Issue & { fileCleanupFailed?: boolean; cleanupJobId?: string }>(`/issues/${id}?archivedChat=true`),
   pendingArchiveCleanup: (companyId: string) => api.get<ArchivedChatCleanupJob[]>(`/companies/${companyId}/archived-chats/pending-cleanup`),
   retryArchiveCleanup: (companyId: string, jobId: string) => api.post<ArchivedChatCleanupJob>(`/companies/${companyId}/archived-chats/pending-cleanup/${jobId}/retry`, {}),
@@ -273,6 +282,17 @@ export const issuesApi = {
     api.post<ArchivedChatCleanupResult>(`/companies/${companyId}/archived-chats/cleanup`, input),
   previewArchivedChatCleanup: (companyId: string, input: ({ issueIds: string[] } | { filters: { q?: string; projectId?: string } }) & { skipRelated?: boolean; includeFiles?: boolean }) =>
     api.post<ArchivedChatCleanupPreview>(`/companies/${companyId}/archived-chats/cleanup-preview`, input),
+  previewArchivedChatCleanupSelection: async (companyId: string, input: { issueIds: string[]; skipRelated: boolean; includeFiles?: boolean }): Promise<ArchivedChatCleanupPreview> => {
+    const items: ArchivedChatCleanupPreview["items"] = [];
+    let measuredAt = new Date().toISOString();
+    for (let offset = 0; offset < input.issueIds.length; offset += 200) {
+      const page = await issuesApi.previewArchivedChatCleanup(companyId, { ...input, issueIds: input.issueIds.slice(offset, offset + 200) });
+      items.push(...page.items);
+      measuredAt = page.measuredAt;
+    }
+    return { previewOnly: true as const, measuredAt, truncated: false, skipRelated: input.skipRelated,
+      items: resolveArchivedChatCleanupSelection(items, input.skipRelated) };
+  },
   unarchiveFromInbox: (id: string, undo?: InboxArchiveUndo) =>
     api.delete<{ id: string; archivedAt: Date } | { ok: true; restoredIssueIds?: string[] }>(
       `/issues/${id}/inbox-archive`,

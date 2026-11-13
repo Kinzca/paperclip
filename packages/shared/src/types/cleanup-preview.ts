@@ -41,6 +41,10 @@ export interface ArchivedChatCleanupPreview {
     id: string;
     title: string | null;
     identifier: string | null;
+    parentId: string | null;
+    childCount: number;
+    linked: boolean;
+    ownProtectionReason: string | null;
     protection: "protected" | "candidate";
     reason: string;
     localAttachmentBytes: number;

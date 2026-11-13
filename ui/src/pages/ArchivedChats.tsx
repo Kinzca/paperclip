@@ -3,7 +3,7 @@ import { CleanupFeedbackDialog, type CleanupFeedbackState } from "@/components/C
 import { useEffect, useState } from "react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, ArchiveRestore, FolderOpen, Loader2, Search, Trash2 } from "lucide-react";
-import type { Issue, ArchivedChatCleanupPreview, ArchivedChatCleanupJob } from "@paperclipai/shared";
+import type { Issue, ArchivedChatCleanupPreview, ArchivedChatCleanupJob, ArchivedChatCleanupResult } from "@paperclipai/shared";
 import { Checkbox } from "@/components/ui/checkbox";
 import { authApi } from "@/api/auth";
 import { issuesApi } from "@/api/issues";
@@ -47,9 +47,11 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
   const [retryTarget, setRetryTarget] = useState<ArchivedChatCleanupJob | null>(null);
   const [skipRelated, setSkipRelated] = useState(true);
   const [feedback, setFeedback] = useState<CleanupFeedbackState | null>(null);
+  const [allSelected, setAllSelected] = useState(false);
+  const [selectionItems, setSelectionItems] = useState<ArchivedChatCleanupPreview["items"]>([]);
   const [preview, setPreview] = useState<ArchivedChatCleanupPreview | null>(null);
   const previewAction = useMutation({
-    mutationFn: (input: { issueIds: string[] } | { filters: { q?: string; projectId?: string } }) => issuesApi.previewArchivedChatCleanup(companyId, { ...input, skipRelated }),
+    mutationFn: (input: { issueIds: string[] }) => issuesApi.previewArchivedChatCleanupSelection(companyId, { ...input, skipRelated }),
     onMutate: () => setActionError(null),
     onSuccess: setPreview,
     onError: (error) => setActionError(error instanceof Error ? uiText(error.message) : uiText("The action failed. Please try again.")),
@@ -58,22 +60,46 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
     queryFn: () => issuesApi.previewArchivedChatCleanup(companyId, { issueIds: [target!.id], skipRelated: false }),
     enabled: !!target, staleTime: 0, retry: false });
   const batchDelete = useMutation({
-    mutationFn: () => issuesApi.cleanupArchivedChats(companyId, { issueIds: preview!.items
-      .filter((item) => item.protection === "candidate").map((item) => item.id), skipRelated: preview!.skipRelated, confirm: true }),
+    mutationFn: async () => {
+      const confirmed = preview!;
+      const ids = confirmed.items.filter(item => item.protection === "candidate").map(item => item.id);
+      const result: ArchivedChatCleanupResult & { warning?: string } = { items: confirmed.items
+        .filter(item => item.protection !== "candidate").map(item => ({ id: item.id, status: "skipped", reason: item.reason, fileCleanupFailed: false })), estimatedLocalBytesRemoved: 0 };
+      for (let offset = 0; offset < ids.length; offset += 200) {
+        const batch = ids.slice(offset, offset + 200);
+        setFeedback({ phase: "cleaning", description: uiText("Processing {{value0}} of {{value1}} selected chats.", {
+          value0: offset, value1: ids.length }) });
+        try {
+          const page = await issuesApi.cleanupArchivedChats(companyId, { issueIds: batch, skipRelated: confirmed.skipRelated, confirm: true });
+          result.items.push(...page.items);
+          result.estimatedLocalBytesRemoved += page.estimatedLocalBytesRemoved;
+        } catch (error) {
+          // Preserve confirmed earlier results. Never automatically repeat a deletion
+          // whose response was lost, or continue later batches after that uncertainty.
+          result.warning = uiText("Cleanup stopped because a batch result could not be confirmed. Refresh before retrying.");
+          result.items.push(...ids.slice(offset).map((id, index) => ({ id, status: "failed" as const, fileCleanupFailed: false,
+            reason: index < batch.length ? "Deletion result unavailable. Refresh before retrying." : "Not processed because cleanup stopped." })));
+          break;
+        }
+      }
+      return result;
+    },
     onMutate: () => { setActionError(null); setFeedback({ phase: "cleaning" }); },
     onSuccess: (result) => {
       const attention = result.items.filter(item => item.status !== "deleted" || item.fileCleanupFailed).length;
-      setFeedback({ phase: attention ? "partial" : "complete", completed: result.items.length - attention, attention,
+      setFeedback({ phase: attention ? "partial" : "complete", completed: result.items.filter(item => item.status === "deleted").length, attention, warning: result.warning,
         metric: { label: uiText("Estimated local files removed"), value: formatBytes(result.estimatedLocalBytesRemoved) },
         details: result.items.map(item => ({ label: preview?.items.find(row => row.id === item.id)?.title ?? uiText("Unavailable record"),
           note: uiText(item.reason) })),
       });
       const deleted = new Set(result.items.filter((item) => item.status === "deleted").map((item) => item.id));
       setSelected((current) => new Set([...current].filter((id) => !deleted.has(id))));
+      setAllSelected(false);
       for (const id of deleted) client.removeQueries({ queryKey: queryKeys.issues.detail(id) });
     },
     onError: (error) => setFeedback({ phase: "error", warning: error.message }),
     onSettled: () => {
+      void client.invalidateQueries({ queryKey: ["archived-chat-eligibility", companyId] });
       void client.invalidateQueries({ queryKey: ["archived-chats", companyId] });
       void invalidateInboxIssueQueries(client, companyId);
       void client.invalidateQueries({ queryKey: ["agent-chats", companyId] });
@@ -103,8 +129,14 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
       void client.invalidateQueries({ queryKey: ["instance-storage"] });
     },
   });
-  useEffect(() => { setSelected(new Set()); setPreview(null); }, [query, projectId]);
-  useEffect(() => { setPreview(null); }, [skipRelated]);
+  useEffect(() => { setSelected(new Set()); setSelectionItems([]); setAllSelected(false); setPreview(null); }, [query, projectId]);
+  useEffect(() => {
+    setPreview(null); setAllSelected(false);
+    if (skipRelated) {
+      const linked = new Set([...selectionItems, ...(eligibility.data?.items ?? [])].filter(item => item.linked).map(item => item.id));
+      setSelected(current => new Set([...current].filter(id => !linked.has(id))));
+    }
+  }, [skipRelated]);
   useEffect(() => { setBreadcrumbs([{ label: uiText("Settings"), href: "/company/settings" }, { label: uiText("Storage"), href: "/company/settings/instance/storage" }, { label: uiText("Archived chats") }]); }, [setBreadcrumbs, locale, getUiLocale()]);
   const chats = useInfiniteQuery({
     queryKey: ["archived-chats", companyId, userId, query, projectId],
@@ -131,8 +163,9 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
           completed: 1, attention: pending ? 1 : 0, details: [{ label: task.title }],
         });
       }
-      setTarget(null);
+      setTarget(null); setAllSelected(false);
       setSelected((current) => { const next = new Set(current); next.delete(task.id); return next; });
+      void client.invalidateQueries({ queryKey: ["archived-chat-eligibility", companyId] });
       void client.invalidateQueries({ queryKey: ["archived-chats", companyId] });
       void invalidateInboxIssueQueries(client, companyId);
       void client.invalidateQueries({ queryKey: ["agent-chats", companyId] });
@@ -146,20 +179,46 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
       else setActionError(uiText(error.message));
     },
   });
-  const busy = previewAction.isPending || batchDelete.isPending || action.isPending || retryFiles.isPending;
+  const selectAll = useMutation({
+    mutationFn: async () => {
+      const records = await issuesApi.listAllArchivedChats(companyId, { q: query, projectId: projectId === "all" ? undefined : projectId });
+      return issuesApi.previewArchivedChatCleanupSelection(companyId, { issueIds: records.map(item => item.id), skipRelated, includeFiles: false });
+    },
+    onMutate: () => setActionError(null),
+    onSuccess: result => {
+      setSelectionItems(result.items);
+      setSelected(new Set(result.items.filter(item => !skipRelated || !item.linked).map(item => item.id)));
+      setAllSelected(true);
+    },
+    onError: error => setActionError(uiText(error.message)),
+  });
+  const includeSubtasks = useMutation({
+    mutationFn: async () => {
+      const records = await issuesApi.listAllArchivedChats(companyId, {});
+      const ids = new Set(preview!.items.map(item => item.id));
+      const descendants = new Map<string, Issue[]>();
+      for (const item of records) if (item.parentId) descendants.set(item.parentId, [...(descendants.get(item.parentId) ?? []), item]);
+      const pending = [...ids];
+      for (let index = 0; index < pending.length; index++) {
+        for (const child of descendants.get(pending[index]) ?? []) {
+          if (!ids.has(child.id)) { ids.add(child.id); pending.push(child.id); }
+        }
+      }
+      return issuesApi.previewArchivedChatCleanupSelection(companyId, { issueIds: [...ids], skipRelated });
+    },
+    onMutate: () => setActionError(null),
+    onSuccess: result => { setPreview(result); setSelected(new Set(result.items.map(item => item.id))); setAllSelected(false); },
+    onError: error => setActionError(uiText(error.message)),
+  });
+  const busy = previewAction.isPending || batchDelete.isPending || action.isPending || retryFiles.isPending || selectAll.isPending || includeSubtasks.isPending;
   const rows = chats.data?.pages.flat() ?? [];
-  const loadedIds = rows.slice(0, 200).map((row) => row.id);
+  const loadedIds = rows.map(row => row.id);
   const eligibility = useQuery({ queryKey: ["archived-chat-eligibility", companyId, userId, skipRelated, loadedIds.join(",")],
-    queryFn: () => issuesApi.previewArchivedChatCleanup(companyId, { issueIds: loadedIds, skipRelated, includeFiles: false }),
-    enabled: ready && loadedIds.length > 0, staleTime: 10_000, refetchOnWindowFocus: false, retry: false });
+    queryFn: () => issuesApi.previewArchivedChatCleanupSelection(companyId, { issueIds: loadedIds, skipRelated, includeFiles: false }),
+    enabled: ready && loadedIds.length > 0, staleTime: 0, retry: false });
   const eligibleItems = new Map(eligibility.data?.items.map((item) => [item.id, item]) ?? []);
-  const eligibleIds = eligibility.data?.items.filter((item) => item.protection === "candidate").map((item) => item.id) ?? [];
+  const excludedCount = (allSelected ? selectionItems : eligibility.data?.items ?? []).filter(item => skipRelated && item.linked).length;
   const selectionDisabled = busy || eligibility.isFetching || eligibility.isError || !eligibility.data;
-  useEffect(() => {
-    if (!eligibility.data) return;
-    const allowed = new Set(eligibility.data.items.filter((item) => item.protection === "candidate").map((item) => item.id));
-    setSelected((current) => new Set([...current].filter((id) => allowed.has(id))));
-  }, [eligibility.data]);
   const groups = new Map<string, Issue[]>();
   for (const row of rows) {
     const group = row.projectId ?? "none";
@@ -170,10 +229,10 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
       <h1 className="flex items-center gap-2 text-lg font-semibold"><Archive className="size-5 text-muted-foreground" />{uiText("Archived chats")}</h1>
       <p className="text-sm text-muted-foreground">{uiText("Manage conversations archived by you in this organization. Unarchiving does not resume execution.")}</p>
     </header>
-    <form className="flex flex-wrap items-center gap-3" onSubmit={(event) => { event.preventDefault(); setQuery(search.trim()); }}>
+    <form className="flex flex-wrap items-center gap-3" onSubmit={(event) => { event.preventDefault(); if (!busy) setQuery(search.trim()); }}>
       <div className="relative min-w-0 flex-1">
         <Search className="absolute left-3 top-3 size-4 text-muted-foreground" />
-        <Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)}
+        <Input className="pl-9" disabled={busy} value={search} onChange={(event) => setSearch(event.target.value)}
           placeholder={uiText("Search archived chats")} aria-label={uiText("Search archived chats")} />
       </div>
       <Button type="submit" variant="secondary" disabled={busy}>{uiText("Search")}</Button>
@@ -182,17 +241,20 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
           ...(projects.data ?? []).map((project) => ({ value: project.id, label: project.name }))]} />
     </form>
     <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
-      <Button size="sm" variant="outline" disabled={!eligibleIds.length || selectionDisabled}
-        onClick={() => setSelected(selected.size ? new Set() : new Set(eligibleIds))}>
-        {uiText(selected.size ? "Clear selection" : "Select loaded chats (up to 200)")}
+      <Button size="sm" variant="outline" disabled={busy || !ready || chats.isPending || chats.isError || !rows.length}
+        onClick={() => { if (allSelected) { setSelected(new Set()); setAllSelected(false); } else selectAll.mutate(); }}>
+        {selectAll.isPending && <Loader2 className="size-4 animate-spin" />}
+        {uiText(selectAll.isPending ? "Selecting all chats..." : allSelected ? "Deselect all chats" : "Select all chats")}
       </Button>
+      {!!selected.size && !allSelected && <Button size="sm" variant="ghost" disabled={busy} onClick={() => setSelected(new Set())}>{uiText("Clear selection")}</Button>}
       <span className="text-sm text-muted-foreground">{uiText("Selected {{value0}}", { value0: selected.size })}</span>
-      <Button size="sm" variant="secondary" disabled={!selected.size || selectionDisabled}
+      <Button size="sm" variant="secondary" disabled={!selected.size || busy}
         onClick={() => previewAction.mutate({ issueIds: [...selected] })}><Trash2 className="size-4" />{uiText("Delete selected chats...")}</Button>
-      {eligibility.data && <span className="text-xs text-muted-foreground">{uiText("Excluded {{value0}}", { value0: eligibility.data.items.length - eligibleIds.length })}</span>}
+      {excludedCount > 0 && <span className="text-xs text-muted-foreground">{uiText("Excluded {{value0}}", { value0: excludedCount })}</span>}
       <label className="ml-auto flex items-center gap-2 whitespace-nowrap text-sm"><Checkbox checked={skipRelated} disabled={busy}
         onCheckedChange={(checked) => setSkipRelated(checked === true)} />{uiText("Automatically exclude linked tasks")}</label>
     </div>
+    <p className="text-xs text-muted-foreground">{uiText("Select all chats matching the current search and project filters. Deletion eligibility is checked in the preview; active work must be stopped first.")}</p>
     {eligibility.isError && <p role="alert" className="text-sm text-destructive">{uiText("Unable to check cleanup eligibility. Selection is disabled; retry the check.")} <Button variant="ghost" size="sm" onClick={() => void eligibility.refetch()}>{uiText("Retry")}</Button></p>}
     {pendingFiles.isError && <p role="alert" className="text-sm text-destructive">{uiText("Unable to load pending file cleanup.")}</p>}
     {!!pendingFiles.data?.length && <section className="flex flex-col gap-3 rounded-lg border bg-card p-4">
@@ -220,9 +282,10 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
         <div className="divide-y rounded-lg border bg-card">
           {tasks.map((task) => <div key={task.id} className="flex flex-wrap items-center gap-3 p-4">
             <Checkbox checked={selected.has(task.id)} aria-label={uiText("Select chat: {{value0}}", { value0: task.title })}
-              disabled={selectionDisabled || eligibleItems.get(task.id)?.protection !== "candidate" || (!selected.has(task.id) && selected.size >= 200)} onCheckedChange={(checked) => setSelected((current) => {
-                const next = new Set(current); if (checked === true) next.add(task.id); else next.delete(task.id); return next;
-              })} />
+              disabled={selectionDisabled || (skipRelated && !!eligibleItems.get(task.id)?.linked)} onCheckedChange={(checked) => {
+                setAllSelected(false);
+                setSelected(current => { const next = new Set(current); if (checked === true) next.add(task.id); else next.delete(task.id); return next; });
+              }} />
             <div className="min-w-0 flex-1">
               <Link to={`/issues/${task.identifier ?? task.id}`} className="block truncate text-sm font-medium hover:underline">{task.title}</Link>
               <p className="font-mono text-xs text-muted-foreground">{task.identifier} · {formatDateTime(task.archivedAt ?? task.updatedAt)}</p>
@@ -237,13 +300,18 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
         </div>
       </section>)}
     {chats.hasNextPage && <Button variant="outline" disabled={chats.isFetchingNextPage} onClick={() => void chats.fetchNextPage()}>{uiText("Load more")}</Button>}
-    <AlertDialog open={!!preview && !feedback} onOpenChange={(open) => { if (!open && !batchDelete.isPending) { setPreview(null); } }}>
+    <AlertDialog open={!!preview && !feedback} onOpenChange={(open) => { if (!open && !busy) { setPreview(null); } }}>
       <AlertDialogContent className="flex max-h-(--sz-85vh) flex-col overflow-hidden sm:max-w-3xl">
         <div className="shrink-0 space-y-3">
           <AlertDialogHeader><AlertDialogTitle>{uiText("Batch cleanup preview")}</AlertDialogTitle>
             <AlertDialogDescription>{uiText("Delete the selected tasks and their verified exclusive files. Retained files are listed separately. This cannot be undone.")}</AlertDialogDescription></AlertDialogHeader>
+          {!preview?.skipRelated && <Button size="sm" variant="outline" disabled={busy} onClick={() => includeSubtasks.mutate()}>
+            {includeSubtasks.isPending && <Loader2 className="size-4 animate-spin" />}{uiText("Include archived subtasks and update preview")}
+          </Button>}
+          <p className="text-xs text-muted-foreground">{uiText("Unarchived or inaccessible subtasks are never added automatically. Cancel active work from its task page before retrying deletion.")}</p>
           <div className="flex flex-wrap gap-4 text-sm"><span>{uiText("Cleanup candidates: {{value0}}", { value0: candidates.length })}</span>
             <span>{uiText("Excluded {{value0}}", { value0: excluded.length })}</span></div>
+          <p className="text-xs text-muted-foreground">{uiText("Only the listed tasks are included. Selected subtasks are deleted before their parents. Unselected subtasks and active execution keep a task protected.")}</p>
           <p className="text-sm font-medium">{uiText("Estimated local files reclaimable: {{value0}}", { value0: formatBytes(candidates.reduce((sum, item) => sum + item.filePlan.localBytes, 0)) })}</p>
           <p className="text-xs text-muted-foreground">{uiText("Task and comment database records: approximately {{value0}} (reusable inside the database; not immediate disk recovery).", { value0: formatBytes(candidates.reduce((sum, item) => sum + item.databaseRecordBytes, 0)) })}</p>
         </div>
@@ -259,13 +327,14 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
             </details>}
           </div>)}
           {!!excluded.length && <details className="text-xs text-muted-foreground"><summary>{uiText("Excluded records ({{value0}})", { value0: excluded.length })}</summary>
-            {excluded.map((item) => <p key={item.id} className="py-2">{item.title ?? uiText("Unavailable record")} · {uiText(item.reason)}</p>)}
+            {excluded.map((item) => <p key={item.id} className="py-2">
+              {item.title ? <Link className="hover:underline" to={`/issues/${item.identifier ?? item.id}`}>{item.title}</Link> : uiText("Unavailable record")} · {uiText(item.reason)}</p>)}
           </details>}
           {actionError && <p role="alert" className="text-sm text-destructive">{actionError}</p>}
           <p className="text-xs text-muted-foreground">{uiText("Only registered exclusive attachments, terminal run logs and verified disposable worktrees are removed. Shared project source, deliverables, backups and unregistered files are retained. Failed file cleanup remains available for retry.")}</p>
         </div>
-        <AlertDialogFooter className="shrink-0 sm:justify-between"><AlertDialogCancel disabled={batchDelete.isPending}>{uiText("Close preview")}</AlertDialogCancel>
-          <Button variant="destructive" disabled={!candidates.length || candidates.length > 200 || batchDelete.isPending}
+        <AlertDialogFooter className="shrink-0 sm:justify-between"><AlertDialogCancel disabled={busy}>{uiText("Close preview")}</AlertDialogCancel>
+          <Button variant="destructive" disabled={!candidates.length || busy}
             onClick={() => batchDelete.mutate()}>{batchDelete.isPending && <Loader2 className="size-4 animate-spin" />}{uiText("Permanently delete {{value0}} chats", { value0: candidates.length })}</Button>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -303,7 +372,7 @@ function ArchivedChatsContent({ companyId, userId, ready }: { companyId: string;
           </details>}
           <p className="text-xs text-muted-foreground">{uiText("Only registered exclusive attachments, terminal run logs and verified disposable worktrees are removed. Shared project source, deliverables, backups and unregistered files are retained. Failed file cleanup remains available for retry.")}</p>
         </div>}
-        <p className="text-sm text-muted-foreground">{uiText("Tasks with subtasks, unfinished work, or active or paused execution cannot be deleted here.")}</p>
+        <p className="text-sm text-muted-foreground">{uiText("Unselected subtasks, unfinished work, or active or paused execution prevent deletion. Finish or cancel the affected tasks first.")}</p>
         {actionError && <p role="alert" className="text-sm text-destructive">{actionError}</p>}
         <AlertDialogFooter className="sm:justify-between">
           <AlertDialogCancel disabled={busy}>{uiText("Cancel")}</AlertDialogCancel>

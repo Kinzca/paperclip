@@ -1,3 +1,4 @@
+import { resolveArchivedChatCleanupSelection } from "@paperclipai/shared";
 import { buildArchiveCleanupPlan } from "./archive-cleanup-files.js";
 import { archiveCleanupJobs } from "@paperclipai/db";
 import { notifyChatPublicationWork } from "./chat-work-notifications.js";
@@ -11826,14 +11827,14 @@ export function issueService(db: Db) {
     ) => {
       if (!ids.length) return [];
       const rows = await db.select({
-        id: issues.id, title: issues.title, identifier: issues.identifier, status: issues.status,
+        id: issues.id, title: issues.title, identifier: issues.identifier, status: issues.status, parentId: issues.parentId,
         hasRelated: sql<boolean>`(${archivedChatRelatedCondition(sql`${issues.id}`)})`,
         localAttachmentBytes: sql<number>`COALESCE((SELECT sum(asset.byte_size) FROM issue_attachments attachment
           JOIN assets asset ON asset.id = attachment.asset_id
           WHERE attachment.issue_id = ${issues.id} AND asset.provider = 'local_disk'), 0)`.mapWith(Number),
         databaseRecordBytes: sql<number>`pg_column_size(${issues}) + COALESCE((SELECT sum(pg_column_size(comment))
           FROM issue_comments comment WHERE comment.issue_id = ${issues.id}), 0)`.mapWith(Number),
-        hasChildren: sql<boolean>`EXISTS (SELECT 1 FROM issues child WHERE child.parent_id = ${issues.id})`,
+        childCount: sql<number>`(SELECT count(*) FROM issues child WHERE child.parent_id = ${issues.id})`.mapWith(Number),
         hasExecution: sql<boolean>`EXISTS (SELECT 1 FROM heartbeat_runs run WHERE run.company_id = ${companyId}
           AND run.issue_id = ${issues.id} AND run.status IN ('queued', 'running'))`,
         hasWorkflow: sql<boolean>`EXISTS (SELECT 1 FROM workflow_runs flow WHERE flow.company_id = ${companyId}
@@ -11843,20 +11844,18 @@ export function issueService(db: Db) {
           eq(issueInboxArchives.userId, userId), inArray(issues.id, ids), visibleIssueCondition(), readCondition,
           sql`NOT (${inboxVisibleForUserCondition(companyId, userId)})`));
       const byId = new Map(rows.map((row) => [row.id, row]));
-      return ids.map((id) => {
+      return resolveArchivedChatCleanupSelection(ids.map((id) => {
         const row = byId.get(id);
-        const reason = !row ? "This chat is unavailable or is no longer archived by you."
-          : row.hasChildren ? "This task has subtasks."
-          : skipRelated && row.hasRelated ? "This task has a parent, dependency or task reference."
+        const ownProtectionReason = !row ? "This chat is unavailable or is no longer archived by you."
           : row.hasExecution || row.hasWorkflow ? "This task has active or paused execution."
           : !["backlog", "done", "cancelled"].includes(row.status) ? "This task is unfinished."
-          : "Candidate only. Deletion must recheck current state and other references.";
+          : null;
         return { id, title: row?.title ?? null, identifier: row?.identifier ?? null,
+          parentId: row?.parentId ?? null, childCount: row?.childCount ?? 0,
+          linked: !!row && (row.hasRelated || row.childCount > 0), ownProtectionReason,
           localAttachmentBytes: row?.localAttachmentBytes ?? 0, databaseRecordBytes: row?.databaseRecordBytes ?? 0,
-          protection: row && !row.hasChildren && !(skipRelated && row.hasRelated) && !row.hasExecution && !row.hasWorkflow
-            && ["backlog", "done", "cancelled"].includes(row.status) ? "candidate" as const : "protected" as const,
-          reason };
-      });
+          protection: "protected" as "candidate" | "protected", reason: ownProtectionReason ?? "" };
+      }), skipRelated);
     },
 
     remove: (id: string, archivedBy?: { companyId: string; userId: string; skipRelated?: boolean; readCondition?: SQL; audit?: Parameters<typeof logActivity>[1]; cleanupJobId?: string }) =>

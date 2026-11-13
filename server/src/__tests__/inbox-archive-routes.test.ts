@@ -314,6 +314,33 @@ describeEmbeddedPostgres("inbox archive routes", () => {
     expect(retry.body.items[0].status).toBe("skipped");
   });
 
+  it("deletes only the selected archived subtree, child before parent, and protects unfinished or missing children", async () => {
+    const seeded = await seed();
+    const svc = issueService(db);
+    const parentId = randomUUID();
+    const childId = randomUUID();
+    await db.insert(issues).values([
+      { id: parentId, companyId: seeded.companyId, title: "Selected parent", status: "done" },
+      { id: childId, companyId: seeded.companyId, parentId, title: "Selected child", status: "in_progress" },
+    ]);
+    for (const id of [parentId, childId]) await svc.archiveInbox(seeded.companyId, id, seeded.responsibleUserId);
+    const actor: Express.Request["actor"] = { type: "board", source: "session", userId: seeded.responsibleUserId,
+      companyIds: [seeded.companyId], memberships: [{ companyId: seeded.companyId, membershipRole: "operator", status: "active" }], isInstanceAdmin: false };
+    const app = appFor(actor);
+    const endpoint = `/api/companies/${seeded.companyId}/archived-chats`;
+    let preview = await request(app).post(`${endpoint}/cleanup-preview`).send({ issueIds: [parentId, childId], skipRelated: false, includeFiles: false }).expect(200);
+    expect(preview.body.items.every((item: { protection: string }) => item.protection === "protected")).toBe(true);
+    await db.update(issues).set({ status: "cancelled" }).where(eq(issues.id, childId));
+    preview = await request(app).post(`${endpoint}/cleanup-preview`).send({ issueIds: [parentId], skipRelated: false, includeFiles: false }).expect(200);
+    expect(preview.body.items[0].protection).toBe("protected");
+    await expect(svc.remove(parentId, { companyId: seeded.companyId, userId: seeded.responsibleUserId, skipRelated: false })).rejects.toThrow("subtasks");
+    const excluded = await request(app).post(`${endpoint}/cleanup-preview`).send({ issueIds: [parentId, childId], skipRelated: true, includeFiles: false }).expect(200);
+    expect(excluded.body.items.every((item: { protection: string }) => item.protection === "protected")).toBe(true);
+    const result = await request(app).post(`${endpoint}/cleanup`).send({ issueIds: [parentId, childId], skipRelated: false, confirm: true }).expect(200);
+    expect(result.body.items.map((item: { id: string; status: string }) => [item.id, item.status])).toEqual([[childId, "deleted"], [parentId, "deleted"]]);
+    expect(await svc.getById(seeded.issueId)).not.toBeNull();
+  });
+
   it("excludes both ends of dependencies and task mentions unless explicitly unchecked", async () => {
     const seeded = await seed();
     const ids = [seeded.issueId, randomUUID(), randomUUID()];

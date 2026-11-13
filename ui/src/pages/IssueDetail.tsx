@@ -6312,7 +6312,7 @@ export function TaskDetailSurface({ conversation, tasksTab }: { tasksTab?: TaskS
   const showInboxToolbar = isMobile && isFromInbox;
   const archivePending = archiveFromInbox.isPending;
   const issueHidden = !!issue?.hiddenAt;
-  const canArchiveFromInbox = isFromInbox && !!issue?.id && !issueHidden;
+  const canArchiveFromInbox = !!issue?.id && !issueHidden;
 
   useEffect(() => {
     if (!showInboxToolbar) {

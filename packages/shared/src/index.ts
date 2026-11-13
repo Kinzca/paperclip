@@ -2879,3 +2879,5 @@ export * from "./workflows.js";
 export type { StorageUsage, StorageCleanupKind, StorageCleanupItem, StorageCleanupInventory, StorageCleanupPreview, StorageCleanupResult } from "./types/storage-usage.js";
 export type { InboxArchiveResult, InboxArchiveUndo } from "./types/inbox-archive.js";
 export type { ArchivedChatCleanupFile, ArchivedChatCleanupPlan, ArchivedChatCleanupJob, ArchivedChatCleanupResult, ArchivedChatCleanupPreview, CleanupProtection, ProjectSpaceUsage } from "./types/cleanup-preview.js";
+
+export { resolveArchivedChatCleanupSelection } from "./archived-chat-cleanup.js";
