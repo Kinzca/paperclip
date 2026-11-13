@@ -14,6 +14,8 @@ import {
 } from "@/lib/recent-tasks";
 import { queryKeys } from "@/lib/queryKeys";
 
+const mockTaskArchive = vi.hoisted(() => ({ prepareTaskArchive: vi.fn(), stopTaskForArchive: vi.fn() }));
+vi.mock("@/lib/task-archive", () => mockTaskArchive);
 const mockAuthApi = vi.hoisted(() => ({ getSession: vi.fn() }));
 const mockAgentsApi = vi.hoisted(() => ({ wakeup: vi.fn() }));
 const mockIssuesApi = vi.hoisted(() => ({
@@ -275,7 +277,7 @@ describe("SidebarRecentTasks", () => {
     expect(container.textContent).toContain("Idle");
   });
 
-  it("archives a task from the inbox without hiding or removing the recent task", async () => {
+  it("requires confirmation before archiving a recent task without removing its history", async () => {
     const issue = {
       id: "issue-1",
       companyId: "company-1",
@@ -292,15 +294,19 @@ describe("SidebarRecentTasks", () => {
       archivedAt: new Date(2),
     });
 
+    mockTaskArchive.prepareTaskArchive.mockResolvedValue({ tree: { issues: [{ id: issue.id }] } });
+    mockTaskArchive.stopTaskForArchive.mockResolvedValue(undefined);
     await render();
     await openActions("Archive me");
     await act(async () => {
-      menuItem("Archive")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      document.querySelector<HTMLButtonElement>('button[data-task-archive-id="issue-1"]')!.click();
       await Promise.resolve();
       await new Promise((resolve) => window.setTimeout(resolve, 0));
     });
 
-    expect(mockIssuesApi.archiveFromInbox).toHaveBeenCalledWith("issue-1");
+    expect(mockIssuesApi.archiveFromInbox).not.toHaveBeenCalled();
+    await act(async () => { document.querySelector<HTMLButtonElement>('button[data-task-archive-id="issue-1"]')!.click(); });
+    expect(mockIssuesApi.archiveFromInbox).toHaveBeenCalledWith("issue-1", true);
     expect(mockIssuesApi.update).not.toHaveBeenCalled();
     expect(container.textContent).toContain("Recent Tasks");
     expect(container.querySelector('a[href="/issues/issue-1"]')?.textContent).toContain(
