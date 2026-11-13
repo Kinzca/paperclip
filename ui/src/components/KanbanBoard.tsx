@@ -158,7 +158,7 @@ interface KanbanBoardProps {
   initialVisibleCount?: number;
   revealIncrement?: number;
   onUpdateIssue: (id: string, data: Record<string, unknown>) => void;
-  onArchive?: (issue: Issue) => void;
+  onArchive?: (issue: Issue) => unknown;
   archiveDisabled?: boolean;
 }
 
@@ -188,7 +188,7 @@ function KanbanColumn({
   visibleCount: number;
   revealIncrement: number;
   onShowMore: () => void;
-  onArchive?: (issue: Issue) => void;
+  onArchive?: (issue: Issue) => unknown;
   archiveDisabled?: boolean;
 }) {
   useUiLocale();
@@ -295,7 +295,7 @@ function KanbanCard({
   isOverlay?: boolean;
   compact?: boolean;
   className?: string;
-  onArchive?: (issue: Issue) => void;
+  onArchive?: (issue: Issue) => unknown;
   archiveDisabled?: boolean;
 }) {
   useUiLocale();
@@ -321,6 +321,7 @@ function KanbanCard({
   return (
     <Card
       ref={setNodeRef}
+      data-archive-scope
       style={style}
       {...attributes}
       {...listeners}
@@ -389,7 +390,7 @@ function KanbanCard({
       </Link>
       {onArchive && !isOverlay ? <div className="mt-2 flex justify-end"
         onPointerDown={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>
-        <InboxArchiveButton onArchive={() => onArchive(issue)} disabled={archiveDisabled} compact />
+        <InboxArchiveButton issueId={issue.id} onArchive={() => onArchive(issue)} disabled={archiveDisabled} compact />
       </div> : null}
     </Card>
   );

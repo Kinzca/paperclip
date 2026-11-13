@@ -8972,5 +8972,15 @@
   "Deselect all chats": "Deselect all chats",
   "Archived from your inbox. The task remains in the task list and execution is unchanged.": "Archived from your inbox. The task remains in the task list and execution is unchanged.",
   "View archived chats": "View archived chats",
-  "Archived. Hidden from task lists and boards; execution is unchanged.": "Archived. Hidden from task lists and boards; execution is unchanged."
+  "Archived. Hidden from task lists and boards; execution is unchanged.": "Archived. Hidden from task lists and boards; execution is unchanged.",
+  "Confirm archive": "Confirm archive",
+  "Stop work and archive · {{count}} tasks": "Stop work and archive · {{count}} tasks",
+  "Stopping...": "Stopping...",
+  "This task belongs to a workflow outside this scope. Stop that workflow from its parent task first.": "This task belongs to a workflow outside this scope. Stop that workflow from its parent task first.",
+  "The task scope changed. Review and confirm the archive again.": "The task scope changed. Review and confirm the archive again.",
+  "The workflow changed. Review and confirm the archive again.": "The workflow changed. Review and confirm the archive again.",
+  "Stopping is not yet confirmed. The task has not been archived. Review its execution before retrying.": "Stopping is not yet confirmed. The task has not been archived. Review its execution before retrying.",
+  "Archive result not confirmed. Refresh before retrying. {{reason}}": "Archive result not confirmed. Refresh before retrying. {{reason}}",
+  "Archive was not submitted. Some stop operations may have completed. {{reason}}": "Archive was not submitted. Some stop operations may have completed. {{reason}}",
+  "Stopped and archived. Hidden from task lists and boards.": "Stopped and archived. Hidden from task lists and boards."
 }

@@ -1,3 +1,4 @@
+import { requestTaskArchive } from "@/lib/task-archive";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -1891,7 +1892,7 @@ function StreamlinedInbox({
   };
 
   const archiveIssueMutation = useMutation({
-    mutationFn: (id: string) => issuesApi.archiveFromInbox(id, nestingEnabled),
+    mutationFn: (id: string) => issuesApi.archiveFromInbox(id, true),
     onMutate: async (id) => {
       // Keep the sort pinned: archiving is engagement, so defer any idle re-sort.
       noteInboxSortInteraction();
@@ -2158,7 +2159,7 @@ function StreamlinedInbox({
   };
 
   const kbActionsRef = useRef({
-    archiveIssue: (id: string) => archiveIssueMutation.mutate(id),
+    archiveIssue: (id: string) => requestTaskArchive(id),
     undoArchiveIssue: (id: string) => unarchiveIssueMutation.mutate({ id, undo: archiveBatches.current.get(id) }),
     archiveNonIssue: handleArchiveNonIssue,
     markRead: (id: string) => markReadMutation.mutate(id),
@@ -2170,7 +2171,7 @@ function StreamlinedInbox({
     navigate,
   });
   kbActionsRef.current = {
-    archiveIssue: (id: string) => archiveIssueMutation.mutate(id),
+    archiveIssue: (id: string) => requestTaskArchive(id),
     undoArchiveIssue: (id: string) => unarchiveIssueMutation.mutate({ id, undo: archiveBatches.current.get(id) }),
     archiveNonIssue: handleArchiveNonIssue,
     markRead: (id: string) => markReadMutation.mutate(id),
@@ -2935,7 +2936,7 @@ function StreamlinedInbox({
                       ) : undefined}
                       unreadState={isUnread ? "visible" : isFading ? "fading" : "hidden"}
                       onMarkRead={() => markReadMutation.mutate(issue.id)}
-                      onArchive={allowArchive ? () => archiveIssueMutation.mutate(issue.id) : undefined}
+                      onArchive={allowArchive ? () => archiveIssueMutation.mutateAsync(issue.id) : undefined}
                       archiveDisabled={isArchiving}
                       desktopTrailing={
                         (streamlinedUiEnabled ? visibleTaskDataColumns : visibleTrailingIssueColumns).length > 0 ? (
@@ -3259,7 +3260,7 @@ function StreamlinedInbox({
                                 key={`issue:${child.id}`}
                                 selected={isChildSelected}
                                 disabled={isChildArchiving}
-                                onArchive={() => archiveIssueMutation.mutate(child.id)}
+                                onArchive={() => archiveIssueMutation.mutateAsync(child.id)}
                               >
                                 {childRow}
                               </SwipeToArchive>
@@ -3287,7 +3288,7 @@ function StreamlinedInbox({
                         key={`issue:${issue.id}`}
                         selected={isSelected}
                         disabled={archivingIssueIds.has(issue.id)}
-                        onArchive={() => archiveIssueMutation.mutate(issue.id)}
+                        onArchive={() => archiveIssueMutation.mutateAsync(issue.id)}
                       >
                         {parentRow}
                       </SwipeToArchive>

@@ -24,6 +24,7 @@ export type PreviewIssueTreeControl = z.infer<typeof previewIssueTreeControlSche
 
 export const createIssueTreeHoldSchema = z
   .object({
+    expectedIssueIds: z.array(z.string().uuid()).min(1).max(10000).optional(),
     mode: issueTreeControlModeSchema,
     reason: z.string().trim().min(1).max(1000).optional().nullable(),
     releasePolicy: issueTreeHoldReleasePolicySchema.optional().nullable(),

@@ -1,3 +1,5 @@
+import { InboxArchiveButton } from "@/components/IssueRow";
+import { requestTaskArchive } from "@/lib/task-archive";
 import { IssueWorkflowPanel } from "../components/IssueWorkflowPanel";
 import { uiText, useUiLocale, getUiLocale } from "@/i18n/ui";
 import { WorkspaceBaseRefRecoveryProvider } from "../components/WorkspaceBaseRefRecovery";
@@ -5487,7 +5489,7 @@ export function TaskDetailSurface({ conversation, tasksTab }: { tasksTab?: TaskS
   });
 
   const archiveFromInbox = useMutation({
-    mutationFn: (id: string) => issuesApi.archiveFromInbox(id),
+    mutationFn: (id: string) => issuesApi.archiveFromInbox(id, !issue?.conversationAgentId),
     onMutate: async (id) => {
       if (!selectedCompanyId)
         return { previousData: [] as InboxIssueCacheSnapshot };
@@ -5927,7 +5929,7 @@ export function TaskDetailSurface({ conversation, tasksTab }: { tasksTab?: TaskS
 
       event.preventDefault();
       if (!archiveFromInbox.isPending) {
-        archiveFromInbox.mutate(issue.id);
+        requestTaskArchive(issue.id);
       }
     };
 
@@ -6282,7 +6284,7 @@ export function TaskDetailSurface({ conversation, tasksTab }: { tasksTab?: TaskS
   const inboxToolbarCallbacksRef = useRef({
     onArchive: () => {
       if (!archiveFromInbox.isPending && issue?.id)
-        archiveFromInbox.mutate(issue.id);
+        requestTaskArchive(issue.id);
     },
     onCopy: () => copyIssueToClipboard(),
     onProperties: () => setMobilePropsOpen(true),
@@ -6296,7 +6298,7 @@ export function TaskDetailSurface({ conversation, tasksTab }: { tasksTab?: TaskS
   inboxToolbarCallbacksRef.current = {
     onArchive: () => {
       if (!archiveFromInbox.isPending && issue?.id)
-        archiveFromInbox.mutate(issue.id);
+        requestTaskArchive(issue.id);
     },
     onCopy: () => copyIssueToClipboard(),
     onProperties: () => setMobilePropsOpen(true),
@@ -7299,21 +7301,10 @@ export function TaskDetailSurface({ conversation, tasksTab }: { tasksTab?: TaskS
         )}
 
         <div className="hidden md:flex items-center md:ml-auto shrink-0">
-          {!streamlinedTaskDetailEnabled && canArchiveFromInbox && (
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => {
-                if (!archivePending && issue?.id)
-                  archiveFromInbox.mutate(issue.id);
-              }}
-              disabled={archivePending}
-              title={uiText("Archive from inbox")}
-              aria-label={uiText("Archive from inbox")}
-            >
-              <Archive className="h-4 w-4" />
-            </Button>
-          )}
+          {canArchiveFromInbox && issue && <span data-archive-scope className="group">
+            <InboxArchiveButton issueId={issue.id} compact disabled={archivePending}
+              onArchive={() => archiveFromInbox.mutateAsync(issue.id)} />
+          </span>}
           {fileViewerEnabled ? (
             <Button
               variant="ghost"
@@ -7407,18 +7398,10 @@ export function TaskDetailSurface({ conversation, tasksTab }: { tasksTab?: TaskS
                       ) : (
                         <Copy className="h-3 w-3" />
                       )}{uiText("Copy as markdown")}</button>
-                    {canArchiveFromInbox ? (
-                      <button
-                        className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-accent/50 disabled:opacity-50"
-                        disabled={archivePending}
-                        onClick={() => {
-                          if (!archivePending && issue?.id)
-                            archiveFromInbox.mutate(issue.id);
-                          setMoreOpen(false);
-                        }}
-                      >
-                        <Archive className="h-3 w-3" />{uiText("Archive from inbox")}</button>
-                    ) : null}
+                    {canArchiveFromInbox && issue ? <div data-archive-scope className="group px-2 py-1.5">
+                      <InboxArchiveButton issueId={issue.id} disabled={archivePending}
+                        onArchive={async () => { await archiveFromInbox.mutateAsync(issue.id); setMoreOpen(false); }} />
+                    </div> : null}
                   </>
                 ) : null}
                 {privacyMenuItems}

@@ -705,6 +705,7 @@ export function issueTreeControlService(db: Db) {
     rootIssueId: string,
     input: {
       mode: IssueTreeControlMode;
+      expectedIssueIds?: string[];
       reason?: string | null;
       releasePolicy?: IssueTreeHoldReleasePolicy | null;
       actor: ActorInput;
@@ -725,6 +726,13 @@ export function issueTreeControlService(db: Db) {
       mode: input.mode,
       releasePolicy: holdReleasePolicy,
     });
+
+    if (input.expectedIssueIds) {
+      const expected = new Set(input.expectedIssueIds);
+      if (expected.size !== holdPreview.issues.length || holdPreview.issues.some(issue => !expected.has(issue.id))) {
+        throw conflict("The task scope changed. Review and confirm the archive again.");
+      }
+    }
 
     if (input.mode === "resume") {
       const issueIds = [...new Set(holdPreview.issues.map((issue) => issue.id))];

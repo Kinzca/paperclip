@@ -6,7 +6,7 @@ import { queryKeys } from "@/lib/queryKeys";
 export function useTaskArchive() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ id }: { id: string; companyId: string }) => issuesApi.archiveFromInbox(id),
+    mutationFn: ({ id }: { id: string; companyId: string }) => issuesApi.archiveFromInbox(id, true),
     onSuccess: async (_result, { id, companyId }) => {
       await Promise.all([
         invalidateInboxIssueQueries(client, companyId),

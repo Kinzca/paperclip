@@ -1742,7 +1742,7 @@ function StreamlinedIssuesList({
     <div ref={rootRef} className="space-y-4">
       {archiveTask.isError && <p role="alert" className="text-sm text-destructive">{uiText(archiveTask.error.message)}</p>}
       {archiveTask.isSuccess && <p role="status" className="text-sm text-muted-foreground">
-        {uiText("Archived. Hidden from task lists and boards; execution is unchanged.")}{" "}
+        {uiText("Stopped and archived. Hidden from task lists and boards.")}{" "}
         <Link className="text-foreground underline" to="/company/settings/instance/storage/archived-chats">{uiText("View archived chats")}</Link>
       </p>}
       {progressSummary ? (
@@ -2037,7 +2037,7 @@ function StreamlinedIssuesList({
           initialVisibleCount={viewState.boardColumnPageSize}
           revealIncrement={viewState.boardColumnPageSize}
           onUpdateIssue={onUpdateIssue}
-          onArchive={issue => archiveTask.mutate({ id: issue.id, companyId: issue.companyId })}
+          onArchive={issue => archiveTask.mutateAsync({ id: issue.id, companyId: issue.companyId })}
           archiveDisabled={archiveTask.isPending}
         />
       ) : (
@@ -2199,7 +2199,7 @@ function StreamlinedIssuesList({
                         : undefined}
                     >
                       <IssueRow
-                        onArchive={() => archiveTask.mutate({ id: issue.id, companyId: issue.companyId })}
+                        onArchive={() => archiveTask.mutateAsync({ id: issue.id, companyId: issue.companyId })}
                         archiveDisabled={archiveTask.isPending}
                         issue={issue}
                         presentation={rowPresentation}

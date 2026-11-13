@@ -1,9 +1,11 @@
+import { useEffect, useRef, useState } from "react";
+import { prepareTaskArchive, stopTaskForArchive, type TaskArchivePreparation } from "@/lib/task-archive";
 import { uiText, useUiLocale } from "@/i18n/ui";
 import { requiresExecutionReconciliation } from "@paperclipai/shared";
 import type { ReactNode } from "react";
 import type { ExternalObjectSummary, Issue, IssueRecoveryAction } from "@paperclipai/shared";
 import { Link } from "@/lib/router";
-import { Archive, Flag } from "lucide-react";
+import { Archive, Flag, Check, Loader2 } from "lucide-react";
 import {
   createIssueDetailPath,
   rememberIssueDetailLocationState,
@@ -65,7 +67,7 @@ export interface IssueRowProps {
   checklistRowId?: string;
   unreadState?: IssueRowUnreadState | null;
   onMarkRead?: () => void;
-  onArchive?: () => void;
+  onArchive?: () => unknown;
   archiveDisabled?: boolean;
   className?: string;
   /** Pointer entered the row (used by list keyboard nav to track hover). */
@@ -82,39 +84,82 @@ export interface IssueRowProps {
 }
 
 export function InboxArchiveButton({
-  onArchive,
-  disabled,
-  compact = false,
+  onArchive, disabled, compact = false, issueId,
 }: {
-  onArchive: () => void;
+  onArchive: () => unknown;
   disabled?: boolean;
   compact?: boolean;
+  issueId?: string;
 }) {
   useUiLocale();
-  return (
-    <button
-      type="button"
-      data-slot="icon-button"
-      onClick={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        onArchive();
-      }}
-      onKeyDown={(event) => {
-        if (event.key !== "Enter" && event.key !== " ") return;
-        event.preventDefault();
-        event.stopPropagation();
-        onArchive();
-      }}
-      disabled={disabled}
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 disabled:pointer-events-none disabled:opacity-30",
-        compact ? "h-5 py-0" : "py-1",
-      )}
-      aria-label={uiText("Archive")}
-    >
-      <Archive className="h-3.5 w-3.5" />{uiText("Archive")}</button>
-  );
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const generation = useRef(0);
+  const submitting = useRef(false);
+  const [preparation, setPreparation] = useState<TaskArchivePreparation | null>(null);
+  const [phase, setPhase] = useState<"idle" | "checking" | "confirm" | "stopping" | "archiving">("idle");
+  const [error, setError] = useState<string | null>(null);
+  const reset = () => {
+    if (submitting.current) return;
+    generation.current++;
+    setPreparation(null); setPhase("idle"); setError(null);
+  };
+  useEffect(() => {
+    const scope = buttonRef.current?.closest("[data-archive-scope]") ?? buttonRef.current?.parentElement;
+    if (!scope) return;
+    const leave = (event: Event) => { if ((event as PointerEvent).pointerType !== "touch") reset(); };
+    const blur = (event: Event) => { if (!scope.contains((event as FocusEvent).relatedTarget as Node | null)) reset(); };
+    scope.addEventListener("pointerleave", leave);
+    scope.addEventListener("focusout", blur);
+    return () => { scope.removeEventListener("pointerleave", leave); scope.removeEventListener("focusout", blur); generation.current++; };
+  }, [issueId]);
+  const activate = async () => {
+    if (disabled || submitting.current || phase === "checking") return;
+    if (!issueId) { onArchive(); return; }
+    setError(null);
+    if (!preparation) {
+      const request = ++generation.current;
+      setPhase("checking");
+      try {
+        const result = await prepareTaskArchive(issueId);
+        if (request !== generation.current) return;
+        setPreparation(result); setPhase("confirm");
+      } catch (error) {
+        if (request === generation.current) { setError(uiText((error as Error).message)); setPhase("idle"); }
+      }
+      return;
+    }
+    submitting.current = true; setPhase("stopping");
+    let archiveStarted = false;
+    try {
+      await stopTaskForArchive(preparation);
+      setPhase("archiving"); archiveStarted = true;
+      await onArchive();
+      setPreparation(null); setPhase("idle");
+    } catch (error) {
+      setError(uiText(archiveStarted ? "Archive result not confirmed. Refresh before retrying. {{reason}}"
+        : "Archive was not submitted. Some stop operations may have completed. {{reason}}", { reason: uiText((error as Error).message) }));
+      setPreparation(null); setPhase("idle");
+    } finally { submitting.current = false; }
+  };
+  const busy = phase === "checking" || phase === "stopping" || phase === "archiving";
+  const Icon = busy ? Loader2 : preparation ? Check : Archive;
+  return <span className="inline-flex min-w-0 flex-col items-end gap-1">
+    <button ref={buttonRef} type="button" data-slot="icon-button" data-task-archive-id={issueId}
+      onClick={event => { event.preventDefault(); event.stopPropagation(); void activate(); }}
+      onKeyDown={event => { if (event.key === "Enter" || event.key === " ") event.stopPropagation(); }}
+      disabled={disabled || phase === "stopping" || phase === "archiving"} aria-busy={busy}
+      className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-opacity hover:bg-accent focus-visible:opacity-100 disabled:pointer-events-none",
+        phase !== "idle" || error ? "opacity-100 text-primary" : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground",
+        compact ? "h-5 py-0" : "py-1")}
+      aria-label={uiText(preparation ? "Confirm archive" : "Archive")}>
+      <Icon className={cn("h-3.5 w-3.5", busy && "animate-spin")} />
+      {uiText(phase === "checking" ? "Checking..." : phase === "stopping" ? "Stopping..." : phase === "archiving" ? "Archiving..." : preparation ? "Confirm archive" : "Archive")}
+    </button>
+    {preparation && !busy && <span className="text-xs text-muted-foreground" role="status">
+      {uiText("Stop work and archive · {{count}} tasks", { count: preparation.tree.issues.length })}
+    </span>}
+    {error && <span role="alert" className="max-w-xs text-xs text-destructive">{error}</span>}
+  </span>;
 }
 
 export function IssueRow({
@@ -218,7 +263,7 @@ export function IssueRow({
     return (
       <div
         onMouseEnter={onMouseEnter}
-        data-slot="task-row"
+        data-slot="task-row" data-archive-scope
         data-unread={isUnread ? "true" : undefined}
         className={cn(
           "group relative flex min-w-0 items-start gap-2 rounded-lg py-2.5 pr-2 text-sm no-underline text-inherit sm:items-center sm:py-2",
@@ -330,7 +375,7 @@ export function IssueRow({
           {metadata ? <span data-slot="task-row-metadata" className="min-w-0">{metadata}</span> : null}
           {desktopTrailing}
           {actions ? <span data-slot="task-row-actions" className="flex shrink-0 items-center gap-1">{actions}</span> : null}
-          {onArchive ? <InboxArchiveButton onArchive={onArchive} disabled={archiveDisabled} compact /> : null}
+          {onArchive ? <InboxArchiveButton issueId={issue.id} onArchive={onArchive} disabled={archiveDisabled} compact /> : null}
           {showIdentifier ? (
             <span data-slot="task-row-identifier" className="w-20 shrink-0 text-right font-mono text-xs text-muted-foreground">
               {identifier}
@@ -349,6 +394,7 @@ export function IssueRow({
   return (
     <div
       onMouseEnter={onMouseEnter}
+      data-archive-scope
       className={cn(
         // No color transition on the row band: hover/selection must snap
         // instantly. A fade (transition-colors) leaves a trail of fading bands
@@ -479,7 +525,7 @@ export function IssueRow({
       {(onArchive || desktopTrailing || trailingMeta || externalObjectSummary) ? (
         <span className="ml-auto hidden shrink-0 items-center gap-2 sm:order-3 sm:flex sm:gap-3">
           {onArchive ? (
-            <InboxArchiveButton onArchive={onArchive} disabled={archiveDisabled} />
+            <InboxArchiveButton issueId={issue.id} onArchive={onArchive} disabled={archiveDisabled} />
           ) : null}
           {externalObjectSummary ? (
             <ExternalObjectStatusSummary summary={externalObjectSummary} compact />

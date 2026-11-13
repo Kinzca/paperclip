@@ -1,7 +1,8 @@
+import { InboxArchiveButton } from "./IssueRow";
 import { uiText, useUiLocale } from "@/i18n/ui";
 import { useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, MoreHorizontal, Pencil, RefreshCw } from "lucide-react";
+import { MoreHorizontal, Pencil, RefreshCw } from "lucide-react";
 import { agentsApi } from "@/api/agents";
 import { authApi } from "@/api/auth";
 import { issuesApi } from "@/api/issues";
@@ -162,7 +163,7 @@ function RecentTasksList({
   const archiveTask = async (entry: RecentTaskEntry) => {
     setPendingAction("archive");
     try {
-      await issuesApi.archiveFromInbox(entry.id);
+      await issuesApi.archiveFromInbox(entry.id, true);
       await refreshIssueQueries(entry.id);
       await queryClient.invalidateQueries({
         queryKey: queryKeys.sidebarBadges(companyId),
@@ -174,6 +175,7 @@ function RecentTasksList({
         body: errorMessage(error, "Unable to archive this task from the inbox."),
         tone: "error",
       });
+      throw error;
     } finally {
       setPendingAction(null);
     }
@@ -286,12 +288,10 @@ function RecentTasksList({
                     onSelect={() => beginRename(entry)}
                   >
                     <Pencil aria-hidden="true" />{uiText("Rename")}</DropdownMenuItem>
-                  <DropdownMenuItem
-                    className={RECENT_TASK_MENU_ITEM_CLASS}
-                    disabled={pendingAction !== null}
-                    onSelect={() => void archiveTask(entry)}
-                  >
-                    <Archive aria-hidden="true" />{uiText("Archive")}</DropdownMenuItem>
+                  <div data-archive-scope className="group px-2 py-1.5">
+                    <InboxArchiveButton issueId={entry.id} disabled={pendingAction !== null}
+                      onArchive={() => archiveTask(entry)} />
+                  </div>
                   <DropdownMenuItem
                     className={RECENT_TASK_MENU_ITEM_CLASS}
                     disabled={pendingAction !== null}

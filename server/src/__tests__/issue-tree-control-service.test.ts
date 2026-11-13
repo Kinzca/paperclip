@@ -56,6 +56,22 @@ describeEmbeddedPostgres("issueTreeControlService", () => {
     await tempDb?.cleanup();
   });
 
+  it("rejects confirmed scope changes before creating a cancellation hold", async () => {
+    const companyId = randomUUID();
+    const rootId = randomUUID();
+    const childId = randomUUID();
+    await db.insert(companies).values({ id: companyId, name: "Archive scope", issuePrefix: `S${companyId.replaceAll("-", "").slice(0, 6).toUpperCase()}` });
+    await db.insert(issues).values([
+      { id: rootId, companyId, title: "Root", status: "in_progress" },
+      { id: childId, companyId, parentId: rootId, title: "New child", status: "todo" },
+    ]);
+    const svc = issueTreeControlService(db);
+    await expect(svc.createHold(companyId, rootId, { mode: "cancel", expectedIssueIds: [rootId],
+      actor: { actorType: "user", actorId: "board" } })).rejects.toThrow("scope changed");
+    expect(await db.select().from(issueTreeHolds).where(eq(issueTreeHolds.companyId, companyId))).toHaveLength(0);
+    expect((await db.select().from(issues).where(eq(issues.id, rootId)))[0].status).toBe("in_progress");
+  });
+
   it("previews a subtree without changing issue statuses", async () => {
     const companyId = randomUUID();
     const otherCompanyId = randomUUID();
