@@ -700,6 +700,13 @@ export function createPostgresRunDispatchAdapter(
         finishedAt: input.now,
         error: input.reason,
         errorCode: input.errorCode,
+        ...(input.errorCode === "issue_dependencies_blocked" ? {
+          resultJson: sql`coalesce(${heartbeatRuns.resultJson}, '{}'::jsonb) || ${JSON.stringify({
+            stopReason: input.errorCode,
+            timeoutSource: "scheduled_retry_gate",
+            providerWorkStarted: false,
+          })}::jsonb`,
+        } : {}),
         updatedAt: input.now,
       })
       .where(

@@ -26,6 +26,7 @@ import {
 import { createPostgresRunDispatchAdapter } from "./postgres.js";
 import { settleUnrecoverableExecutions } from "../../../services/execution-recovery-resolution.js";
 import { getExecutionBlocker } from "../../../services/execution-blocker.js";
+import { canRetryStoppedRun } from "../../../services/cancelled-native-startup.js";
 
 // Proves the DB-to-facts mapping this adapter owns for each state the two
 // run-dispatch gates decide on. `application/use-cases.test.ts` and
@@ -1092,6 +1093,47 @@ describeEmbeddedPostgres("run-dispatch postgres adapter", () => {
     expect(await getExecutionBlocker(db, companyId, issueId)).toMatchObject({ recoveryActionId: action!.id });
     const [retained] = await db.select().from(issueRecoveryActions).where(eq(issueRecoveryActions.id, action!.id));
     expect(retained.evidence.automaticRecovery).toMatchObject({ replay: "blocked", actionOutcome: "unknown" });
+  });
+
+  it.each(["receipt", "historical", "executed", "missing-event"])("reconciles only proven pre-dispatch dependency waits: %s", async mode => {
+    const { companyId, agentId } = await seedCompanyAndAgent();
+    const issueId = randomUUID(), blockerId = randomUUID();
+    await seedIssue({ companyId, issueId, status: "blocked", assigneeAgentId: agentId });
+    await seedIssue({ companyId, issueId: blockerId, status: "todo" });
+    await db.insert(issueRelations).values({ companyId, issueId: blockerId, relatedIssueId: issueId, type: "blocks" });
+    const sourceId = await seedRun({ companyId, agentId, contextSnapshot: { issueId } });
+    await db.update(heartbeatRuns).set({ status: "failed" }).where(eq(heartbeatRuns.id, sourceId));
+    const now = new Date();
+    const runId = await seedRun({ companyId, agentId, status: "scheduled_retry", now,
+      scheduledRetryReason: "transient_failure",
+      contextSnapshot: { issueId, wakeReason: "transient_failure_retry", retryOfRunId: sourceId },
+    });
+    await db.update(heartbeatRuns).set({ runtimeMode: "legacy", retryOfRunId: sourceId, scheduledRetryAttempt: 1 })
+      .where(eq(heartbeatRuns.id, runId));
+    expect(await createPostgresRunDispatchAdapter(db).promoteOrCancelDueRetry({ companyId, runId, now }))
+      .toMatchObject({ outcome: "gate_suppressed", errorCode: "issue_dependencies_blocked" });
+    const [cancelled] = await db.select().from(heartbeatRuns).where(eq(heartbeatRuns.id, runId));
+    expect(cancelled.resultJson).toMatchObject({ stopReason: "issue_dependencies_blocked",
+      timeoutSource: "scheduled_retry_gate", providerWorkStarted: false });
+    if (mode !== "receipt") await db.update(heartbeatRuns).set({ resultJson: null }).where(eq(heartbeatRuns.id, runId));
+    if (mode === "executed") await db.insert(heartbeatRunEvents).values({ companyId, agentId, runId, seq: 100, eventType: "tool.execution.started" });
+    if (mode === "missing-event") await db.delete(heartbeatRunEvents).where(eq(heartbeatRunEvents.runId, runId));
+    const [action] = await db.insert(issueRecoveryActions).values({ companyId, sourceIssueId: issueId,
+      kind: "active_run_watchdog", ownerType: "board", cause: "legacy_execution_requires_reconciliation",
+      status: "resolved", outcome: "blocked", fingerprint: runId, nextAction: "Inspect stopped run",
+      evidence: { runId, automaticRecovery: { replay: "blocked", actionOutcome: "unknown" } },
+    }).returning();
+    const [run] = await db.select().from(heartbeatRuns).where(eq(heartbeatRuns.id, runId));
+    const safe = mode === "receipt" || mode === "historical";
+    expect(await canRetryStoppedRun(db, run)).toBe(safe);
+    await settleUnrecoverableExecutions(db);
+    expect(await getExecutionBlocker(db, companyId, issueId)).toEqual(safe ? null : expect.objectContaining({ recoveryActionId: action!.id }));
+    await settleUnrecoverableExecutions(db);
+    const [retained] = await db.select().from(issueRecoveryActions).where(eq(issueRecoveryActions.id, action!.id));
+    expect(retained.evidence.automaticRecovery).toMatchObject({ replay: safe ? "not_dispatched" : "blocked" });
+    expect((await db.select().from(issues).where(eq(issues.id, issueId)))[0].status).toBe("blocked");
+    expect(await db.select().from(heartbeatRuns).where(eq(heartbeatRuns.retryOfRunId, runId))).toHaveLength(0);
+    expect(await db.select().from(activityLog).where(eq(activityLog.entityId, issueId))).toHaveLength(safe ? 1 : 0);
   });
 
   it("links the stopped run's agent instead of its return owner, within the same company", async () => {

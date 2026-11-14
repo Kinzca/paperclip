@@ -25,6 +25,7 @@ import { isSupersededConversationRun } from "./agent-conversations.js";
 import { hasRequiredWorkspaceRecovery } from "./workspace-restore-recovery-state.js";
 import { hasRemoteTerminationReceipt } from "./remote-execution-termination.js";
 import { mayOwnLocalRunProcesses } from "./local-run-process-ownership.js";
+import { isPreDispatchReviewWaitVerified } from "./pre-dispatch-review-wait.js";
 
 /** An operator records observed outcomes; this is not permission to blindly retry. */
 export async function validateExecutionReconciliation(input: {
@@ -333,6 +334,55 @@ export async function settleUnrecoverableExecutions(
   now = new Date(),
   options: { failpoint?: (phase: "persisted") => void } = {},
 ) {
+  // A suppressed scheduled retry never received execution authority. Older
+  // hosts misclassified it as an unknown outcome, including resolved holds.
+  // Retire only that hold; do not wake work or change task/pause/budget state.
+  const suppressedHolds = await db.select({ action: issueRecoveryActions })
+    .from(issueRecoveryActions).innerJoin(heartbeatRuns, and(
+      eq(heartbeatRuns.companyId, issueRecoveryActions.companyId),
+      sql`${heartbeatRuns.id}::text = ${issueRecoveryActions.evidence}->>'runId'`,
+      sql`${heartbeatRuns.contextSnapshot}->>'issueId' = ${issueRecoveryActions.sourceIssueId}::text`,
+    )).where(and(
+      eq(issueRecoveryActions.kind, "active_run_watchdog"),
+      eq(issueRecoveryActions.cause, "legacy_execution_requires_reconciliation"),
+      eq(heartbeatRuns.status, "cancelled"),
+      eq(heartbeatRuns.errorCode, "issue_dependencies_blocked"),
+      or(inArray(issueRecoveryActions.status, ["active", "escalated"]),
+        sql`${issueRecoveryActions.evidence}->'automaticRecovery'->>'replay' = 'blocked'`),
+    )).limit(25);
+  for (const { action: candidate } of suppressedHolds) {
+    await db.transaction(async tx => {
+      const [task] = await tx.select().from(issues).where(and(
+        eq(issues.companyId, candidate.companyId), eq(issues.id, candidate.sourceIssueId),
+      )).for("update");
+      const [run] = await tx.select().from(heartbeatRuns).where(and(
+        eq(heartbeatRuns.companyId, candidate.companyId),
+        eq(heartbeatRuns.id, candidate.evidence.runId as string),
+      )).for("update");
+      const [action] = await tx.select().from(issueRecoveryActions)
+        .where(eq(issueRecoveryActions.id, candidate.id)).for("update");
+      if (!task || !run || !action || action.evidence.runId !== run.id ||
+          action.cause !== "legacy_execution_requires_reconciliation" ||
+          hasRequiredWorkspaceRecovery(action.evidence) ||
+          !(await isPreDispatchReviewWaitVerified(tx as unknown as Db, run))) return;
+      const automaticRecovery = action.evidence.automaticRecovery as Record<string, unknown> | undefined;
+      if (!["active", "escalated"].includes(action.status) && automaticRecovery?.replay !== "blocked") return;
+      const note = "Dependency-wait cancellation verified before dispatch; no provider actions were started or replayed.";
+      await tx.update(issueRecoveryActions).set({
+        status: "resolved", outcome: "cancelled", resolvedAt: now, updatedAt: now,
+        nextAction: note, resolutionNote: note, wakePolicy: null, monitorPolicy: null,
+        evidence: { ...action.evidence, automaticRecovery: {
+          ...automaticRecovery, runId: run.id, replay: "not_dispatched",
+          actionOutcome: "not_started", recordedAt: now.toISOString(),
+        } },
+      }).where(eq(issueRecoveryActions.id, action.id));
+      await persistActivity(tx as unknown as Db, {
+        companyId: run.companyId, actorType: "system", actorId: "execution-recovery",
+        action: "issue.execution_recovery_settled", entityType: "issue", entityId: task.id,
+        runId: run.id, details: { recoveryActionId: action.id, outcome: "cancelled", replay: "not_dispatched" },
+      });
+    });
+  }
   // Fold obsolete conversation holds without waking historical work on upgrade.
   // Keep their evidence and record the policy change in the task's activity log.
   const obsoleteConversationHold = and(
